@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>우리 반 식습관 조사</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Song+Myung&family=Nanum+Myeongjo:wght@400;700;800&display=swap">
+<style>
+/* Hallmark · genre: editorial (utilitarian) · macrostructure: 학급 신문 1면(제호 + 단 나눔) · theme: custom "newsprint red"
+ * fonts: Song Myung (display) + Nanum Myeongjo (body)
+ * pre-emit critique: P4 H5 E4 S5 R4 V5 */
+:root {
+  --color-paper:     oklch(95% 0.012 92);   /* 신문 용지 */
+  --color-paper-2:   oklch(91% 0.016 90);   /* 박스 바탕 */
+  --color-ink:       oklch(20% 0.01 75);    /* 먹 */
+  --color-on-ink:    oklch(96% 0.01 92);
+  --color-muted:     oklch(38% 0.012 75);   /* 보조 글자 */
+  --color-rule:      oklch(22% 0.01 75);    /* 굵은 괘선 */
+  --color-rule-soft: oklch(72% 0.012 85);   /* 가는 괘선 */
+  --color-accent:    oklch(49% 0.19 27);    /* 붉은 포인트(1등 막대·번호·현재 위치) */
+  --color-accent-bg: oklch(93% 0.03 27);
+  --color-focus:     oklch(49% 0.19 27);
+  /* 반별 비교 누적 막대 — 붉은색 1개 + 먹 농담 */
+  --c1: oklch(49% 0.19 27); --c2: oklch(22% 0.01 75); --c3: oklch(42% 0.01 75); --c4: oklch(58% 0.01 75);
+  --c5: oklch(72% 0.01 80); --c6: oklch(84% 0.01 85); --c7: oklch(68% 0.08 40);
+
+  --font-display: "Song Myung", "Nanum Myeongjo", serif;
+  --font-body:    "Nanum Myeongjo", "Batang", serif;
+
+  --text-xs: 0.8125rem; --text-sm: 0.9375rem; --text-md: 1.0625rem; --text-lg: 1.25rem;
+  --text-xl: 1.625rem;  --text-2xl: clamp(2.25rem, 6vw + 1rem, 4.5rem); --text-num: clamp(3.5rem, 8vw + 1rem, 7rem);
+  --space-3xs: 0.25rem; --space-2xs: 0.5rem; --space-xs: 0.75rem; --space-sm: 1rem;
+  --space-md: 1.5rem;   --space-lg: 2rem;    --space-xl: 3rem;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-short: 160ms;
+  --wrap: 46rem; --wrap-wide: 84rem;
+}
+* { box-sizing: border-box; }
+html, body { overflow-x: clip; }
+body { word-break: keep-all; overflow-wrap: break-word; }
+body { margin: 0; font-family: var(--font-body); color: var(--color-ink); background: var(--color-paper);
+  font-size: var(--text-md); line-height: 1.65; -webkit-font-smoothing: antialiased; }
+h1, h2, h3 { margin: 0; font-weight: 800; font-style: normal; line-height: 1.3; overflow-wrap: anywhere; min-width: 0; }
+p { margin: 0; }
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 2px; }
+[hidden] { display: none !important; }
+.spacer { flex: 1; }
+
+.wrap { max-width: var(--wrap); margin: 0 auto; padding-inline: max(var(--space-sm), env(safe-area-inset-left)); }
+body.wide .wrap { max-width: var(--wrap-wide); }
+
+/* 제호 */
+.masthead { padding-top: var(--space-md); text-align: center; }
+.masthead__rule { border-top: 4px solid var(--color-rule); border-bottom: 1px solid var(--color-rule); height: 7px; }
+.masthead h1 { font-family: var(--font-display); font-weight: 400; font-size: var(--text-2xl); letter-spacing: -0.02em; padding-block: var(--space-xs); }
+.dateline { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-3xs) var(--space-sm);
+  border-top: 1px solid var(--color-rule); border-bottom: 4px double var(--color-rule); padding-block: var(--space-2xs); font-size: var(--text-sm); text-align: left; }
+.dateline #intro { color: var(--color-muted); flex: 1 1 18rem; }
+.dateline .date { font-weight: 800; white-space: nowrap; }
+.tabs { display: flex; justify-content: center; gap: var(--space-md); padding-top: var(--space-xs); }
+.tab { min-height: 44px; padding: 0 var(--space-3xs); border: 0; background: none; cursor: pointer; font-weight: 800; color: var(--color-muted);
+  border-bottom: 3px solid transparent; white-space: nowrap; }
+.tab[aria-selected="true"] { color: var(--color-ink); border-bottom-color: var(--color-accent); }
+
+.demo__in { display: flex; flex-wrap: wrap; gap: var(--space-2xs) var(--space-sm); align-items: center; padding-block: var(--space-xs);
+  border-bottom: 1px solid var(--color-rule-soft); font-size: var(--text-sm); }
+.demo__in .badge { font-weight: 800; color: var(--color-accent); border: 1px solid var(--color-accent); padding: 0 var(--space-2xs); }
+
+main.wrap { padding-top: var(--space-lg); padding-bottom: var(--space-xl); }
+.stack > * + * { margin-top: var(--space-md); }
+
+/* 박스(응답자 칸·PIN) — 신문 속 네모 박스 */
+.box { border: 1px solid var(--color-rule); background: var(--color-paper-2); padding: var(--space-sm); }
+.box h2 { font-size: var(--text-lg); }
+.narrow { max-width: 26rem; margin-inline: auto; }
+
+.btn { min-height: 44px; padding: 0 var(--space-md); border: 1px solid var(--color-ink); border-radius: 0; background: var(--color-ink); color: var(--color-on-ink);
+  font-weight: 800; cursor: pointer; white-space: nowrap; display: inline-flex; align-items: center; justify-content: center;
+  transition: background-color var(--dur-short) var(--ease-out); }
+.btn:hover { background: var(--color-accent); border-color: var(--color-accent); }
+.btn:disabled { opacity: .6; cursor: progress; }
+.btn--ghost { background: transparent; color: var(--color-ink); }
+.btn--ghost:hover { background: var(--color-paper-2); border-color: var(--color-ink); }
+.btn--ghost[aria-pressed="true"] { background: var(--color-ink); color: var(--color-on-ink); }
+.btn--sm { padding: 0 var(--space-sm); font-size: var(--text-sm); }
+.btn--block { width: 100%; }
+
+.field { display: block; }
+.field > span { display: block; font-weight: 800; font-size: var(--text-sm); margin-bottom: var(--space-3xs); }
+.input { width: 100%; min-height: 44px; padding: 0 var(--space-xs); background: var(--color-paper); border: 1px solid var(--color-rule); border-radius: 0; font-size: var(--text-md); }
+textarea.input { padding: var(--space-xs); min-height: 6rem; resize: vertical; line-height: 1.6; }
+.input:focus { outline: none; box-shadow: inset 0 -3px 0 var(--color-accent); }
+.grid2 { display: grid; gap: var(--space-sm); grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.row { display: flex; flex-wrap: wrap; gap: var(--space-2xs); align-items: center; }
+.hint { color: var(--color-muted); font-size: var(--text-sm); }
+.progress { height: 3px; background: var(--color-rule-soft); margin-top: var(--space-3xs); }
+.progress i { display: block; height: 100%; width: 0; background: var(--color-accent); }
+
+/* 문항 — 기사 하나처럼: 붉은 번호 + 제목 + 네모 칸 */
+#questions > * + * { margin-top: 0; }
+.q { position: relative; border: 0; border-top: 1px solid var(--color-rule); margin: 0; padding: var(--space-md) 0 var(--space-lg) 2.75rem; min-width: 0; }
+.q__no { padding: 0; font-family: var(--font-display); font-size: var(--text-xl); line-height: 1.1; color: var(--color-accent); }
+.q > .q__no { position: absolute; left: 0; top: var(--space-md); }
+.q h3 { font-size: var(--text-lg); margin-bottom: var(--space-sm); }
+.q.answered .q__no { color: var(--color-muted); }
+.opts { display: flex; flex-wrap: wrap; gap: var(--space-2xs) var(--space-sm); }
+.opt { position: relative; display: block; }
+.opt input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.opt span { display: inline-flex; align-items: center; gap: var(--space-2xs); min-height: 44px; padding-right: var(--space-2xs); white-space: nowrap; }
+.opt span::before { content: ""; width: 20px; height: 20px; flex: none; border: 2px solid var(--color-ink); background: var(--color-paper); }
+.opt input[type="radio"] + span::before { border-radius: 50%; }
+.opt input:checked + span { font-weight: 800; }
+.opt input:checked + span::before { background: var(--color-ink); box-shadow: inset 0 0 0 3px var(--color-paper); }
+.opt input:focus-visible + span { outline: 3px solid var(--color-focus); outline-offset: 2px; }
+
+.sticky { position: sticky; bottom: 0; padding: var(--space-xs) 0 max(var(--space-xs), env(safe-area-inset-bottom)); background: var(--color-paper); border-top: 4px double var(--color-rule); }
+.sticky .btn { width: 100%; min-height: 52px; font-size: var(--text-lg); }
+.done { text-align: center; padding: var(--space-xl) var(--space-sm); border-block: 4px double var(--color-rule); }
+.done .big { font-family: var(--font-display); font-size: var(--text-2xl); }
+.done .btn { margin-top: var(--space-md); }
+
+/* ===== 교사 화면 — 1면 ===== */
+.toolbar { display: flex; flex-wrap: wrap; gap: var(--space-2xs) var(--space-sm); align-items: center; }
+.seg { display: inline-flex; border: 1px solid var(--color-ink); }
+.seg button { min-height: 44px; padding: 0 var(--space-sm); border: 0; background: none; cursor: pointer; font-weight: 800; white-space: nowrap; }
+.seg button + button { border-left: 1px solid var(--color-ink); }
+.seg button[aria-pressed="true"] { background: var(--color-ink); color: var(--color-on-ink); }
+.chips { display: flex; flex-wrap: wrap; gap: 0 var(--space-sm); }
+.chip { min-height: 44px; padding: 0 var(--space-3xs); border: 0; border-bottom: 3px solid transparent; background: none; cursor: pointer; font-weight: 800; color: var(--color-muted); white-space: nowrap; }
+.chip[aria-pressed="true"] { color: var(--color-ink); border-bottom-color: var(--color-accent); }
+.tools { display: flex; flex-wrap: wrap; gap: var(--space-2xs); }
+.live { display: inline-flex; align-items: center; gap: var(--space-2xs); }
+.live i { width: 8px; height: 8px; background: var(--color-accent); }
+
+.front { display: grid; gap: var(--space-sm); grid-template-columns: minmax(0, 1fr); align-items: end; border-top: 4px solid var(--color-rule); border-bottom: 1px solid var(--color-rule); padding-block: var(--space-sm); }
+.headline-num { display: flex; align-items: baseline; gap: var(--space-2xs); }
+.headline-num b { font-family: var(--font-display); font-weight: 400; font-size: var(--text-num); line-height: 1; font-variant-numeric: tabular-nums; }
+.headline-num span { font-size: var(--text-xl); font-weight: 800; }
+.byline { display: flex; flex-wrap: wrap; gap: 0; font-size: var(--text-md); }
+.byline span { padding: 0 var(--space-sm); border-left: 1px solid var(--color-rule-soft); white-space: nowrap; }
+.byline span:first-child { border-left: 0; padding-left: 0; }
+.byline b { font-variant-numeric: tabular-nums; }
+
+/* 기사 단 나눔 — 단 사이 세로 괘선 */
+.results { display: grid; grid-template-columns: minmax(0, 1fr); }
+.article { padding: var(--space-md) 0; border-bottom: 1px solid var(--color-rule); min-width: 0; }
+.article__head { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--space-2xs); align-items: baseline; margin-bottom: var(--space-sm); }
+.article__head .q__no { font-size: var(--text-xl); }
+.article__head h3 { font-size: var(--text-lg); }
+.article__head .hint { grid-column: 2; }
+.bars { display: grid; gap: var(--space-2xs); }
+.bar { display: grid; grid-template-columns: minmax(5.5rem, 8.5rem) minmax(0, 1fr) 3.25rem; gap: var(--space-xs); align-items: center; font-variant-numeric: tabular-nums; }
+.bar > span:first-child { font-size: var(--text-sm); }
+.bar__track { height: 18px; border-bottom: 1px solid var(--color-rule); }
+.bar__fill { height: 100%; background: var(--color-ink); }
+.bar.is-max .bar__fill { background: var(--color-accent); }
+.bar.is-max > span:first-child { font-weight: 800; }
+.bar__val { text-align: right; font-weight: 800; line-height: 1.2; }
+.bar__val small { display: block; font-weight: 400; color: var(--color-muted); font-size: var(--text-xs); }
+.cmp { display: grid; grid-template-columns: 3rem minmax(0, 1fr) 3rem; gap: var(--space-xs); align-items: center; margin-top: var(--space-2xs); font-variant-numeric: tabular-nums; }
+.stack-bar { display: flex; height: 22px; border: 1px solid var(--color-rule); }
+.stack-bar i { display: block; height: 100%; }
+.stack-bar i + i { box-shadow: inset 1px 0 0 var(--color-paper); }
+.legend { display: flex; flex-wrap: wrap; gap: var(--space-3xs) var(--space-sm); margin-top: var(--space-xs); font-size: var(--text-sm); color: var(--color-muted); }
+.legend i { display: inline-block; width: 12px; height: 12px; margin-right: var(--space-3xs); vertical-align: -1px; border: 1px solid var(--color-rule); }
+
+/* 서술형 — 독자 한마디 단 */
+.article--wide { grid-column: 1 / -1; }
+.texts { margin: 0; padding: 0; list-style: none; columns: 1; column-gap: var(--space-lg); column-rule: 1px solid var(--color-rule-soft); }
+.texts li { break-inside: avoid; padding: var(--space-2xs) 0; border-bottom: 1px dotted var(--color-rule-soft); }
+.texts li::before { content: "“"; font-family: var(--font-display); color: var(--color-accent); margin-right: var(--space-3xs); }
+.texts small { color: var(--color-muted); margin-left: var(--space-2xs); font-size: var(--text-xs); }
+.empty { padding: var(--space-lg) 0; color: var(--color-muted); text-align: center; }
+
+/* TV(크게 보기) — 큰 숫자·굵은 괘선 */
+body.tv { font-size: 1.3rem; }
+body.tv .masthead, body.tv .demo { display: none; }
+body.tv .article { border-bottom-width: 3px; }
+body.tv .bar__track { height: 30px; }
+body.tv .bar { grid-template-columns: minmax(7rem, 11rem) minmax(0, 1fr) 4.5rem; }
+body.tv .stack-bar { height: 34px; }
+body.hide-private .private { filter: blur(7px); user-select: none; }
+
+#toast { position: fixed; left: 50%; bottom: max(var(--space-sm), env(safe-area-inset-bottom)); transform: translateX(-50%); max-width: calc(100% - 2rem);
+  background: var(--color-ink); color: var(--color-on-ink); padding: var(--space-xs) var(--space-md); border-top: 3px solid var(--color-accent);
+  opacity: 0; pointer-events: none; transition: opacity var(--dur-short) var(--ease-out); z-index: 10; }
+#toast.show { opacity: 1; }
+#toast.err { background: var(--color-accent); border-top-color: var(--color-ink); }
+
+@media (min-width: 40rem) {
+  .front { grid-template-columns: auto minmax(0, 1fr); column-gap: var(--space-lg); }
+  .byline { justify-content: flex-end; }
+  .texts { columns: 2; }
+}
+@media (min-width: 64rem) {
+  .results { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 0; }
+  .results > .article:nth-child(odd):not(.article--wide) { padding-right: var(--space-lg); border-right: 1px solid var(--color-rule-soft); }
+  .results > .article:nth-child(even):not(.article--wide) { padding-left: var(--space-lg); }
+  .texts { columns: 3; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+<header class="masthead wrap">
+  <div class="masthead__rule"></div>
+  <h1 id="appTitle">우리 반 식습관 조사</h1>
+  <div class="dateline"><span class="date" id="today"></span><span id="intro">불러오는 중…</span></div>
+  <nav class="tabs" role="tablist">
+    <button class="tab" role="tab" aria-selected="true" data-tab="student">설문 답하기</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="teacher">결과 1면 (교사)</button>
+  </nav>
+</header>
+
+<div class="demo" id="demoBar" hidden>
+  <div class="wrap demo__in">
+    <span class="badge">체험 모드</span>
+    <span class="hint">데이터는 이 브라우저에만 저장돼요.</span>
+    <span class="spacer"></span>
+    <button class="btn btn--ghost btn--sm" id="demoFill">샘플 넣기</button>
+    <button class="btn btn--ghost btn--sm" id="demoClear">체험 데이터 지우기</button>
+  </div>
+</div>
+
+<main class="wrap">
+  <section id="tab-student">
+    <form id="surveyForm" novalidate>
+      <div class="box stack">
+        <div class="grid2">
+          <label class="field"><span>반</span><select class="input" id="fCls"></select></label>
+          <label class="field"><span>번호 (선택)</span><input class="input" id="fNum" type="number" inputmode="numeric" min="1" placeholder="비워도 돼요"></label>
+        </div>
+        <p class="hint">번호를 적으면 다시 낼 때 이전 응답이 바뀌어요. 이름은 받지 않아요.</p>
+        <div><p class="hint" id="progText">0 / 0 답함</p><div class="progress"><i id="progBar"></i></div></div>
+      </div>
+      <div id="questions"></div>
+      <div class="sticky"><button class="btn" id="submitBtn" type="submit">응답 제출</button></div>
+    </form>
+    <div class="done" id="doneCard" hidden>
+      <p class="big">고마워요</p>
+      <p class="hint" id="doneMsg">응답이 저장됐어요. 결과는 선생님 화면에서 함께 봐요.</p>
+      <button class="btn btn--ghost" id="again">다음 친구 차례</button>
+    </div>
+  </section>
+
+  <section id="tab-teacher" hidden>
+    <form class="box narrow stack" id="pinForm">
+      <h2>교사 확인</h2>
+      <label class="field"><span>교사 PIN</span><input class="input" id="pin" type="password" inputmode="numeric" autocomplete="off"></label>
+      <p class="hint" id="demoPinHint" hidden>체험 모드 PIN은 <b>1234</b></p>
+      <button class="btn btn--block" id="pinBtn" type="submit">결과 보기</button>
+    </form>
+
+    <div id="dash" class="stack" hidden>
+      <div class="toolbar">
+        <div class="seg" role="group" aria-label="보기 방식">
+          <button id="modeAll" aria-pressed="true">결과</button>
+          <button id="modeCmp" aria-pressed="false">반별 비교</button>
+        </div>
+        <div class="chips" id="clsChips" aria-label="반 고르기"></div>
+      </div>
+      <div class="toolbar">
+        <span class="hint live" id="liveText"></span>
+        <span class="spacer"></span>
+        <div class="tools">
+          <button class="btn btn--ghost btn--sm" id="autoBtn" aria-pressed="false">자동 새로고침</button>
+          <button class="btn btn--ghost btn--sm" id="refresh">새로고침</button>
+          <button class="btn btn--ghost btn--sm" id="tvBtn" aria-pressed="false">크게 보기</button>
+          <button class="btn btn--ghost btn--sm" id="hideBtn" aria-pressed="false">서술 가리기</button>
+          <button class="btn btn--ghost btn--sm" id="csvBtn">CSV</button>
+          <button class="btn btn--ghost btn--sm" id="logout">잠그기</button>
+        </div>
+      </div>
+      <div class="front" id="stats"></div>
+      <div class="results" id="results"></div>
+    </div>
+  </section>
+</main>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+/* ======================= 서버 호출 래퍼 =======================
+   Apps Script 안에서 열리면 google.script.run(Code.gs)을, 그냥 열면 '체험 모드'(DEMO)를 씁니다. */
+const IS_GAS = typeof google !== 'undefined' && google.script && google.script.run;
+function api(name, ...args) {
+  if (IS_GAS) {
+    return new Promise((resolve, reject) => {
+      google.script.run
+        .withSuccessHandler(resolve)
+        .withFailureHandler(e => reject(new Error(String(e && e.message || e).replace(/^(Error|Exception):\s*/, ''))))
+        [name](...args);
+    });
+  }
+  return new Promise((resolve, reject) => setTimeout(() => {
+    try { resolve(JSON.parse(JSON.stringify(DEMO[name](...args)))); } catch (e) { reject(e); }
+  }, 200));
+}
+
+/* ======================= 체험 모드 (Code.gs 흉내) =======================
+   문항·검사 규칙은 Code.gs와 같게 맞춰 두었습니다. Code.gs의 QUESTIONS를 고치면 여기 DEMO_CONFIG도 같이 고치세요(체험 모드에만 쓰임). */
+const DEMO_KEY = 'gas-survey-demo';
+const DEMO_PIN = '1234';
+const DEMO_CONFIG = {
+  appTitle: '우리 반 식습관 조사',
+  intro: '정답은 없어요. 요즘 나의 모습 그대로 골라 주세요. 이름은 받지 않아요.',
+  classes: ['1반', '2반', '3반', '4반'], maxNumber: 40,
+  questions: [
+    { id: 'breakfast', type: 'single', title: '일주일에 아침밥을 며칠 먹나요?', options: ['매일', '5~6일', '3~4일', '1~2일', '거의 안 먹음'] },
+    { id: 'skipReason', type: 'multi', max: 2, title: '아침을 거른다면 가장 큰 이유는? (2개까지)', options: ['시간이 없어서', '입맛이 없어서', '살을 빼려고', '차려진 음식이 없어서', '습관이 돼서', '거르지 않음'] },
+    { id: 'snackFreq', type: 'single', title: '하루에 간식을 몇 번 먹나요?', options: ['안 먹음', '1번', '2번', '3번 이상'] },
+    { id: 'snackKind', type: 'multi', max: 3, title: '자주 먹는 간식은? (3개까지)', options: ['과자', '빵·떡', '과일', '우유·요구르트', '탄산·단 음료', '라면', '견과류'] },
+    { id: 'water', type: 'single', title: '하루에 물을 몇 컵(200mL) 마시나요?', options: ['1컵 이하', '2~3컵', '4~5컵', '6컵 이상'] },
+    { id: 'veg', type: 'single', title: '채소 반찬을 얼마나 자주 먹나요?', options: ['끼니마다', '하루 1번', '이틀에 1번', '거의 안 먹음'] },
+    { id: 'lateNight', type: 'single', title: '일주일에 야식(밤 9시 이후)을 몇 번 먹나요?', options: ['안 먹음', '1~2번', '3~4번', '5번 이상'] },
+    { id: 'fastFood', type: 'single', title: '일주일에 패스트푸드(햄버거·피자·치킨)를 몇 번 먹나요?', options: ['안 먹음', '1번', '2~3번', '4번 이상'] },
+    { id: 'pledge', type: 'text', max: 100, title: '나의 식습관 개선 다짐 한 가지', placeholder: '예: 아침에 우유 한 잔이라도 마시기' }
+  ]
+};
+const DEMO = {
+  load() { try { return JSON.parse(localStorage.getItem(DEMO_KEY)) || []; } catch (e) { return []; } },
+  save(list) { localStorage.setItem(DEMO_KEY, JSON.stringify(list)); },
+  getConfig() { return DEMO_CONFIG; },
+  submitResponse(resp) {
+    const v = demoValidate(resp);
+    let list = this.load(); const before = list.length;
+    if (v.num !== '') list = list.filter(r => !(r.cls === v.cls && String(r.num) === String(v.num)));
+    v.savedAt = new Date().toISOString();
+    list.push(v); this.save(list);
+    return { ok: true, replaced: list.length === before, savedAt: v.savedAt };
+  },
+  getTeacherData(pin) {
+    if (String(pin || '').trim() !== DEMO_PIN) throw new Error('PIN이 맞지 않아요.');
+    return { config: DEMO_CONFIG, responses: this.load() };
+  }
+};
+function demoValidate(resp) {
+  const C = DEMO_CONFIG, fail = m => { throw new Error(m); };
+  if (!resp || typeof resp !== 'object') fail('응답이 비어 있어요.');
+  const cls = String(resp.cls || ''); if (!C.classes.includes(cls)) fail('반을 골라 주세요.');
+  let num = '';
+  if (resp.num !== '' && resp.num != null) { num = Number(resp.num); if (!Number.isInteger(num) || num < 1 || num > C.maxNumber) fail('번호는 1~' + C.maxNumber + ' 사이로 적거나 비워 두세요.'); }
+  const input = resp.answers || {}, answers = {};
+  C.questions.forEach((q, i) => {
+    const label = (i + 1) + '번 문항', a = input[q.id];
+    if (q.type === 'single') { if (!q.options.includes(a)) fail(label + '에 답해 주세요.'); answers[q.id] = a; }
+    else if (q.type === 'multi') {
+      if (!Array.isArray(a) || !a.length) fail(label + '에서 1개 이상 골라 주세요.');
+      if (a.length > (q.max || q.options.length)) fail(label + '은 ' + q.max + '개까지 고를 수 있어요.');
+      if (a.some(x => !q.options.includes(x))) fail(label + '에 없는 선택지예요.');
+      if (new Set(a).size !== a.length) fail(label + '에 같은 선택지가 두 번 들어갔어요.');
+      answers[q.id] = q.options.filter(o => a.includes(o));
+    } else {
+      const s = String(a == null ? '' : a).replace(/[\u0000-\u001f\u007f]/g, ' ').trim();
+      if (s.length > (q.max || 100)) fail(label + ' 글자 수는 ' + (q.max || 100) + '자 이내로 적어 주세요.');
+      if (!s) fail(label + '에 한 줄이라도 적어 주세요.');
+      answers[q.id] = s;
+    }
+  });
+  return { cls, num, answers };
+}
+function demoFill() {
+  const pledges = ['아침에 우유 한 잔이라도 마시기', '탄산음료 대신 물 마시기', '야식은 주 1번만', '급식 채소 반찬 남기지 않기', '라면은 주말에만 먹기',
+    '하루 물 5컵 마시기', '간식으로 과일 먹기', '10분 일찍 일어나서 아침 먹기', '패스트푸드 줄이기', '천천히 꼭꼭 씹어 먹기'];
+  // 반마다 성향이 조금 다르게(비교 화면이 보이도록)
+  const bias = { '1반': 0, '2반': 1, '3반': 2, '4반': 1 };
+  let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const pick = (opts, b) => opts[Math.min(opts.length - 1, Math.floor(Math.pow(rnd(), 1.4) * opts.length * 0.8 + b * rnd()))];
+  const list = DEMO.load().filter(r => r.num === '' || r.num > 0);
+  ['1반', '2반', '3반'].forEach((cls, ci) => {
+    for (let n = 1; n <= 22 - ci * 3; n++) {
+      const answers = {};
+      DEMO_CONFIG.questions.forEach(q => {
+        if (q.type === 'single') answers[q.id] = pick(q.options, bias[cls]);
+        else if (q.type === 'multi') { const s = new Set(); const k = 1 + Math.floor(rnd() * q.max); while (s.size < k) s.add(pick(q.options, bias[cls])); answers[q.id] = q.options.filter(o => s.has(o)); }
+        else answers[q.id] = pledges[Math.floor(rnd() * pledges.length)];
+      });
+      const i = list.findIndex(r => r.cls === cls && r.num === n); if (i >= 0) list.splice(i, 1);
+      list.push({ cls, num: n, answers, savedAt: new Date(Date.now() - n * 60000).toISOString() });
+    }
+  });
+  DEMO.save(list);
+}
+
+/* ======================= 공통 도우미 ======================= */
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+let toastTimer;
+function toast(msg, isErr) {
+  const t = $('#toast'); t.textContent = msg; t.className = 'show' + (isErr ? ' err' : '');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.className = '', isErr ? 4500 : 2500);
+}
+async function busy(btn, label, fn) {
+  const old = btn.textContent; btn.disabled = true; btn.textContent = label;
+  try { return await fn(); } catch (e) { toast(e.message || '잠시 뒤 다시 시도해 주세요.', true); } finally { btn.disabled = false; btn.textContent = old; }
+}
+function downloadCsv(filename, rows) {
+  const csv = '﻿' + rows.map(r => r.map(v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"').join(',')).join('\r\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+}
+
+document.querySelectorAll('.tab').forEach(btn => btn.addEventListener('click', () => {
+  document.querySelectorAll('.tab').forEach(b => b.setAttribute('aria-selected', b === btn));
+  const t = btn.dataset.tab;
+  $('#tab-student').hidden = t !== 'student'; $('#tab-teacher').hidden = t !== 'teacher';
+  document.body.classList.toggle('wide', t === 'teacher' && !$('#dash').hidden);
+}));
+
+/* ======================= 학생 화면 ======================= */
+let CONFIG = null;
+function renderQuestions() {
+  $('#questions').innerHTML = CONFIG.questions.map((q, i) => `
+    <fieldset class="q" data-q="${esc(q.id)}">
+      <legend class="q__no" aria-label="${i + 1}번 문항">${i + 1}</legend>
+      <h3>${esc(q.title)}</h3>
+      ${q.type === 'text'
+        ? `<textarea class="input" name="${esc(q.id)}" maxlength="${q.max || 100}" placeholder="${esc(q.placeholder || '')}"></textarea><p class="hint"><span class="cnt">0</span> / ${q.max || 100}자</p>`
+        : `<div class="opts">${q.options.map(o => `<label class="opt"><input type="${q.type === 'multi' ? 'checkbox' : 'radio'}" name="${esc(q.id)}" value="${esc(o)}"><span>${esc(o)}</span></label>`).join('')}</div>`}
+    </fieldset>`).join('');
+}
+function collect() {
+  const answers = {};
+  CONFIG.questions.forEach(q => {
+    if (q.type === 'text') answers[q.id] = $(`[name="${q.id}"]`).value;
+    else if (q.type === 'multi') answers[q.id] = [...document.querySelectorAll(`[name="${q.id}"]:checked`)].map(x => x.value);
+    else { const c = $(`[name="${q.id}"]:checked`); answers[q.id] = c ? c.value : ''; }
+  });
+  return answers;
+}
+function updateProgress() {
+  const a = collect();
+  let n = 0;
+  CONFIG.questions.forEach(q => {
+    const ok = Array.isArray(a[q.id]) ? a[q.id].length > 0 : String(a[q.id]).trim() !== '';
+    $(`[data-q="${q.id}"]`).classList.toggle('answered', ok); if (ok) n++;
+  });
+  $('#progText').textContent = `${n} / ${CONFIG.questions.length} 답함`;
+  $('#progBar').style.width = (n / CONFIG.questions.length * 100) + '%';
+}
+$('#questions').addEventListener('change', e => {
+  const q = CONFIG.questions.find(x => x.id === e.target.name);
+  if (q && q.type === 'multi') {
+    const checked = document.querySelectorAll(`[name="${q.id}"]:checked`);
+    if (checked.length > q.max) { e.target.checked = false; toast(`${q.max}개까지 고를 수 있어요.`, true); }
+  }
+  updateProgress();
+});
+$('#questions').addEventListener('input', e => {
+  if (e.target.tagName === 'TEXTAREA') { e.target.closest('.q').querySelector('.cnt').textContent = e.target.value.length; updateProgress(); }
+});
+$('#surveyForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const resp = { cls: $('#fCls').value, num: $('#fNum').value === '' ? '' : Number($('#fNum').value), answers: collect() };
+  busy($('#submitBtn'), '제출하는 중…', async () => {
+    const res = await api('submitResponse', resp);
+    $('#surveyForm').hidden = true; $('#doneCard').hidden = false;
+    $('#doneMsg').textContent = res.replaced ? '같은 번호로 낸 이전 응답을 새 응답으로 바꿨어요.' : '응답이 저장됐어요. 결과는 선생님 화면에서 함께 봐요.';
+    window.scrollTo(0, 0);
+  });
+});
+$('#again').addEventListener('click', () => {
+  const cls = $('#fCls').value; $('#surveyForm').reset(); $('#fCls').value = cls;
+  document.querySelectorAll('.cnt').forEach(c => c.textContent = '0');
+  updateProgress(); $('#doneCard').hidden = true; $('#surveyForm').hidden = false; window.scrollTo(0, 0);
+});
+
+/* ======================= 교사 화면 ======================= */
+let PIN = '', DATA = null, autoTimer = null;
+const view = { cls: '전체', mode: 'all' };
+
+$('#pinForm').addEventListener('submit', e => {
+  e.preventDefault();
+  busy($('#pinBtn'), '확인 중…', async () => {
+    DATA = await api('getTeacherData', $('#pin').value);
+    PIN = $('#pin').value; $('#pin').value = '';
+    $('#pinForm').hidden = true; $('#dash').hidden = false; document.body.classList.add('wide');
+    renderDash();
+  });
+});
+async function reload(silent) {
+  try { DATA = await api('getTeacherData', PIN); renderDash(); }
+  catch (e) { toast(e.message, true); }
+}
+$('#refresh').addEventListener('click', () => reload(false));
+$('#autoBtn').addEventListener('click', e => {
+  if (autoTimer) { clearInterval(autoTimer); autoTimer = null; } else autoTimer = setInterval(() => reload(true), 10000);
+  e.currentTarget.setAttribute('aria-pressed', !!autoTimer); renderLive();
+});
+$('#logout').addEventListener('click', () => {
+  clearInterval(autoTimer); autoTimer = null; $('#autoBtn').setAttribute('aria-pressed', false);
+  PIN = ''; DATA = null; $('#dash').hidden = true; $('#pinForm').hidden = false; document.body.classList.remove('wide', 'tv', 'hide-private');
+});
+$('#tvBtn').addEventListener('click', e => {
+  const on = document.body.classList.toggle('tv'); e.currentTarget.setAttribute('aria-pressed', on);
+  if (on) { document.body.classList.add('hide-private'); $('#hideBtn').setAttribute('aria-pressed', true); }
+});
+$('#hideBtn').addEventListener('click', e => e.currentTarget.setAttribute('aria-pressed', document.body.classList.toggle('hide-private')));
+$('#modeAll').addEventListener('click', () => { view.mode = 'all'; renderDash(); });
+$('#modeCmp').addEventListener('click', () => { view.mode = 'cmp'; renderDash(); });
+$('#clsChips').addEventListener('click', e => { const c = e.target.closest('.chip'); if (c) { view.cls = c.dataset.c; renderDash(); } });
+
+let lastLoaded = null;
+function renderLive() {
+  const t = lastLoaded ? lastLoaded.toTimeString().slice(0, 8) : '';
+  $('#liveText').innerHTML = autoTimer ? `<i></i> 10초마다 자동 새로고침 · 마지막 ${t}` : `마지막 새로고침 ${t}`;
+}
+/** 문항 하나의 선택지별 응답 수. multi는 '응답한 사람 중 몇 %'로 계산 */
+function countOptions(q, list) {
+  const counts = q.options.map(o => list.filter(r => {
+    const a = r.answers[q.id]; return Array.isArray(a) ? a.includes(o) : a === o;
+  }).length);
+  return { counts, base: list.length };
+}
+const pct = (n, base) => base ? Math.round(n / base * 100) : 0;
+
+function renderDash() {
+  lastLoaded = new Date(); renderLive();
+  const C = DATA.config, all = DATA.responses;
+  $('#modeAll').setAttribute('aria-pressed', view.mode === 'all');
+  $('#modeCmp').setAttribute('aria-pressed', view.mode === 'cmp');
+  $('#clsChips').hidden = view.mode === 'cmp';
+  $('#clsChips').innerHTML = ['전체', ...C.classes].map(c => `<button class="chip" aria-pressed="${view.cls === c}" data-c="${esc(c)}">${esc(c)}</button>`).join('');
+  const list = view.mode === 'all' && view.cls !== '전체' ? all.filter(r => r.cls === view.cls) : all;
+
+  const label = view.mode === 'all' && view.cls !== '전체' ? esc(view.cls) : '전체';
+  $('#stats').innerHTML = `<div class="headline-num"><b>${list.length}</b><span>명 응답 · ${label}</span></div>
+    <p class="byline">${C.classes.map(c => `<span>${esc(c)} <b>${all.filter(r => r.cls === c).length}</b>명</span>`).join('')}</p>`;
+
+  if (!all.length) { $('#results').innerHTML = '<p class="empty">아직 응답이 없어요. 학생들에게 웹 앱 주소(또는 QR)를 알려 주세요.</p>'; return; }
+  $('#results').innerHTML = C.questions.map((q, i) => {
+    const head = `<div class="article__head"><span class="q__no">${i + 1}</span><h3>${esc(q.title)}</h3>${q.type === 'multi' ? '<span class="hint">여러 개 고름 · 응답자 대비 %</span>' : ''}</div>`;
+    if (q.type === 'text') {
+      const texts = list.filter(r => r.answers[q.id]);
+      return `<article class="article article--wide">${head}<p class="hint">${texts.length}개 · TV에 띄울 땐 ‘서술 가리기’를 켜 두세요.</p>
+        <ul class="texts">${texts.map(r => `<li class="private">${esc(r.answers[q.id])}<small>${esc(r.cls)}</small></li>`).join('')}</ul></article>`;
+    }
+    if (view.mode === 'cmp') {
+      const rows = C.classes.map(c => {
+        const sub = all.filter(r => r.cls === c); const { counts, base } = countOptions(q, sub);
+        const total = counts.reduce((s, n) => s + n, 0) || 1;
+        return `<div class="cmp"><b>${esc(c)}</b><div class="stack-bar" title="${esc(c)}">${counts.map((n, k) =>
+          `<i style="width:${n / total * 100}%;background:var(--c${k % 7 + 1})" title="${esc(q.options[k])} ${n}명"></i>`).join('')}</div><span class="hint">${base}명</span></div>`;
+      }).join('');
+      return `<article class="article">${head}${rows}<div class="legend">${q.options.map((o, k) => `<span><i style="background:var(--c${k % 7 + 1})"></i>${esc(o)}</span>`).join('')}</div></article>`;
+    }
+    const { counts, base } = countOptions(q, list); const max = Math.max(...counts);
+    return `<article class="article">${head}<div class="bars">${q.options.map((o, k) => `
+      <div class="bar${counts[k] === max && max > 0 ? ' is-max' : ''}"><span>${esc(o)}</span>
+        <div class="bar__track"><div class="bar__fill" style="width:${pct(counts[k], base)}%"></div></div>
+        <span class="bar__val">${pct(counts[k], base)}%<small>${counts[k]}명</small></span></div>`).join('')}</div></article>`;
+  }).join('');
+}
+
+$('#csvBtn').addEventListener('click', () => {
+  if (!DATA || !DATA.responses.length) return toast('내려받을 응답이 없어요.', true);
+  const Q = DATA.config.questions;
+  const rows = [['제출시각', '반', '번호', ...Q.map(q => q.title)]].concat(DATA.responses.map(r =>
+    [r.savedAt, r.cls, r.num, ...Q.map(q => Array.isArray(r.answers[q.id]) ? r.answers[q.id].join(', ') : r.answers[q.id])]));
+  downloadCsv('식습관조사_' + new Date().toISOString().slice(0, 10) + '.csv', rows);
+});
+
+/* ======================= 시작 ======================= */
+async function init() {
+  if (!IS_GAS) { $('#demoBar').hidden = false; $('#demoPinHint').hidden = false; }
+  try { CONFIG = await api('getConfig'); }
+  catch (e) { $('#intro').textContent = '설문을 불러오지 못했어요. 새로고침해 보세요. (' + e.message + ')'; return; }
+  $('#appTitle').textContent = CONFIG.appTitle; $('#intro').textContent = CONFIG.intro;
+  $('#today').textContent = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' });
+  $('#fCls').innerHTML = '<option value="">반 고르기</option>' + CONFIG.classes.map(c => `<option>${esc(c)}</option>`).join('');
+  $('#fNum').max = CONFIG.maxNumber;
+  renderQuestions(); updateProgress();
+}
+$('#demoFill').addEventListener('click', () => { demoFill(); toast('1~3반 샘플 응답을 넣었어요. 결과 1면(PIN 1234)에서 보세요.'); if (DATA) reload(true); });
+$('#demoClear').addEventListener('click', () => { if (!confirm('체험 데이터를 모두 지울까요?')) return; localStorage.removeItem(DEMO_KEY); toast('체험 데이터를 지웠어요.'); if (DATA) reload(true); });
+init();
+</script>
+</body>
+</html>

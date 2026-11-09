@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<!--
+  무엇을 하는 앱: 조리실습 모둠 도우미 — 레시피 선택, 인원수만큼 재료량 환산, 모둠 역할 뽑기, 단계별 타이머, 위생·안전 체크, 모둠 실습 기록지 인쇄.
+  수업 장면: 기술·가정 식생활 조리실습. 모둠마다 태블릿 1대로 쓰거나, 교사가 TV에 타이머를 크게 띄워 전체 진행.
+  설정 바꾸는 곳: 화면의 [레시피 관리] 버튼(추가·편집·JSON 내보내기/불러오기). 기본 레시피는 아래 스크립트의 DEFAULT_RECIPES, 역할은 ROLES, 체크리스트는 CHECKLIST.
+-->
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>조리실습 모둠 도우미</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hahmlet:wght@500;700;800&family=IBM+Plex+Sans+KR:wght@400;600;700&display=swap">
+<style>
+/* Hallmark · macrostructure: Workbench (단계 탭 작업표) · tone: utilitarian · anchor hue: tomato 32
+ * theme: custom (vibe: "주방 작업표, 레시피 카드, 크림 종이, 토마토") · paper oklch(96.5% 0.018 85) · accent oklch(52% 0.19 32)
+ * display: Hahmlet 800 · body: IBM Plex Sans KR 400/700 · axes: light / roman-serif / warm
+ * pre-emit critique: P4 H4 E4 S5 R4 V4
+ */
+:root {
+  /* 색 — 크림 종이 + 갈색 잉크 + 토마토 한 가지 */
+  --color-paper:      oklch(96.5% 0.018 85);
+  --color-paper-2:    oklch(93% 0.024 82);
+  --color-card:       oklch(98.6% 0.010 85);
+  --color-rule:       oklch(84% 0.022 75);
+  --color-rule-ink:   oklch(30% 0.020 50);
+  --color-ink:        oklch(23% 0.020 45);
+  --color-ink-2:      oklch(43% 0.020 50);
+  --color-accent:     oklch(52% 0.190 32);
+  --color-accent-ink: oklch(46% 0.170 32);
+  --color-accent-soft:oklch(93.5% 0.035 40);
+  --color-on-ink:     oklch(97% 0.012 85);
+  --color-ok:         oklch(46% 0.110 145);
+  --color-ok-soft:    oklch(94% 0.040 140);
+  --color-warn-ink:   oklch(42% 0.090 70);
+  --color-warn-soft:  oklch(94% 0.060 90);
+  --color-focus:      oklch(52% 0.190 32);
+  --color-scrim:      oklch(23% 0.020 45 / .5);
+
+  --font-display: "Hahmlet", "Noto Serif KR", "Batang", serif;
+  --font-body: "IBM Plex Sans KR", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+
+  --text-sm: 0.875rem; --text-base: 1rem; --text-md: 1.125rem; --text-lg: 1.375rem; --text-xl: 1.75rem; --text-2xl: 2.25rem;
+  --text-clock: clamp(3.75rem, 14vw, 6.75rem);
+  --space-3xs: 4px; --space-2xs: 8px; --space-xs: 12px; --space-sm: 16px; --space-md: 24px; --space-lg: 32px; --space-xl: 48px; --space-2xl: 72px;
+  --radius: 3px; --radius-input: 2px;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-short: 160ms;
+  --container: 1080px;
+}
+* { box-sizing: border-box; }
+html, body { overflow-x: clip; }
+html.big { font-size: 125%; }
+body { margin: 0; font-family: var(--font-body); color: var(--color-ink); background: var(--color-paper); font-size: var(--text-base); line-height: 1.6; word-break: keep-all; overflow-wrap: break-word; -webkit-font-smoothing: antialiased; }
+h1, h2, h3, h4 { line-height: 1.25; margin: 0; font-style: normal; }
+button, input, textarea, select { font: inherit; color: inherit; }
+.wrap { max-width: var(--container); margin: 0 auto; padding-inline: max(var(--space-sm), env(safe-area-inset-left)); }
+
+/* 머리 — 작업표 표제 */
+.topbar { border-bottom: 2px solid var(--color-rule-ink); }
+.topbar .wrap { display: flex; align-items: flex-end; gap: var(--space-sm); padding-block: var(--space-md) var(--space-sm); flex-wrap: wrap; }
+.brand { flex: 1 1 260px; min-width: 0; }
+.brand h1 { font-family: var(--font-display); font-weight: 800; font-size: var(--text-xl); letter-spacing: -0.02em; overflow-wrap: anywhere; }
+.brand p { margin: var(--space-3xs) 0 0; font-size: var(--text-sm); color: var(--color-ink-2); }
+.top-actions { display: flex; gap: var(--space-2xs); }
+
+/* 작업 순서 탭 — 밑줄로 현재 단계 표시 */
+.steps-nav { position: sticky; top: 0; z-index: 5; background: var(--color-paper); border-bottom: 1px solid var(--color-rule); }
+.steps-nav .wrap { display: flex; gap: var(--space-md); overflow-x: auto; scrollbar-width: none; }
+.tab { flex: none; min-height: 52px; padding: 0; border: 0; border-bottom: 3px solid transparent; background: none; color: var(--color-ink-2); font-weight: 600; cursor: pointer;
+  white-space: nowrap; display: inline-flex; align-items: center; gap: var(--space-2xs); transition: color var(--dur-short) var(--ease-out); }
+.tab .num { font-family: var(--font-display); font-weight: 800; font-size: var(--text-md); color: var(--color-rule-ink); }
+.tab:hover { color: var(--color-ink); }
+.tab[aria-selected="true"] { color: var(--color-ink); border-bottom-color: var(--color-accent); }
+.tab[aria-selected="true"] .num { color: var(--color-accent-ink); }
+.tab.done .num::after { content: "✓"; font-family: var(--font-body); font-size: var(--text-sm); color: var(--color-ok); margin-left: 2px; }
+
+main { padding: var(--space-lg) 0 var(--space-2xl); }
+.panel { display: none; }
+.panel.active { display: block; }
+.panel-head { margin-bottom: var(--space-md); max-width: 62ch; }
+.panel-head h2 { font-family: var(--font-display); font-size: var(--text-xl); font-weight: 800; letter-spacing: -0.02em; overflow-wrap: anywhere; min-width: 0; }
+.panel-head p { margin: var(--space-2xs) 0 0; color: var(--color-ink-2); }
+.stack > * + * { margin-top: var(--space-md); }
+
+/* 버튼 — 잉크 채움 하나, 나머지는 선 */
+.btn { min-height: 46px; padding: 0 var(--space-md); border: 1.5px solid var(--color-ink); border-radius: var(--radius); background: var(--color-ink); color: var(--color-on-ink);
+  font-size: var(--text-base); font-weight: 700; cursor: pointer; white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2xs);
+  transition: background-color var(--dur-short) var(--ease-out), color var(--dur-short) var(--ease-out), transform 100ms var(--ease-out); }
+.btn:hover { background: var(--color-rule-ink); }
+.btn:active { transform: translateY(1px); }
+.btn:disabled { background: var(--color-paper-2); border-color: var(--color-rule); color: var(--color-ink-2); cursor: not-allowed; transform: none; }
+.btn--ghost, .btn--accent { background: transparent; color: var(--color-ink); }
+.btn--ghost:hover, .btn--accent:hover { background: var(--color-paper-2); }
+.btn--danger { background: transparent; color: var(--color-accent-ink); border-color: var(--color-accent-ink); }
+.btn--danger:hover { background: var(--color-accent-soft); }
+.btn--sm { min-height: 44px; padding: 0 var(--space-sm); font-size: var(--text-sm); }
+.btn--lg { min-height: 56px; padding: 0 var(--space-lg); font-size: var(--text-md); }
+:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 2px; }
+
+/* 카드 = 레시피 카드: 제목 아래 토마토 이중선 */
+.card { background: var(--color-card); border: 1px solid var(--color-rule); border-radius: var(--radius); padding: var(--space-md); }
+.card h3 { font-family: var(--font-display); font-size: var(--text-lg); font-weight: 700; padding-bottom: var(--space-2xs); margin-bottom: var(--space-sm);
+  border-bottom: 3px double var(--color-accent); display: flex; align-items: baseline; gap: var(--space-2xs); flex-wrap: wrap; }
+.input { width: 100%; min-height: 46px; padding: 0 var(--space-sm); border: 1px solid var(--color-rule-ink); border-radius: var(--radius-input); font-size: var(--text-base); background: var(--color-card); }
+textarea.input { padding: var(--space-xs) var(--space-sm); min-height: 96px; resize: vertical; line-height: 1.6; }
+.input:focus { outline: 2px solid var(--color-focus); outline-offset: 0; }
+.input::placeholder { color: var(--color-ink-2); }
+.badge { display: inline-flex; align-items: center; padding: 0 var(--space-2xs); border: 1px solid var(--color-rule-ink); border-radius: var(--radius-input);
+  font-family: var(--font-body); font-size: var(--text-sm); font-weight: 700; color: var(--color-ink); white-space: nowrap; }
+.muted { color: var(--color-ink-2); }
+.small { font-size: var(--text-sm); }
+.row { display: flex; gap: var(--space-xs); flex-wrap: wrap; align-items: center; }
+.row--end { justify-content: flex-end; }
+.field { display: block; min-width: 0; }
+.field > span { display: block; font-weight: 700; margin-bottom: var(--space-2xs); }
+.field small { display: block; color: var(--color-ink-2); margin-top: var(--space-3xs); font-size: var(--text-sm); }
+.empty { padding: var(--space-lg) var(--space-sm); color: var(--color-ink-2); border: 1px dashed var(--color-rule-ink); border-radius: var(--radius); }
+.notice { padding: var(--space-xs) var(--space-sm); border: 1px solid var(--color-warn-ink); border-radius: var(--radius); background: var(--color-warn-soft); color: var(--color-warn-ink); font-weight: 700; display: flex; gap: var(--space-2xs); }
+.mt-4 { margin-top: var(--space-sm); } .mt-6 { margin-top: var(--space-md); }
+
+/* 1. 레시피 — 카드 서랍처럼 한 줄씩 */
+.recipe-grid { display: grid; grid-template-columns: minmax(0, 1fr); border-top: 2px solid var(--color-rule-ink); max-width: 820px; }
+.recipe-card { text-align: left; background: transparent; border: 0; border-bottom: 1px solid var(--color-rule); padding: var(--space-md) var(--space-2xs); cursor: pointer;
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-3xs) var(--space-md); align-items: baseline; transition: background-color var(--dur-short) var(--ease-out); }
+.recipe-card:hover { background: var(--color-paper-2); }
+.recipe-card .name { font-family: var(--font-display); font-size: var(--text-xl); font-weight: 800; letter-spacing: -0.02em; overflow-wrap: anywhere; }
+.recipe-card .desc { grid-column: 1; color: var(--color-ink-2); }
+.recipe-card .meta { grid-column: 2; grid-row: 1 / span 2; align-self: center; text-align: right; font-variant-numeric: tabular-nums; color: var(--color-ink-2); font-size: var(--text-sm); white-space: nowrap; }
+.recipe-card .meta b { display: block; font-size: var(--text-md); color: var(--color-ink); }
+.recipe-card[aria-pressed="true"] { background: var(--color-accent-soft); }
+.recipe-card[aria-pressed="true"] .name { color: var(--color-accent-ink); }
+.recipe-card[aria-pressed="true"] .name::after { content: "고른 요리"; margin-left: var(--space-xs); font-family: var(--font-body); font-size: var(--text-sm); font-weight: 700; letter-spacing: 0;
+  color: var(--color-on-ink); background: var(--color-accent-ink); padding: 2px var(--space-2xs); border-radius: var(--radius-input); vertical-align: middle; }
+
+/* 2. 인원·재료·역할 */
+.grid-2 { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-md); }
+.group-form { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-sm); }
+.group-form .full { grid-column: 1 / -1; }
+.stepper { display: flex; align-items: center; border: 1px solid var(--color-rule-ink); border-radius: var(--radius); width: max-content; }
+.stepper button { width: 56px; height: 56px; border: 0; background: transparent; font-size: var(--text-xl); font-weight: 700; cursor: pointer; color: var(--color-ink); }
+.stepper button:hover { background: var(--color-paper-2); }
+.stepper output { min-width: 96px; text-align: center; font-family: var(--font-display); font-size: var(--text-2xl); font-weight: 800; font-variant-numeric: tabular-nums;
+  border-inline: 1px solid var(--color-rule-ink); line-height: 56px; }
+table.ing { width: 100%; border-collapse: collapse; }
+table.ing th, table.ing td { padding: var(--space-xs) var(--space-3xs); border-bottom: 1px solid var(--color-rule); text-align: left; vertical-align: baseline; }
+table.ing th { font-size: var(--text-sm); color: var(--color-ink-2); font-weight: 600; border-bottom: 1px solid var(--color-rule-ink); }
+table.ing td.num, table.ing th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+table.ing td.scaled { font-weight: 700; font-size: var(--text-md); color: var(--color-accent-ink); }
+table.ing tr:last-child td { border-bottom: 0; }
+.allergy { margin-top: var(--space-sm); }
+.role-list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--color-rule-ink); }
+.role-list li { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: var(--space-sm); align-items: baseline; padding: var(--space-xs) 0; border-bottom: 1px solid var(--color-rule); }
+.role-list .who { font-family: var(--font-display); font-weight: 800; font-size: var(--text-lg); overflow-wrap: anywhere; }
+.role-list .what b { display: block; }
+.role-list .what span { font-size: var(--text-sm); color: var(--color-ink-2); }
+.role-list.shuffling li { animation: settle 220ms var(--ease-out); }
+@keyframes settle { from { opacity: .3; } to { opacity: 1; } }
+#roleBtns { margin-top: var(--space-sm); }
+
+/* 3. 타이머 */
+.timer-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-md); }
+.step-list { list-style: none; margin: 0; padding: 0; border-top: 2px solid var(--color-rule-ink); }
+.step-list button { width: 100%; text-align: left; min-height: 56px; padding: var(--space-xs) var(--space-2xs); border: 0; border-bottom: 1px solid var(--color-rule); background: transparent; cursor: pointer;
+  display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; gap: var(--space-xs); align-items: baseline; }
+.step-list button:hover { background: var(--color-paper-2); }
+.step-list button .n { font-family: var(--font-display); font-weight: 800; font-size: var(--text-lg); color: var(--color-rule-ink); }
+.step-list button .t { font-size: var(--text-sm); word-break: keep-all; }
+.step-list button .m { font-size: var(--text-sm); color: var(--color-ink-2); font-variant-numeric: tabular-nums; }
+.step-list button.current { background: var(--color-accent-soft); }
+.step-list button.current .n { color: var(--color-accent-ink); }
+.step-list button.current .t { font-weight: 700; }
+.step-list button.past .n { color: var(--color-ok); }
+.step-list button.past .t { color: var(--color-ink-2); text-decoration: line-through; text-decoration-color: var(--color-rule-ink); }
+.timer-card { order: -1; }
+.timer-card .step-label { color: var(--color-ink-2); font-weight: 600; font-variant-numeric: tabular-nums; }
+.timer-card .step-text { font-family: var(--font-display); font-size: var(--text-xl); font-weight: 700; margin: var(--space-2xs) 0 var(--space-md); word-break: keep-all; overflow-wrap: anywhere; }
+.clock { font-family: var(--font-body); font-size: var(--text-clock); font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1; letter-spacing: -0.03em; }
+.clock.ended { color: var(--color-accent-ink); }
+.clock-sub { min-height: 1.6em; margin-top: var(--space-2xs); font-weight: 700; color: var(--color-ink-2); }
+.clock-sub.ended { color: var(--color-accent-ink); }
+.bar { height: 8px; background: var(--color-paper-2); border: 1px solid var(--color-rule-ink); margin: var(--space-md) 0; }
+.bar > i { display: block; height: 100%; width: 0; background: var(--color-ink); transition: width 250ms linear; }
+.caution { display: flex; gap: var(--space-xs); align-items: baseline; padding: var(--space-sm); border: 1.5px solid var(--color-accent-ink); border-radius: var(--radius);
+  background: var(--color-accent-soft); color: var(--color-accent-ink); font-weight: 700; margin-bottom: var(--space-md); font-size: var(--text-md); word-break: keep-all; }
+.caution[hidden] { display: none; }
+.caution .ico { flex: none; background: var(--color-accent-ink); color: var(--color-on-ink); font-size: var(--text-sm); padding: 1px var(--space-2xs); border-radius: var(--radius-input); }
+.controls { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-xs); }
+.controls .btn { width: 100%; padding: 0 var(--space-xs); }
+.controls .main-btn { grid-column: 1 / -1; order: -1; }
+.safety-list { margin: 0; padding-left: 1.2em; }
+.safety-list li + li { margin-top: var(--space-2xs); }
+body.flash { animation: flash .5s steps(2) 6; }
+@keyframes flash { 50% { background: var(--color-accent-soft); } }
+
+/* TV 크게 보기 */
+.big-overlay { position: fixed; inset: 0; z-index: 50; background: var(--color-paper); display: none; flex-direction: column; padding: var(--space-md); overflow: auto; }
+.big-overlay.open { display: flex; }
+.big-overlay .bo-top { display: flex; justify-content: space-between; align-items: center; gap: var(--space-sm); flex-wrap: wrap; border-bottom: 2px solid var(--color-rule-ink); padding-bottom: var(--space-sm); }
+.big-overlay .bo-title { font-family: var(--font-display); font-size: clamp(1.25rem, 2.5vw, 2rem); font-weight: 800; }
+.big-overlay .bo-body { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; gap: var(--space-md); padding: var(--space-md) 0; }
+.big-overlay .step-label, .big-overlay .clock-sub { font-size: clamp(1rem, 1.8vw, 1.75rem); font-weight: 700; color: var(--color-ink-2); }
+.big-overlay .clock-sub.ended { color: var(--color-accent-ink); }
+.big-overlay .bo-step { font-family: var(--font-display); font-size: clamp(1.5rem, 4vw, 3.25rem); font-weight: 800; max-width: 1400px; word-break: keep-all; line-height: 1.3; }
+.big-overlay .clock { font-size: clamp(5rem, 22vw, 18rem); }
+.big-overlay .caution { font-size: clamp(1.125rem, 2.6vw, 2.25rem); max-width: 1400px; margin: 0; }
+.big-overlay .caution .ico { font-size: 0.7em; }
+.big-overlay .controls { width: min(760px, 100%); grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.big-overlay.flash { animation: flash .5s steps(2) 6; }
+
+/* 4. 체크리스트 — 종이 점검표 */
+.check-group + .check-group { margin-top: var(--space-lg); }
+.check-group h4 { margin: 0 0 var(--space-2xs); font-family: var(--font-display); font-size: var(--text-md); font-weight: 700; }
+.check { display: flex; gap: var(--space-sm); align-items: center; min-height: 56px; padding: var(--space-2xs) var(--space-2xs); border-bottom: 1px solid var(--color-rule); cursor: pointer; transition: background-color var(--dur-short) var(--ease-out); }
+.check-group h4 + .check { border-top: 1px solid var(--color-rule-ink); }
+.check input { width: 26px; height: 26px; accent-color: var(--color-ok); flex: none; cursor: pointer; margin: 0; }
+.check.on { background: var(--color-ok-soft); }
+.check.on span { color: var(--color-ok); font-weight: 600; }
+.progress-row { display: flex; align-items: center; gap: var(--space-sm); margin-bottom: var(--space-md); }
+.progress-row .bar { flex: 1; margin: 0; }
+.progress-row .bar > i { background: var(--color-ok); }
+.progress-row strong { font-variant-numeric: tabular-nums; white-space: nowrap; font-size: var(--text-md); }
+.complete-box { margin-top: var(--space-lg); }
+.complete-box .done-msg { margin-top: var(--space-sm); padding: var(--space-sm); border: 1.5px solid var(--color-ok); border-radius: var(--radius); background: var(--color-ok-soft); color: var(--color-ok); font-weight: 700; }
+
+/* 5. 기록지 */
+.sheet { background: var(--color-card); border: 1px solid var(--color-rule-ink); border-radius: var(--radius); padding: var(--space-lg) var(--space-md); }
+.sheet h2 { font-family: var(--font-display); text-align: center; font-size: var(--text-xl); font-weight: 800; }
+.sheet .sheet-sub { text-align: center; color: var(--color-ink-2); margin: var(--space-3xs) 0 var(--space-md); }
+.sheet h3 { font-family: var(--font-display); font-size: var(--text-md); font-weight: 700; margin: var(--space-md) 0 var(--space-2xs); padding-bottom: var(--space-3xs); border-bottom: 2px solid var(--color-rule-ink); }
+.sheet table { width: 100%; border-collapse: collapse; font-size: var(--text-sm); }
+.sheet th, .sheet td { border: 1px solid var(--color-rule); padding: var(--space-2xs); text-align: left; vertical-align: top; }
+.sheet th { background: var(--color-paper-2); width: 22%; font-weight: 700; }
+.sheet .cols { columns: 2; column-gap: var(--space-md); font-size: var(--text-sm); }
+.sheet .cols div { break-inside: avoid; }
+.sheet textarea.input { min-height: 80px; }
+.sheet .print-text { display: none; white-space: pre-wrap; }
+.sheet .sign { display: flex; justify-content: flex-end; gap: var(--space-md); margin-top: var(--space-md); font-size: var(--text-sm); flex-wrap: wrap; }
+
+/* 레시피 관리 */
+dialog { border: 1px solid var(--color-rule-ink); border-radius: var(--radius); padding: 0; width: min(760px, calc(100% - 24px)); max-height: calc(100dvh - 24px); background: var(--color-card); color: var(--color-ink); }
+dialog::backdrop { background: var(--color-scrim); }
+.dlg-head { display: flex; justify-content: space-between; align-items: center; gap: var(--space-xs); padding: var(--space-xs) var(--space-xs) var(--space-xs) var(--space-md); border-bottom: 2px solid var(--color-rule-ink); position: sticky; top: 0; background: var(--color-card); z-index: 1; }
+.dlg-head h2 { font-family: var(--font-display); font-size: var(--text-lg); font-weight: 800; }
+.dlg-body { padding: var(--space-md); }
+.manage-list { list-style: none; margin: 0 0 var(--space-md); padding: 0; border-top: 1px solid var(--color-rule-ink); }
+.manage-list li { display: flex; align-items: center; gap: var(--space-xs); padding: var(--space-3xs) 0 var(--space-3xs) var(--space-2xs); border-bottom: 1px solid var(--color-rule); }
+.manage-list li .nm { flex: 1; font-weight: 700; min-width: 0; }
+.icon-btn { min-width: 44px; min-height: 44px; padding: 0 var(--space-xs); border: 0; background: transparent; border-radius: var(--radius); cursor: pointer; font-size: var(--text-sm); font-weight: 700; color: var(--color-ink); white-space: nowrap; }
+.icon-btn:hover { background: var(--color-paper-2); }
+.icon-btn.del { color: var(--color-accent-ink); }
+.form-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-sm); }
+.toast { position: fixed; left: 50%; bottom: max(var(--space-md), env(safe-area-inset-bottom)); transform: translateX(-50%) translateY(12px); background: var(--color-ink); color: var(--color-on-ink); padding: var(--space-xs) var(--space-md);
+  border-radius: var(--radius); font-weight: 600; opacity: 0; pointer-events: none; transition: opacity 200ms var(--ease-out), transform 200ms var(--ease-out); z-index: 100; max-width: calc(100% - 32px); text-align: center; }
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+@media (min-width: 40rem) {
+  .brand h1 { font-size: var(--text-2xl); }
+  .form-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .form-grid .full { grid-column: 1 / -1; }
+  .controls { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr); }
+  .controls .main-btn { grid-column: auto; order: 0; }
+  .big-overlay .controls { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .card { padding: var(--space-md) var(--space-lg); }
+}
+@media (min-width: 60rem) {
+  .grid-2 { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); align-items: start; }
+  .timer-layout { grid-template-columns: minmax(0, 340px) minmax(0, 1fr); align-items: start; }
+  .timer-card { order: 0; }
+  .panel-head h2 { font-size: var(--text-2xl); }
+}
+@media (max-width: 29.9rem) {
+  .top-actions { width: 100%; }
+  .top-actions .btn { flex: 1; padding: 0 var(--space-2xs); }
+  .card { padding: var(--space-sm); }
+  .sheet { padding: var(--space-md) var(--space-sm); }
+  .sheet .cols { columns: 1; }
+  .recipe-card { grid-template-columns: minmax(0, 1fr); }
+  .recipe-card .meta { grid-column: 1; grid-row: auto; text-align: left; }
+  .recipe-card .meta b { display: inline; margin-right: var(--space-2xs); }
+}
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+
+@media print {
+  @page { size: A4; margin: 14mm; }
+  html.big { font-size: 100%; }
+  body { background: var(--color-card); font-size: 11pt; }
+  body > *:not(main), .panel-head, .no-print, .panel:not(#panel-sheet) { display: none !important; }
+  main { padding: 0; }
+  #panel-sheet { display: block !important; }
+  .sheet { border: 0; padding: 0; }
+  .sheet textarea { display: none; }
+  .sheet .print-text { display: block; min-height: 70px; border: 1px solid var(--color-rule); padding: 6px; }
+  .sheet th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .sheet h3 { break-after: avoid; }
+  .sheet table { break-inside: avoid; }
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap">
+    <div class="brand">
+      <h1>조리실습 모둠 도우미</h1>
+      <p>기술·가정 식생활 · 모둠 실습 작업표</p>
+    </div>
+    <div class="top-actions">
+      <button class="btn btn--ghost btn--sm" id="btnManage" type="button">레시피 관리</button>
+      <button class="btn btn--ghost btn--sm" id="btnBig" type="button" aria-pressed="false">글자 크게</button>
+    </div>
+  </div>
+</header>
+
+<nav class="steps-nav" aria-label="실습 단계">
+  <div class="wrap" role="tablist" id="tabs">
+    <button class="tab" role="tab" data-tab="recipe"><span class="num">1</span>레시피</button>
+    <button class="tab" role="tab" data-tab="prep"><span class="num">2</span>재료·역할</button>
+    <button class="tab" role="tab" data-tab="timer"><span class="num">3</span>조리 타이머</button>
+    <button class="tab" role="tab" data-tab="check"><span class="num">4</span>위생·안전 체크</button>
+    <button class="tab" role="tab" data-tab="sheet"><span class="num">5</span>기록지</button>
+  </div>
+</nav>
+
+<main>
+  <div class="wrap">
+
+    <!-- 1. 레시피 -->
+    <section class="panel" id="panel-recipe" role="tabpanel">
+      <div class="panel-head">
+        <h2>오늘 만들 요리</h2>
+        <p>요리를 누르면 재료·역할 단계로 넘어갑니다. 레시피는 [레시피 관리]에서 추가·수정할 수 있어요.</p>
+      </div>
+      <div class="recipe-grid" id="recipeGrid"></div>
+    </section>
+
+    <!-- 2. 재료·역할 -->
+    <section class="panel" id="panel-prep" role="tabpanel">
+      <div class="panel-head">
+        <h2 id="prepTitle">재료 준비와 역할 나누기</h2>
+        <p>모둠 인원을 정하면 재료량이 자동으로 바뀝니다.</p>
+      </div>
+      <div class="grid-2">
+        <div class="stack">
+          <div class="card">
+            <h3>우리 모둠</h3>
+            <div class="group-form">
+              <label class="field"><span>반</span><input class="input" id="inClass" inputmode="text" placeholder="예) 2-3" maxlength="10"></label>
+              <label class="field"><span>모둠 번호</span><input class="input" id="inGroup" type="number" min="1" max="20" placeholder="예) 2"></label>
+              <div class="field full">
+                <span>모둠 인원</span>
+                <div class="stepper">
+                  <button type="button" id="pMinus" aria-label="인원 줄이기">−</button>
+                  <output id="pOut" aria-live="polite">4명</output>
+                  <button type="button" id="pPlus" aria-label="인원 늘리기">+</button>
+                </div>
+              </div>
+              <label class="field full"><span>모둠원 별칭 (선택)</span>
+                <input class="input" id="inNames" placeholder="예) 1번, 2번 또는 별칭을 쉼표로" maxlength="120">
+                <small>실명 대신 번호나 별칭을 쓰세요. 비워 두면 1번, 2번…으로 표시돼요.</small>
+              </label>
+            </div>
+          </div>
+          <div class="card">
+            <h3>재료 <span class="badge" id="ingBadge">4인분</span></h3>
+            <table class="ing">
+              <thead><tr><th>재료</th><th class="num">1인분</th><th class="num" id="ingHead">4인분</th></tr></thead>
+              <tbody id="ingBody"></tbody>
+            </table>
+            <div class="allergy notice" id="allergy" hidden></div>
+          </div>
+        </div>
+        <div class="stack">
+          <div class="card">
+            <h3>역할 나누기</h3>
+            <p class="muted small" id="roleHint">버튼을 누르면 모둠원에게 역할이 무작위로 배정됩니다.</p>
+            <ul class="role-list" id="roleList"></ul>
+            <div class="row" id="roleBtns">
+              <button class="btn btn--accent" id="btnRoll" type="button">역할 뽑기</button>
+            </div>
+          </div>
+          <div class="row row--end"><button class="btn btn--lg" type="button" data-go="timer">조리 시작 →</button></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. 타이머 -->
+    <section class="panel" id="panel-timer" role="tabpanel">
+      <div class="panel-head">
+        <h2 id="timerTitle">조리 타이머</h2>
+        <p>단계마다 권장 시간이 있어요. 시간이 끝나면 소리와 화면 깜빡임으로 알려 줍니다.</p>
+      </div>
+      <div class="timer-layout">
+        <div class="stack">
+          <ol class="step-list" id="stepList" aria-label="조리 단계"></ol>
+          <div class="card">
+            <h3>이 요리의 안전 수칙</h3>
+            <ul class="safety-list" id="safetyList"></ul>
+          </div>
+        </div>
+        <div class="card timer-card" id="timerCard">
+          <div class="step-label" id="tLabel">단계 1 / 6</div>
+          <div class="step-text" id="tText"></div>
+          <div class="clock" id="tClock" role="timer" aria-live="off">00:00</div>
+          <div class="clock-sub" id="tSub" aria-live="polite"></div>
+          <div class="bar" aria-hidden="true"><i id="tBar"></i></div>
+          <div class="caution" id="tCaution" hidden><span class="ico">주의</span><span id="tCautionText"></span></div>
+          <div class="controls">
+            <button class="btn btn--ghost" type="button" data-t="prev">이전</button>
+            <button class="btn btn--lg main-btn" type="button" data-t="toggle">시작</button>
+            <button class="btn btn--ghost" type="button" data-t="next">다음</button>
+          </div>
+          <div class="row row--end mt-4">
+            <button class="btn btn--ghost btn--sm" type="button" data-t="reset">이 단계 다시</button>
+            <button class="btn btn--ghost btn--sm" type="button" id="btnTv">TV 크게 보기</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. 체크리스트 -->
+    <section class="panel" id="panel-check" role="tabpanel">
+      <div class="panel-head">
+        <h2>위생·안전 점검표</h2>
+        <p>모두 체크해야 [실습 완료]를 누를 수 있어요. 위생 담당이 확인하며 체크하세요.</p>
+      </div>
+      <div class="card">
+        <div class="progress-row">
+          <div class="bar" aria-hidden="true"><i id="cBar"></i></div>
+          <strong id="cCount">0 / 0</strong>
+        </div>
+        <div id="checkWrap"></div>
+        <div class="complete-box">
+          <button class="btn btn--lg" id="btnComplete" type="button" disabled>실습 완료</button>
+          <div class="done-msg" id="doneMsg" hidden></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. 기록지 -->
+    <section class="panel" id="panel-sheet" role="tabpanel">
+      <div class="panel-head">
+        <h2>모둠 실습 기록지</h2>
+        <p>소감을 적고 인쇄하세요. 소감 칸을 비워 두면 손으로 쓸 수 있는 빈칸으로 인쇄됩니다.</p>
+      </div>
+      <div class="sheet" id="sheet"></div>
+      <div class="row row--end no-print mt-6">
+        <button class="btn btn--danger" type="button" id="btnNew">새 실습 시작</button>
+        <button class="btn btn--lg" type="button" id="btnPrint">기록지 인쇄</button>
+      </div>
+    </section>
+
+  </div>
+</main>
+
+<!-- TV 크게 보기 -->
+<div class="big-overlay" id="bigOverlay" role="dialog" aria-modal="true" aria-label="타이머 크게 보기">
+  <div class="bo-top">
+    <div class="bo-title" id="boTitle"></div>
+    <button class="btn btn--ghost" type="button" id="boClose">닫기 (Esc)</button>
+  </div>
+  <div class="bo-body">
+    <div class="step-label" id="boLabel"></div>
+    <div class="bo-step" id="boText"></div>
+    <div class="clock" id="boClock">00:00</div>
+    <div class="clock-sub" id="boSub"></div>
+    <div class="caution" id="boCaution" hidden><span class="ico">주의</span><span id="boCautionText"></span></div>
+    <div class="controls">
+      <button class="btn btn--ghost btn--lg" type="button" data-t="prev">이전</button>
+      <button class="btn btn--lg main-btn" type="button" data-t="toggle">시작</button>
+      <button class="btn btn--ghost btn--lg" type="button" data-t="reset">다시</button>
+      <button class="btn btn--ghost btn--lg" type="button" data-t="next">다음</button>
+    </div>
+  </div>
+</div>
+
+<!-- 레시피 관리 -->
+<dialog id="dlgManage" aria-labelledby="dlgManageTitle">
+  <div class="dlg-head">
+    <h2 id="dlgManageTitle">레시피 관리</h2>
+    <button class="icon-btn" type="button" data-close aria-label="닫기">닫기</button>
+  </div>
+  <div class="dlg-body">
+    <div id="manageView">
+      <ul class="manage-list" id="manageList"></ul>
+      <div class="row">
+        <button class="btn" type="button" id="btnAddRecipe">새 레시피</button>
+        <button class="btn btn--ghost" type="button" id="btnExport">JSON 내보내기</button>
+        <button class="btn btn--ghost" type="button" id="btnImport">JSON 불러오기</button>
+        <input type="file" id="fileImport" accept=".json,application/json" class="sr-only">
+        <button class="btn btn--danger" type="button" id="btnResetRecipes">기본값 복원</button>
+      </div>
+      <p class="muted small">레시피는 이 브라우저에만 저장됩니다. 다른 컴퓨터로 옮길 때는 JSON 내보내기 → 불러오기를 쓰세요.</p>
+    </div>
+    <form id="editView" hidden>
+      <input type="hidden" name="emoji">
+      <div class="form-grid">
+        <label class="field full"><span>요리 이름</span><input class="input" name="name" required maxlength="30" placeholder="예) 달걀말이"></label>
+        <label class="field full"><span>한 줄 설명</span><input class="input" name="desc" maxlength="60" placeholder="예) 불 조절과 말기 연습"></label>
+        <label class="field full"><span>재료 (한 줄에 하나: 재료 | 1인분 양 | 단위)</span>
+          <textarea class="input" name="ings" rows="6" placeholder="달걀 | 2 | 개&#10;대파 | 10 | g&#10;소금 |  | 약간"></textarea>
+          <small>양을 비우면 ‘적당량/약간’으로 표시되고 인원 환산을 하지 않아요.</small></label>
+        <label class="field full"><span>조리 단계 (한 줄에 하나: 할 일 | 권장 시간(분) | 안전 주의(선택))</span>
+          <textarea class="input" name="steps" rows="6" placeholder="달걀을 풀고 소금을 넣는다 | 3&#10;팬에 기름을 두르고 약불로 익힌다 | 5 | 팬 손잡이는 안쪽으로"></textarea></label>
+        <label class="field full"><span>안전 수칙 (한 줄에 하나)</span>
+          <textarea class="input" name="safety" rows="3"></textarea></label>
+        <label class="field full"><span>알레르기 확인 재료 (쉼표로)</span><input class="input" name="allergy" maxlength="80" placeholder="예) 달걀, 우유, 밀"></label>
+      </div>
+      <div class="row row--end mt-6">
+        <button class="btn btn--ghost" type="button" id="btnCancelEdit">취소</button>
+        <button class="btn" type="submit">저장</button>
+      </div>
+    </form>
+  </div>
+</dialog>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+/* ===== 설정: 기본 레시피 (양은 1인분 기준) ===== */
+const DEFAULT_RECIPES = [
+  { id: 'kimchi-rice', emoji: '🍳', name: '김치볶음밥', desc: '썰기·볶기 기본기를 한 번에', allergy: '달걀, 돼지고기(햄), 대두, 밀',
+    ings: [['밥', 210, 'g'], ['배추김치', 60, 'g'], ['햄(또는 참치)', 30, 'g'], ['양파', 0.25, '개'], ['대파', 10, 'g'], ['달걀', 1, '개'], ['식용유', 1, '큰술'], ['참기름', 0.5, '작은술'], ['김가루', null, '약간']],
+    steps: [
+      ['손을 씻고 양파·대파를 씻어 준비한다', 3, ''],
+      ['김치·양파·햄은 사방 1cm로, 대파는 송송 썬다', 7, '칼질은 고양이 손! 칼끝은 아래로, 칼을 들고 돌아다니지 않아요'],
+      ['팬에 식용유를 두르고 대파를 볶아 파기름을 낸다', 2, '기름이 튈 수 있어요. 팬 손잡이가 조리대 밖으로 나오지 않게'],
+      ['양파·햄·김치를 넣고 김치가 투명해질 때까지 볶는다', 4, '불 앞을 비우지 말기 — 자리를 뜰 땐 불을 끄고'],
+      ['밥을 넣고 고루 섞어 볶은 뒤 참기름으로 마무리한다', 4, ''],
+      ['달걀프라이를 올리고 김가루를 뿌려 담는다', 4, '다 쓴 화구는 바로 끄고 중간 밸브까지 잠그기']],
+    safety: ['칼은 사용 후 바로 칼꽂이에', '뜨거운 팬은 맨손으로 잡지 않기', '가스 냄새가 나면 즉시 선생님께'] },
+  { id: 'sandwich', emoji: '🥪', name: '달걀 샌드위치', desc: '불 사용이 적은 첫 실습용', allergy: '달걀, 밀, 우유, 돼지고기(햄), 대두, 토마토',
+    ings: [['식빵', 2, '장'], ['달걀', 1, '개'], ['슬라이스 햄', 1, '장'], ['슬라이스 치즈', 1, '장'], ['양상추', 2, '장'], ['토마토', 0.25, '개'], ['오이', 0.25, '개'], ['마요네즈', 1, '큰술'], ['소금·후추', null, '약간']],
+    steps: [
+      ['냄비에 달걀이 잠길 만큼 물을 붓고 12분 삶는다', 12, '끓는 물에 달걀은 국자로 살살 넣기 — 화상 주의'],
+      ['그동안 양상추·토마토·오이를 씻어 물기를 뺀다', 4, ''],
+      ['토마토·오이를 얇게 썬다', 5, '둥근 채소는 반으로 갈라 평평한 면을 도마에 대고 썰기'],
+      ['삶은 달걀을 찬물에 식혀 껍질을 까고 으깬 뒤 마요네즈·소금·후추와 섞는다', 4, ''],
+      ['빵 → 양상추 → 햄·치즈 → 달걀 → 토마토·오이 → 빵 순서로 쌓는다', 4, ''],
+      ['랩으로 감싸 반으로 자르고 접시에 담는다', 3, '빵칼은 톱질하듯 천천히, 손은 칼날 반대쪽에']],
+    safety: ['달걀을 만진 뒤에는 손 씻기', '젖은 손으로 전기 기구 만지지 않기', '마요네즈 넣은 음식은 오래 두지 않기'] },
+  { id: 'tteokbokki', emoji: '🌶️', name: '떡볶이', desc: '양념장 비율과 불 조절 익히기', allergy: '밀, 대두, 생선(어묵), 달걀',
+    ings: [['떡볶이 떡', 150, 'g'], ['어묵', 50, 'g'], ['양배추', 40, 'g'], ['대파', 15, 'g'], ['물', 200, 'ml'], ['고추장', 1, '큰술'], ['고춧가루', 0.5, '큰술'], ['설탕', 0.5, '큰술'], ['간장', 1, '작은술']],
+    steps: [
+      ['떡을 물에 헹궈 불려 둔다', 5, ''],
+      ['어묵은 삼각형, 양배추는 한입 크기, 대파는 어슷 썬다', 6, '칼질은 고양이 손! 도마 밑에 젖은 행주를 깔면 미끄러지지 않아요'],
+      ['고추장·고춧가루·설탕·간장을 섞어 양념장을 만든다', 3, ''],
+      ['냄비에 물과 양념장을 넣고 끓인다', 4, '끓는 국물이 튈 수 있어요 — 얼굴을 냄비 위로 내밀지 않기'],
+      ['떡·어묵을 넣고 저어 가며 중불로 끓인다', 8, '눌어붙지 않게 계속 젓기, 불 앞을 비우지 말기'],
+      ['양배추·대파를 넣고 1~2분 더 끓여 마무리한다', 3, '불 끄기 → 중간 밸브 잠그기 확인']],
+    safety: ['냄비 손잡이는 마른 행주로 잡기', '고춧가루를 만진 손으로 눈 비비지 않기', '국물 맛볼 때는 덜어서 식혀 맛보기'] },
+  { id: 'hwachae', emoji: '🍉', name: '과일화채', desc: '불 없이, 칼 사용과 담음새 연습', allergy: '우유, 키위, 복숭아(사이다 향료 확인)',
+    ings: [['수박', 150, 'g'], ['사과', 0.25, '개'], ['키위', 0.5, '개'], ['사이다', 100, 'ml'], ['우유', 50, 'ml'], ['꿀', 1, '작은술'], ['얼음', null, '적당량']],
+    steps: [
+      ['과일을 흐르는 물에 깨끗이 씻는다', 3, ''],
+      ['수박은 숟가락(스쿱)으로 동그랗게 떠낸다', 6, '수박 껍질·물기는 미끄러워요 — 바닥에 떨어지면 바로 닦기'],
+      ['사과·키위는 껍질을 벗기고 한입 크기로 썬다', 6, '필러·칼은 몸 바깥쪽으로, 손은 칼날 뒤에'],
+      ['사이다·우유·꿀을 섞어 화채 국물을 만든다', 2, ''],
+      ['그릇에 과일을 담고 국물을 붓는다', 2, ''],
+      ['얼음을 띄워 바로 먹는다', 1, '']],
+    safety: ['과일 칼은 사용 후 바로 씻어 칼꽂이에', '깨지기 쉬운 유리그릇은 두 손으로', '알레르기 과일(키위·복숭아 등) 미리 확인'] }
+];
+
+/* 역할: 인원이 적으면 한 사람이 여러 역할, 많으면 '조리 보조'가 추가됨 (앞쪽일수록 먼저 배정) */
+const ROLES = [
+  ['조장', '진행·시간 관리, 타이머 담당'],
+  ['조리', '불·팬 앞에서 볶고 끓이기'],
+  ['재료 손질', '씻기·썰기·계량'],
+  ['위생 담당', '손 씻기·앞치마 확인, 체크리스트 체크'],
+  ['정리 담당', '설거지·조리대·쓰레기 분리배출'],
+  ['기록 담당', '기록지 작성, 사진·소감 정리']
+];
+const EXTRA_ROLE = ['조리 보조', '조리·손질 돕기, 필요한 도구 챙기기'];
+
+const CHECKLIST = [
+  ['실습 전', ['비누로 30초 이상 손 씻기', '앞치마·두건(머리망) 착용', '손톱 정리, 반지·시계 빼기', '조리대·도마·칼 깨끗이 준비']],
+  ['실습 중', ['칼은 고양이 손, 칼끝은 아래로', '날것(고기·달걀)과 익힌 음식 도구 구분', '불 앞을 비우지 않기', '바닥 물기 바로 닦기']],
+  ['실습 후', ['화구 끄고 중간 밸브(전원)까지 잠그기', '설거지 후 그릇·도구 물기 닦아 제자리', '조리대·싱크대 닦기', '음식물·재활용 쓰레기 분리배출']]
+];
+
+/* ===== 저장 ===== */
+const KEY_RECIPES = 'cookingLab.recipes.v1', KEY_STATE = 'cookingLab.state.v1';
+function load(key, fallback) { try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch (e) { return fallback; } }
+function save(key, v) { try { localStorage.setItem(key, JSON.stringify(v)); } catch (e) { toast('저장 공간을 쓸 수 없어 이 창을 닫으면 내용이 사라져요'); } }
+
+let recipes = load(KEY_RECIPES, null) || clone(DEFAULT_RECIPES);
+const blankState = () => ({ tab: 'recipe', recipeId: null, people: 4, cls: '', group: '', names: '', roles: null, step: 0, remain: null, checks: {}, completedAt: null, notes: { good: '', better: '', feel: '' } });
+let st = Object.assign(blankState(), load(KEY_STATE, {}));
+const persist = () => save(KEY_STATE, st);
+
+/* ===== 유틸 ===== */
+function clone(o) { return JSON.parse(JSON.stringify(o)); }
+const $ = (s, el = document) => el.querySelector(s);
+const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+let toastTimer;
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2400); }
+const recipe = () => recipes.find(r => r.id === st.recipeId) || null;
+const COUNT_UNITS = ['개', '장', '알', '쪽', '줄', '큰술', '작은술', '컵', '봉', '모', '송이', '단', '줌'];
+const FRAC = { 0.25: '¼', 0.5: '½', 0.75: '¾' };
+/* 단위는 그대로 두고 반올림만: 개·큰술 등은 ¼ 단위, g·ml은 크기에 따라 0.1 / 1 / 5 단위 */
+function fmtAmount(v, unit) {
+  if (v === null || v === undefined || v === '' || isNaN(v)) return '';
+  if (COUNT_UNITS.includes(unit)) {
+    const q = Math.max(0.25, Math.round(v * 4) / 4), whole = Math.floor(q), f = +(q - whole).toFixed(2);
+    return (whole ? whole : '') + (FRAC[f] || '') || '0';
+  }
+  if (v < 10) return String(Math.round(v * 10) / 10);
+  if (v < 100) return String(Math.round(v));
+  return Math.round(v / 5) * 5 + '';
+}
+const amountText = (v, unit) => { const a = fmtAmount(v, unit); return a ? a + ' ' + unit : unit; };
+const members = () => {
+  const given = st.names.split(/[,，、\n]/).map(s => s.trim()).filter(Boolean);
+  return Array.from({ length: st.people }, (_, i) => given[i] || (i + 1) + '번');
+};
+const mmss = ms => { const s = Math.max(0, Math.ceil(ms / 1000)); return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); };
+
+/* ===== 탭 ===== */
+function goTab(name) {
+  if (name !== 'recipe' && !recipe()) { toast('먼저 요리를 골라 주세요'); name = 'recipe'; }
+  st.tab = name; persist();
+  $$('.tab').forEach(t => t.setAttribute('aria-selected', t.dataset.tab === name));
+  $('.tab[aria-selected="true"]').scrollIntoView({ inline: 'center', block: 'nearest' });
+  $$('.panel').forEach(p => p.classList.toggle('active', p.id === 'panel-' + name));
+  render();
+  window.scrollTo({ top: 0 });
+}
+$('#tabs').addEventListener('click', e => { const t = e.target.closest('.tab'); if (t) goTab(t.dataset.tab); });
+document.addEventListener('click', e => { const g = e.target.closest('[data-go]'); if (g) goTab(g.dataset.go); });
+
+/* ===== 1. 레시피 ===== */
+function renderRecipes() {
+  const g = $('#recipeGrid');
+  if (!recipes.length) { g.innerHTML = '<div class="empty">레시피가 없어요. 위의 [레시피 관리]에서 새 레시피를 추가하세요.</div>'; return; }
+  g.innerHTML = recipes.map(r => {
+    const total = r.steps.reduce((a, s) => a + (+s[1] || 0), 0);
+    return `<button type="button" class="recipe-card" data-id="${esc(r.id)}" aria-pressed="${r.id === st.recipeId}">
+      <span class="name">${esc(r.name)}</span>
+      <span class="desc">${esc(r.desc)}</span>
+      <span class="meta"><b>약 ${total}분</b>${r.steps.length}단계</span>
+    </button>`;
+  }).join('');
+}
+$('#recipeGrid').addEventListener('click', e => {
+  const c = e.target.closest('.recipe-card'); if (!c) return;
+  if (st.recipeId !== c.dataset.id) { st.recipeId = c.dataset.id; st.step = 0; st.remain = null; stopTimer(); }
+  goTab('prep');
+});
+
+/* ===== 2. 재료·역할 ===== */
+function renderPrep() {
+  const r = recipe(); if (!r) return;
+  $('#prepTitle').textContent = `${r.name} — 재료 준비와 역할 나누기`;
+  $('#pOut').textContent = st.people + '명';
+  $('#ingBadge').textContent = $('#ingHead').textContent = st.people + '인분';
+  $('#ingBody').innerHTML = r.ings.map(([n, v, u]) => {
+    const has = v !== null && v !== '' && !isNaN(v);
+    return `<tr><td>${esc(n)}</td><td class="num muted">${has ? esc(amountText(v, u)) : esc(u)}</td><td class="num scaled">${has ? esc(amountText(v * st.people, u)) : esc(u)}</td></tr>`;
+  }).join('');
+  const al = $('#allergy');
+  al.hidden = !r.allergy; al.innerHTML = r.allergy ? `<span>알레르기 확인: ${esc(r.allergy)}</span>` : '';
+  $('#inClass').value = st.cls; $('#inGroup').value = st.group; $('#inNames').value = st.names;
+  renderRoles();
+}
+function renderRoles(anim) {
+  const list = $('#roleList');
+  const stale = st.roles && st.roles.length !== st.people;
+  if (!st.roles || stale) {
+    list.innerHTML = stale ? '<li class="muted">인원이 바뀌었어요. 역할을 다시 뽑아 주세요.</li>' : '';
+    $('#btnRoll').textContent = '역할 뽑기';
+    return;
+  }
+  const names = members();
+  list.innerHTML = st.roles.map((rs, i) => `<li><span class="who">${esc(names[i])}</span><span class="what"><b>${esc(rs.map(r => r[0]).join(' + '))}</b><span>${esc(rs.map(r => r[1]).join(' / '))}</span></span></li>`).join('');
+  $('#btnRoll').textContent = '다시 뽑기';
+  if (anim) { list.classList.remove('shuffling'); void list.offsetWidth; list.classList.add('shuffling'); }
+}
+function rollRoles() {
+  const n = st.people, order = [...Array(n).keys()];
+  for (let i = n - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [order[i], order[j]] = [order[j], order[i]]; }
+  const out = Array.from({ length: n }, () => []);
+  ROLES.forEach((role, k) => out[order[k % n]].push(role));          // 적은 인원: 여러 역할을 돌아가며
+  for (let k = ROLES.length; k < n; k++) out[order[k]].push(EXTRA_ROLE); // 많은 인원: 조리 보조
+  st.roles = out; persist(); renderRoles(true);
+}
+$('#btnRoll').addEventListener('click', rollRoles);
+function setPeople(n) { st.people = Math.min(12, Math.max(1, n)); persist(); renderPrep(); }
+$('#pMinus').addEventListener('click', () => setPeople(st.people - 1));
+$('#pPlus').addEventListener('click', () => setPeople(st.people + 1));
+$('#inClass').addEventListener('input', e => { st.cls = e.target.value; persist(); });
+$('#inGroup').addEventListener('input', e => { st.group = e.target.value; persist(); });
+$('#inNames').addEventListener('input', e => { st.names = e.target.value; persist(); renderRoles(); });
+
+/* ===== 3. 타이머 ===== */
+let running = false, endAt = 0, tick = null, audioCtx = null, ended = false;
+const stepMs = i => (+(recipe().steps[i] || [])[1] || 0) * 60000;
+function remain() { return running ? endAt - Date.now() : (st.remain ?? stepMs(st.step)); }
+function startTimer() {
+  try { audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)(); audioCtx.resume(); } catch (e) { /* 소리 없이 진행 */ }
+  if (remain() <= 0) st.remain = stepMs(st.step);
+  endAt = Date.now() + remain(); ended = false; running = true;
+  tick = setInterval(onTick, 250); renderTimer();
+}
+function stopTimer() { if (running) { st.remain = Math.max(0, endAt - Date.now()); persist(); } running = false; clearInterval(tick); }
+function onTick() {
+  if (endAt - Date.now() <= 0) { stopTimer(); st.remain = 0; persist(); ended = true; alarm(); }
+  renderTimer();
+}
+function gotoStep(i) {
+  const r = recipe(); stopTimer(); ended = false;
+  st.step = Math.max(0, Math.min(r.steps.length - 1, i)); st.remain = null; persist(); renderTimer();
+}
+function alarm() {
+  try {
+    if (audioCtx) {
+      const t0 = audioCtx.currentTime;
+      for (let k = 0; k < 3; k++) {
+        const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+        o.type = 'square'; o.frequency.value = 880; o.connect(g); g.connect(audioCtx.destination);
+        g.gain.setValueAtTime(0.0001, t0 + k * 0.5); g.gain.exponentialRampToValueAtTime(0.25, t0 + k * 0.5 + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t0 + k * 0.5 + 0.35);
+        o.start(t0 + k * 0.5); o.stop(t0 + k * 0.5 + 0.4);
+      }
+    }
+  } catch (e) { /* 소리 실패 시 화면 깜빡임만 */ }
+  [document.body, $('#bigOverlay')].forEach(el => { el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); });
+  if (navigator.vibrate) navigator.vibrate([300, 150, 300]);
+}
+function renderTimer() {
+  const r = recipe(); if (!r || !r.steps.length) return;
+  const [text, min, caution] = r.steps[st.step];
+  const total = stepMs(st.step), left = remain(), last = st.step === r.steps.length - 1;
+  const label = `단계 ${st.step + 1} / ${r.steps.length} · 권장 ${min}분`;
+  const sub = ended ? (last ? '시간 끝! 마지막 단계예요 — 위생 체크로 가세요' : '시간 끝! [다음]을 누르세요') : running ? '진행 중' : (left < total ? '일시정지됨' : '');
+  const toggleLabel = running ? '일시정지' : (left < total && left > 0 ? '계속' : '시작');
+  $('#timerTitle').textContent = `${r.name} 조리 타이머`;
+  $('#tLabel').textContent = $('#boLabel').textContent = label;
+  $('#tText').textContent = $('#boText').textContent = text;
+  $('#boTitle').textContent = r.name + (st.group ? ` · ${st.group}모둠` : '');
+  [['#tClock', '#tSub'], ['#boClock', '#boSub']].forEach(([c, s]) => {
+    $(c).textContent = mmss(left); $(c).classList.toggle('ended', ended);
+    $(s).textContent = sub; $(s).classList.toggle('ended', ended);
+  });
+  $('#tBar').style.width = (total ? Math.min(100, (1 - left / total) * 100) : 0) + '%';
+  [['#tCaution', '#tCautionText'], ['#boCaution', '#boCautionText']].forEach(([b, t]) => { $(b).hidden = !caution; $(t).textContent = caution || ''; });
+  $$('[data-t="toggle"]').forEach(b => { b.textContent = toggleLabel; });
+  $$('[data-t="prev"]').forEach(b => { b.disabled = st.step === 0; });
+  $$('[data-t="next"]').forEach(b => { b.textContent = last ? '위생 체크로' : '다음'; });
+  $('#stepList').innerHTML = r.steps.map((s, i) => `<li><button type="button" data-step="${i}" class="${i === st.step ? 'current' : i < st.step ? 'past' : ''}" ${i === st.step ? 'aria-current="step"' : ''}>
+    <span class="n">${i < st.step ? '✓' : i + 1}</span><span class="t">${esc(s[0])}</span><span class="m">${esc(s[1])}분</span></button></li>`).join('');
+  $('#safetyList').innerHTML = (r.safety || []).map(s => `<li>${esc(s)}</li>`).join('') || '<li class="muted">등록된 안전 수칙이 없어요.</li>';
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-t]'); if (!b) return;
+  const a = b.dataset.t, r = recipe();
+  if (a === 'toggle') running ? (stopTimer(), renderTimer()) : startTimer();
+  if (a === 'reset') gotoStep(st.step);
+  if (a === 'prev') gotoStep(st.step - 1);
+  if (a === 'next') { if (st.step >= r.steps.length - 1) { stopTimer(); closeBig(); goTab('check'); } else gotoStep(st.step + 1); }
+});
+$('#stepList').addEventListener('click', e => { const b = e.target.closest('[data-step]'); if (b) gotoStep(+b.dataset.step); });
+function closeBig() { $('#bigOverlay').classList.remove('open'); try { if (document.fullscreenElement) document.exitFullscreen(); } catch (e) {} }
+$('#btnTv').addEventListener('click', () => {
+  $('#bigOverlay').classList.add('open'); renderTimer();
+  try { const p = document.documentElement.requestFullscreen?.(); p && p.catch(() => {}); } catch (e) {}
+});
+$('#boClose').addEventListener('click', closeBig);
+document.addEventListener('keydown', e => {
+  if (!$('#bigOverlay').classList.contains('open')) return;
+  if (e.key === 'Escape') closeBig();
+  if (e.key === ' ') { e.preventDefault(); running ? (stopTimer(), renderTimer()) : startTimer(); }
+});
+
+/* ===== 4. 체크리스트 ===== */
+const allItems = () => CHECKLIST.flatMap(([, items]) => items);
+function renderChecks() {
+  $('#checkWrap').innerHTML = CHECKLIST.map(([g, items]) => `<div class="check-group"><h4>${esc(g)}</h4>${items.map(it =>
+    `<label class="check ${st.checks[it] ? 'on' : ''}"><input type="checkbox" data-item="${esc(it)}" ${st.checks[it] ? 'checked' : ''}><span>${esc(it)}</span></label>`).join('')}</div>`).join('');
+  updateCheckProgress();
+}
+function updateCheckProgress() {
+  const all = allItems(), n = all.filter(i => st.checks[i]).length;
+  $('#cCount').textContent = `${n} / ${all.length}`;
+  $('#cBar').style.width = (n / all.length * 100) + '%';
+  $('#btnComplete').disabled = n < all.length || !!st.completedAt;
+  $('#btnComplete').textContent = st.completedAt ? '완료됨' : n < all.length ? `실습 완료 (${all.length - n}개 남음)` : '실습 완료';
+  const m = $('#doneMsg'); m.hidden = !st.completedAt;
+  if (st.completedAt) m.textContent = `수고했어요! ${new Date(st.completedAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })} 실습 완료 — 기록지 탭에서 소감을 적어 인쇄하세요.`;
+}
+$('#checkWrap').addEventListener('change', e => {
+  const it = e.target.dataset.item; if (!it) return;
+  st.checks[it] = e.target.checked;
+  if (!e.target.checked) st.completedAt = null;
+  e.target.closest('.check').classList.toggle('on', e.target.checked);
+  persist(); updateCheckProgress();
+});
+$('#btnComplete').addEventListener('click', () => { st.completedAt = Date.now(); persist(); updateCheckProgress(); toast('실습 완료! 기록지로 이동해요'); setTimeout(() => goTab('sheet'), 900); });
+
+/* ===== 5. 기록지 ===== */
+function renderSheet() {
+  const r = recipe(); if (!r) return;
+  const names = members(), all = allItems(), done = all.filter(i => st.checks[i]);
+  const date = new Date(st.completedAt || Date.now()).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' });
+  const roleRows = st.roles && st.roles.length === st.people
+    ? st.roles.map((rs, i) => `<tr><th>${esc(names[i])}</th><td>${esc(rs.map(x => x[0]).join(', '))}</td></tr>`).join('')
+    : names.map(n => `<tr><th>${esc(n)}</th><td></td></tr>`).join('');
+  const note = (key, label, ph) => `<tr><th>${label}</th><td><textarea class="input no-print-input" data-note="${key}" placeholder="${ph}">${esc(st.notes[key])}</textarea><div class="print-text">${esc(st.notes[key])}</div></td></tr>`;
+  $('#sheet').innerHTML = `
+    <h2>조리실습 모둠 기록지</h2>
+    <p class="sheet-sub">${esc(r.name)} · ${date}</p>
+    <table>
+      <tr><th>반 / 모둠</th><td>${esc(st.cls || '　　')} 반 · ${esc(st.group || '　')} 모둠</td></tr>
+      <tr><th>인원</th><td>${st.people}명 (${esc(names.join(', '))})</td></tr>
+      <tr><th>실습 완료</th><td>${st.completedAt ? '완료 ' + new Date(st.completedAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }) : '미완료'}</td></tr>
+    </table>
+    <h3>재료 (${st.people}인분)</h3>
+    <div class="cols">${r.ings.map(([n, v, u]) => `<div>• ${esc(n)} — ${esc(v !== null && v !== '' && !isNaN(v) ? amountText(v * st.people, u) : u)}</div>`).join('')}</div>
+    <h3>역할</h3>
+    <table>${roleRows}</table>
+    <h3>위생·안전 체크 (${done.length} / ${all.length})</h3>
+    <div class="cols">${all.map(i => `<div>${st.checks[i] ? '☑' : '☐'} ${esc(i)}</div>`).join('')}</div>
+    <h3>소감</h3>
+    <table>
+      ${note('good', '잘한 점', '예) 역할을 나눠서 시간 안에 끝냈다')}
+      ${note('better', '아쉬운 점·고칠 점', '예) 양파를 너무 크게 썰었다')}
+      ${note('feel', '느낀 점', '예) 집에서도 가족에게 만들어 주고 싶다')}
+    </table>
+    <div class="sign"><span>모둠장 확인: ________</span><span>선생님 확인: ________</span></div>`;
+}
+$('#sheet').addEventListener('input', e => {
+  const k = e.target.dataset.note; if (!k) return;
+  st.notes[k] = e.target.value; e.target.nextElementSibling.textContent = e.target.value; persist();
+});
+$('#btnPrint').addEventListener('click', () => window.print());
+$('#btnNew').addEventListener('click', () => {
+  if (!confirm('지금 기록(인원·역할·체크·소감)을 지우고 새 실습을 시작할까요?\n인쇄하지 않았다면 먼저 인쇄하세요.')) return;
+  stopTimer(); const keep = { cls: st.cls, people: st.people }; st = Object.assign(blankState(), keep); persist(); goTab('recipe');
+});
+
+/* ===== 레시피 관리 ===== */
+const dlg = $('#dlgManage'); let editingId = null;
+function renderManage() {
+  $('#manageView').hidden = false; $('#editView').hidden = true;
+  $('#manageList').innerHTML = recipes.map(r => `<li><span class="nm">${esc(r.name)}</span>
+    <button class="icon-btn" type="button" data-edit="${esc(r.id)}" aria-label="${esc(r.name)} 편집">편집</button>
+    <button class="icon-btn del" type="button" data-del="${esc(r.id)}" aria-label="${esc(r.name)} 삭제">삭제</button></li>`).join('') || '<li class="muted">레시피가 없어요.</li>';
+}
+function openEdit(id) {
+  editingId = id; const r = recipes.find(x => x.id === id) || { name: '', emoji: '🍽️', desc: '', ings: [], steps: [], safety: [], allergy: '' };
+  const f = $('#editView');
+  f.name.value = r.name; f.emoji.value = r.emoji; f.desc.value = r.desc; f.allergy.value = r.allergy || '';
+  f.ings.value = r.ings.map(([n, v, u]) => `${n} | ${v ?? ''} | ${u}`).join('\n');
+  f.steps.value = r.steps.map(([t, m, c]) => [t, m, c].filter((x, i) => i < 2 || x).join(' | ')).join('\n');
+  f.safety.value = (r.safety || []).join('\n');
+  $('#manageView').hidden = true; f.hidden = false; f.name.focus();
+}
+const lines = s => s.split('\n').map(l => l.trim()).filter(Boolean);
+$('#editView').addEventListener('submit', e => {
+  e.preventDefault(); const f = e.target;
+  const ings = lines(f.ings.value).map(l => { const [n, v, u] = l.split('|').map(x => (x || '').trim()); const num = parseFloat(v); return [n, isNaN(num) ? null : num, u || (isNaN(num) ? '적당량' : '')]; }).filter(x => x[0]);
+  const steps = lines(f.steps.value).map(l => { const [t, m, c] = l.split('|').map(x => (x || '').trim()); return [t, Math.max(0.5, parseFloat(m) || 3), c || '']; }).filter(x => x[0]);
+  if (!steps.length) { toast('조리 단계를 한 줄 이상 적어 주세요'); f.steps.focus(); return; }
+  const data = { id: editingId || 'r' + Date.now().toString(36), name: f.name.value.trim(), emoji: f.emoji.value.trim() || '🍽️', desc: f.desc.value.trim(), allergy: f.allergy.value.trim(), ings, steps, safety: lines(f.safety.value) };
+  const i = recipes.findIndex(x => x.id === data.id);
+  i >= 0 ? recipes[i] = data : recipes.push(data);
+  if (data.id === st.recipeId && st.step >= steps.length) { st.step = 0; st.remain = null; }
+  save(KEY_RECIPES, recipes); renderManage(); render(); toast('레시피를 저장했어요');
+});
+$('#btnCancelEdit').addEventListener('click', renderManage);
+$('#btnManage').addEventListener('click', () => { renderManage(); dlg.showModal(); });
+dlg.addEventListener('click', e => {
+  if (e.target === dlg || e.target.closest('[data-close]')) dlg.close();
+  const ed = e.target.closest('[data-edit]'); if (ed) openEdit(ed.dataset.edit);
+  const del = e.target.closest('[data-del]');
+  if (del) {
+    const r = recipes.find(x => x.id === del.dataset.del);
+    if (!confirm(`‘${r.name}’ 레시피를 삭제할까요?`)) return;
+    recipes = recipes.filter(x => x !== r); save(KEY_RECIPES, recipes);
+    if (st.recipeId === r.id) { st.recipeId = null; persist(); }
+    renderManage(); render();
+  }
+});
+$('#btnAddRecipe').addEventListener('click', () => openEdit(null));
+$('#btnExport').addEventListener('click', () => {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(recipes, null, 2)], { type: 'application/json' }));
+  a.download = '조리실습_레시피.json'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+});
+$('#btnImport').addEventListener('click', () => $('#fileImport').click());
+$('#fileImport').addEventListener('change', async e => {
+  const file = e.target.files[0]; e.target.value = ''; if (!file) return;
+  try {
+    const data = JSON.parse(await file.text());
+    if (!Array.isArray(data) || !data.every(r => r && r.name && Array.isArray(r.ings) && Array.isArray(r.steps))) throw new Error('형식');
+    if (!confirm(`레시피 ${data.length}개를 불러와 지금 목록을 바꿀까요?`)) return;
+    recipes = data.map(r => Object.assign({ id: 'r' + Math.random().toString(36).slice(2, 8), emoji: '🍽️', desc: '', safety: [], allergy: '' }, r));
+    if (!recipes.some(r => r.id === st.recipeId)) { st.recipeId = null; persist(); }
+    save(KEY_RECIPES, recipes); renderManage(); render(); toast('레시피를 불러왔어요');
+  } catch (err) { toast('이 파일은 레시피 JSON이 아니에요. [JSON 내보내기]로 만든 파일을 고르세요'); }
+});
+$('#btnResetRecipes').addEventListener('click', () => {
+  if (!confirm('직접 추가·수정한 레시피가 모두 사라지고 기본 4개로 돌아갑니다. 계속할까요?')) return;
+  recipes = clone(DEFAULT_RECIPES); save(KEY_RECIPES, recipes);
+  if (!recipe()) { st.recipeId = null; persist(); }
+  renderManage(); render(); toast('기본 레시피로 되돌렸어요');
+});
+
+/* ===== 글자 크게 ===== */
+function setBig(on) { document.documentElement.classList.toggle('big', on); $('#btnBig').setAttribute('aria-pressed', on); $('#btnBig').textContent = on ? '글자 보통' : '글자 크게'; save('cookingLab.big', on); }
+$('#btnBig').addEventListener('click', () => setBig(!document.documentElement.classList.contains('big')));
+
+/* ===== 그리기 ===== */
+function render() {
+  const has = !!recipe();
+  $$('.tab').forEach(t => { const k = t.dataset.tab; t.classList.toggle('done', (k === 'recipe' && has) || (k === 'prep' && has && !!st.roles) || (k === 'check' && !!st.completedAt)); });
+  renderRecipes();
+  if (!has) return;
+  if (st.tab === 'prep') renderPrep();
+  if (st.tab === 'timer') renderTimer();
+  if (st.tab === 'check') renderChecks();
+  if (st.tab === 'sheet') renderSheet();
+}
+window.addEventListener('beforeprint', () => { if (recipe()) renderSheet(); });
+setBig(load('cookingLab.big', false));
+goTab(recipe() ? st.tab : 'recipe');
+</script>
+</body>
+</html>
