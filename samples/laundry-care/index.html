@@ -1,0 +1,658 @@
+<!--
+  무엇을 하는 앱: 섬유제품 취급표시(세탁 기호)를 그림으로 찾아보고, 내 옷 라벨을 조합해 세탁 방법 문장으로 풀어 주며, 상황 판단 퀴즈·섬유별 관리 팁·얼룩 제거 기본을 담은 옷 관리 도우미
+  수업 장면: 의생활(의복 관리) — 기호 사전으로 익히기 → 집에서 찍어 온 내 옷 라벨을 조합·해독 → 상황 퀴즈(판단+이유)로 확인 → 활동지(라벨 3개 해독) 인쇄
+  설정 바꾸는 곳: 아래 <script> 맨 위 CONFIG (기호 목록·설명 문장, 퀴즈 문제, 섬유 팁, 얼룩 가이드). 기호는 교과서 취급표시 표와 대조 후 사용
+-->
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>세탁 기호 해독 &amp; 옷 관리 도우미</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gugi&family=Stylish&display=swap">
+<style>
+/* Hallmark · pre-emit critique: P4 H4 E4 S5 R4 V4
+ * Hallmark · genre: editorial(utilitarian) · theme: custom (care label — 옷 안쪽에 꿰매 붙인 취급표시 라벨) · macrostructure: catalogue / workbench tabs
+ * axes: light paper · display-heavy(Gugi) · cool accent(indigo thread) · body: Stylish
+ * contrast: ink on paper ≈ 14:1, muted ≈ 7:1, stop-red ≈ 5.6:1, accent ≈ 7:1 (AA)
+ */
+:root {
+  /* 세탁실 벽(차가운 회청) + 라벨 천(따뜻한 흰 공단) */
+  --color-paper:       oklch(95.2% 0.012 240);
+  --color-paper-2:     oklch(91.5% 0.016 240);
+  --color-label:       oklch(98.6% 0.007 95);
+  --color-label-edge:  oklch(88% 0.018 95);
+  --color-rule:        oklch(80% 0.020 245);
+  --color-rule-strong: oklch(48% 0.030 250);
+  --color-ink:         oklch(22% 0.025 258);
+  --color-ink-2:       oklch(33% 0.030 258);
+  --color-muted:       oklch(44% 0.022 252);
+  --color-on-ink:      oklch(97.5% 0.008 95);
+  --color-accent:      oklch(44% 0.140 262);   /* 라벨 박음질 실 — 남색 */
+  --color-accent-soft: oklch(91% 0.040 262);
+  --color-stop:        oklch(49% 0.180 27);    /* 금지(X) */
+  --color-stop-soft:   oklch(94% 0.030 27);
+  --color-ok:          oklch(44% 0.110 155);
+  --color-ok-soft:     oklch(94% 0.035 155);
+  --color-focus:       oklch(55% 0.170 262);
+
+  --font-display: "Gugi", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+  --font-body:    "Stylish", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+  --font-sym:     Arial, "Helvetica Neue", sans-serif;  /* 기호 안 숫자·글자(라벨 인쇄체) */
+
+  --text-xs: 0.875rem; --text-sm: 1rem; --text-base: 1.125rem; --text-md: 1.3rem;
+  --text-lg: 1.6rem; --text-xl: clamp(1.75rem, 3vw + 0.9rem, 2.75rem);
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
+  --space-6: 24px; --space-8: 32px; --space-12: 48px;
+  --container: 70rem;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-short: 160ms;
+}
+* { box-sizing: border-box; }
+html, body { overflow-x: clip; }
+body { margin: 0; font-family: var(--font-body); font-size: var(--text-base); line-height: 1.6; color: var(--color-ink); background: var(--color-paper); -webkit-font-smoothing: antialiased; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 400; font-style: normal; line-height: 1.2; margin: 0; overflow-wrap: anywhere; min-width: 0; letter-spacing: -0.01em; }
+button, input, select, textarea { font: inherit; color: inherit; }
+p { margin: 0; }
+.wrap { max-width: var(--container); margin: 0 auto; padding-inline: clamp(1rem, 4vw, 2rem); }
+.hidden { display: none !important; }
+:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 2px; }
+.num { font-variant-numeric: tabular-nums; }
+.muted { color: var(--color-muted); }
+
+/* 머리: 라벨 한 장 — 꿰맨 자국 + 접힌 위쪽 단 */
+.mast { padding-top: var(--space-8); padding-bottom: var(--space-6); }
+.mast-tag { background: var(--color-label); border: 1px solid var(--color-label-edge); position: relative; padding: var(--space-6) var(--space-6) var(--space-4); }
+.mast-tag::before { content: ""; position: absolute; inset: 7px; border: 1.5px dashed var(--color-accent); pointer-events: none; }
+.mast-tag h1 { font-size: var(--text-xl); }
+.mast-tag p { margin-top: var(--space-2); color: var(--color-muted); max-width: 46em; }
+.mast-strip { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); margin-top: var(--space-4); padding-top: var(--space-3); border-top: 1px solid var(--color-label-edge); }
+.mast-strip svg { width: 34px; height: 38px; color: var(--color-ink); }
+.mast-tag p.notice { max-width: none; }
+.notice { margin-top: var(--space-3); font-size: var(--text-sm); color: var(--color-ink-2); }
+.notice b { color: var(--color-stop); font-weight: 400; }
+
+/* 탭 */
+.tabs { position: sticky; top: 0; z-index: 5; background: var(--color-paper); border-bottom: 2px solid var(--color-ink); }
+.tabs .wrap { display: flex; overflow-x: auto; scrollbar-width: none; }
+.tab { flex: 1 0 auto; min-height: 48px; padding: 0 var(--space-4); border: 0; background: transparent; color: var(--color-muted); cursor: pointer; white-space: nowrap; font-size: var(--text-base); border-bottom: 4px solid transparent; margin-bottom: -2px; transition: color var(--dur-short) var(--ease-out); }
+.tab:hover { color: var(--color-ink); }
+.tab[aria-selected="true"] { color: var(--color-ink); border-bottom-color: var(--color-accent); }
+
+main { padding-block: var(--space-8) var(--space-12); }
+.panel h2 { font-size: var(--text-lg); margin-bottom: var(--space-2); }
+.panel > .lead { color: var(--color-muted); margin-bottom: var(--space-6); max-width: 46em; }
+h3 { font-size: var(--text-md); }
+
+/* 버튼 */
+.btn { min-height: 44px; padding: 0 var(--space-6); border: 1.5px solid var(--color-ink); border-radius: 0; background: var(--color-ink); color: var(--color-on-ink); cursor: pointer; white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); font-size: var(--text-base);
+  transition: background-color var(--dur-short) var(--ease-out), color var(--dur-short) var(--ease-out); }
+.btn:hover { background: var(--color-ink-2); }
+.btn:active { transform: translateY(1px); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn--ghost { background: transparent; color: var(--color-ink); }
+.btn--ghost:hover { background: var(--color-paper-2); }
+.row { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
+
+/* 기호 공통 */
+.sym { width: 48px; height: 52px; color: var(--color-ink); flex: none; }
+.sym .x { stroke: var(--color-stop); }
+.sym text { font-family: var(--font-sym); }
+
+/* 사전: 범주별 표 (취급표시 표 서식) */
+.dict-filter { display: flex; flex-wrap: wrap; gap: 0; border: 1.5px solid var(--color-ink); margin-bottom: var(--space-6); width: fit-content; max-width: 100%; }
+.dict-filter button { min-height: 40px; padding: 0 var(--space-3); border: 0; border-right: 1px solid var(--color-rule); background: transparent; cursor: pointer; white-space: nowrap; }
+.dict-filter button:last-child { border-right: 0; }
+.dict-filter button[aria-pressed="true"] { background: var(--color-ink); color: var(--color-on-ink); }
+.cat { margin-bottom: var(--space-8); }
+.cat-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-2) var(--space-4); border-bottom: 2px solid var(--color-ink); padding-bottom: var(--space-1); }
+.cat-head p { color: var(--color-muted); font-size: var(--text-sm); }
+.entry { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: var(--space-4); padding: var(--space-3) 0; border-bottom: 1px solid var(--color-rule); align-items: start; }
+.entry .sym { width: 56px; height: 60px; background: var(--color-label); border: 1px solid var(--color-label-edge); padding: 4px; }
+.entry b { font-weight: 400; font-size: var(--text-md); display: block; line-height: 1.3; }
+.entry .why { color: var(--color-muted); font-size: var(--text-sm); }
+@media (min-width: 48rem) {
+  .cat-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: var(--space-8); }
+}
+
+/* 라벨 해독 */
+.builder { display: grid; gap: var(--space-8); }
+@media (min-width: 62rem) { .builder { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); align-items: start; } .out { position: sticky; top: 64px; } }
+.pick { border: 0; margin: 0 0 var(--space-4); padding: 0; min-width: 0; }
+.pick legend { font-family: var(--font-display); font-size: var(--text-base); padding: 0; margin-bottom: var(--space-2); }
+.opts { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.opt { position: relative; }
+.opt input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.opt label { display: grid; place-items: center; width: 64px; min-height: 64px; border: 1.5px solid var(--color-rule); background: var(--color-label); cursor: pointer; padding: 2px; transition: border-color var(--dur-short) var(--ease-out); }
+.opt label .sym { width: 44px; height: 48px; }
+.opt label.none { font-size: var(--text-xs); color: var(--color-muted); text-align: center; line-height: 1.2; }
+.opt label:hover { border-color: var(--color-ink-2); }
+.opt input:checked + label { border: 3px solid var(--color-accent); background: var(--color-accent-soft); }
+.opt input:focus-visible + label { outline: 3px solid var(--color-focus); outline-offset: 2px; }
+.field { display: grid; gap: var(--space-1); margin-bottom: var(--space-4); }
+.field label { font-size: var(--text-sm); color: var(--color-muted); }
+.input { min-height: 44px; border: 1.5px solid var(--color-rule-strong); border-radius: 0; background: var(--color-label); padding: 0 var(--space-3); width: 100%; }
+.two { display: grid; gap: var(--space-4); }
+@media (min-width: 30rem) { .two { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* 출력 라벨: 실제 옷 라벨 모양 */
+.tag { background: var(--color-label); border: 1px solid var(--color-label-edge); position: relative; padding: var(--space-6) var(--space-6) var(--space-4); }
+.tag::before { content: ""; position: absolute; inset: 6px; border: 1.5px dashed var(--color-accent); pointer-events: none; }
+.tag-title { font-family: var(--font-display); font-size: var(--text-md); }
+.tag-fiber { color: var(--color-muted); font-size: var(--text-sm); }
+.tag-syms { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: var(--space-3) 0; min-height: 52px; }
+.tag ol { margin: var(--space-2) 0 0; padding-left: 1.4em; }
+.tag li { margin-bottom: var(--space-1); }
+.tag li.stop { color: var(--color-stop); }
+.tag .tip { margin-top: var(--space-3); padding-top: var(--space-2); border-top: 1px solid var(--color-label-edge); font-size: var(--text-sm); color: var(--color-ink-2); }
+.saved { margin-top: var(--space-6); }
+.saved h3 { font-size: var(--text-base); margin-bottom: var(--space-2); }
+.saved ul { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--color-rule); }
+.saved li { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) 0; border-bottom: 1px solid var(--color-rule); min-width: 0; }
+.saved li .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.saved li .mini { display: flex; gap: 2px; }
+.saved li .mini .sym { width: 22px; height: 24px; }
+.linkbtn { background: none; border: 0; padding: 0 var(--space-2); min-height: 44px; cursor: pointer; color: var(--color-accent); white-space: nowrap; text-decoration: underline; text-underline-offset: 3px; }
+.linkbtn.del { color: var(--color-stop); }
+
+/* 퀴즈 */
+.quiz { max-width: 46rem; }
+.qbar { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 2px solid var(--color-ink); padding-bottom: var(--space-1); margin-bottom: var(--space-4); gap: var(--space-4); }
+.qbar .num { font-family: var(--font-display); }
+.scene { font-size: var(--text-md); line-height: 1.45; margin: var(--space-4) 0 var(--space-2); }
+.step { border: 0; padding: 0; margin: var(--space-4) 0 0; min-width: 0; }
+.step legend { font-family: var(--font-display); padding: 0; margin-bottom: var(--space-2); }
+.choice { display: flex; gap: var(--space-3); align-items: flex-start; padding: var(--space-3); border: 1.5px solid var(--color-rule); background: var(--color-label); margin-bottom: -1.5px; cursor: pointer; }
+.choice input { margin-top: 0.3em; width: 18px; height: 18px; accent-color: var(--color-accent); flex: none; }
+.choice:has(input:checked) { border-color: var(--color-accent); position: relative; z-index: 1; }
+.choice.right { border-color: var(--color-ok); background: var(--color-ok-soft); position: relative; z-index: 1; }
+.choice.wrong { border-color: var(--color-stop); background: var(--color-stop-soft); position: relative; z-index: 1; }
+.feedback { margin-top: var(--space-4); padding: var(--space-4); border: 1.5px solid var(--color-ink); background: var(--color-label); }
+.feedback .verdict { font-family: var(--font-display); font-size: var(--text-md); }
+.feedback .verdict.ok { color: var(--color-ok); }
+.feedback .verdict.no { color: var(--color-stop); }
+.result-score { font-family: var(--font-display); font-size: var(--text-xl); }
+.review { list-style: none; padding: 0; margin: var(--space-4) 0; border-top: 1px solid var(--color-rule); }
+.review li { padding: var(--space-3) 0; border-bottom: 1px solid var(--color-rule); }
+.review .mk { font-family: var(--font-display); margin-right: var(--space-2); }
+.review .mk.o { color: var(--color-ok); } .review .mk.x { color: var(--color-stop); }
+
+/* 섬유·얼룩 표 */
+.table-wrap { overflow-x: auto; border-top: 2px solid var(--color-ink); margin-bottom: var(--space-8); }
+table { border-collapse: collapse; width: 100%; min-width: 40rem; }
+th, td { text-align: left; vertical-align: top; padding: var(--space-2) var(--space-3); border-bottom: 1px solid var(--color-rule); font-size: var(--text-sm); }
+th { font-weight: 400; font-family: var(--font-display); background: var(--color-paper-2); white-space: nowrap; }
+td:first-child { font-family: var(--font-display); white-space: nowrap; }
+@media (max-width: 47.99rem) {
+  .stack table, .stack thead, .stack tbody, .stack tr, .stack td { display: block; min-width: 0; }
+  .stack thead { display: none; }
+  .stack tr { border-bottom: 1.5px solid var(--color-ink-2); padding: var(--space-2) 0; }
+  .stack td { border: 0; padding: var(--space-1) 0; }
+  .stack td::before { content: attr(data-label); display: block; font-size: var(--text-xs); color: var(--color-muted); }
+  .stack td:first-child::before { display: none; }
+  .table-wrap.stack { overflow: visible; }
+}
+.safety { border: 2px solid var(--color-stop); padding: var(--space-4); background: var(--color-label); margin-bottom: var(--space-6); }
+.safety h3 { color: var(--color-stop); margin-bottom: var(--space-2); }
+.safety ul { margin: 0; padding-left: 1.2em; }
+
+/* 활동지 미리보기 + 인쇄 */
+.sheet-pick { margin-bottom: var(--space-4); }
+.sheet { background: var(--color-label); border: 1px solid var(--color-rule-strong); padding: var(--space-6); }
+.sheet-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-2) var(--space-6); border-bottom: 2px solid var(--color-ink); padding-bottom: var(--space-2); }
+.sheet-head h2 { font-size: var(--text-lg); margin: 0; }
+.sheet-meta { display: flex; gap: var(--space-4); flex-wrap: wrap; font-size: var(--text-sm); }
+.sheet-meta span { white-space: nowrap; }
+.sheet-meta span::after { content: ""; display: inline-block; width: 4.5em; border-bottom: 1px solid var(--color-ink); margin-left: var(--space-1); }
+.slot { border: 1.5px solid var(--color-ink); margin-top: var(--space-4); display: grid; grid-template-columns: minmax(0, 1fr); break-inside: avoid; }
+@media (min-width: 40rem) { .slot { grid-template-columns: 13rem minmax(0, 1fr); } }
+.slot-label { padding: var(--space-3); border-bottom: 1px dashed var(--color-rule-strong); min-height: 8rem; }
+@media (min-width: 40rem) { .slot-label { border-bottom: 0; border-right: 1px dashed var(--color-rule-strong); } }
+.slot-label .cap { font-size: var(--text-xs); color: var(--color-muted); }
+.slot-label .syms { display: flex; flex-wrap: wrap; gap: 4px; margin-top: var(--space-2); }
+.slot-label .syms .sym { width: 34px; height: 37px; }
+.slot-body { padding: var(--space-3); }
+.slot-body .ln { border-bottom: 1px solid var(--color-rule-strong); min-height: 2em; font-size: var(--text-sm); }
+.slot-body .ln b { font-weight: 400; color: var(--color-muted); }
+.sheet-foot { margin-top: var(--space-4); font-size: var(--text-xs); color: var(--color-muted); }
+
+.toast { position: fixed; left: 50%; bottom: var(--space-6); transform: translateX(-50%); background: var(--color-ink); color: var(--color-on-ink); padding: var(--space-3) var(--space-6); z-index: 20; max-width: calc(100% - 2rem); }
+footer a { color: var(--color-accent); overflow-wrap: anywhere; }
+footer { border-top: 1px solid var(--color-rule); padding-block: var(--space-6); font-size: var(--text-sm); color: var(--color-muted); }
+
+@media (prefers-reduced-motion: reduce) { * { transition-duration: 0.01ms !important; } }
+
+@media print {
+  @page { size: A4; margin: 12mm; }
+  body { background: none; font-size: 11pt; }
+  .mast, .tabs, footer, .no-print, .panel:not(#p-sheet), .toast { display: none !important; }
+  #p-sheet { display: block !important; }
+  main { padding: 0; }
+  .wrap { max-width: none; padding: 0; }
+  .sheet { border: 0; padding: 0; background: none; }
+  .slot { grid-template-columns: 52mm 1fr; }
+  .slot-label { border-bottom: 0; border-right: 1px dashed var(--color-rule-strong); }
+  .slot-body .ln { min-height: 8.5mm; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+</style>
+</head>
+<body>
+
+<header class="wrap mast">
+  <div class="mast-tag">
+    <h1>세탁 기호 해독 &amp; 옷 관리 도우미</h1>
+    <p>옷 안쪽 라벨의 기호를 읽고, 내 옷에 맞는 세탁·건조·다림질 방법을 문장으로 정리합니다.</p>
+    <div class="mast-strip" id="mastStrip" aria-hidden="true"></div>
+    <p class="notice"><b>확인</b> 국제 기준(ISO 3758·GINETEX) 기호입니다. 우리나라 KS K 0021 기호·교과서 표와 일부 다를 수 있으니 교과서 표와 대조 후 사용하세요.</p>
+  </div>
+</header>
+
+<nav class="tabs" aria-label="기능">
+  <div class="wrap" role="tablist">
+    <button class="tab" role="tab" aria-selected="true" aria-controls="p-dict" id="t-dict">기호 사전</button>
+    <button class="tab" role="tab" aria-selected="false" aria-controls="p-label" id="t-label">라벨 해독</button>
+    <button class="tab" role="tab" aria-selected="false" aria-controls="p-quiz" id="t-quiz">상황 퀴즈</button>
+    <button class="tab" role="tab" aria-selected="false" aria-controls="p-care" id="t-care">섬유·얼룩</button>
+    <button class="tab" role="tab" aria-selected="false" aria-controls="p-sheet" id="t-sheet">활동지</button>
+  </div>
+</nav>
+
+<main class="wrap">
+  <section class="panel" id="p-dict" role="tabpanel" aria-labelledby="t-dict">
+    <h2>기호 사전</h2>
+    <p class="lead">다섯 가지 기본 모양(물통·삼각형·사각형·다리미·원)에 숫자·점·선·X가 더해져 뜻이 정해집니다. 점이 많을수록 온도가 높고, 밑줄이 많을수록 약하게 다룹니다.</p>
+    <div class="dict-filter" id="dictFilter" role="group" aria-label="범주 고르기"></div>
+    <div id="dictList"></div>
+  </section>
+
+  <section class="panel hidden" id="p-label" role="tabpanel" aria-labelledby="t-label">
+    <h2>내 옷 라벨 해독</h2>
+    <p class="lead">내 옷 라벨에 있는 기호를 범주마다 하나씩 고르면 세탁 방법이 문장으로 정리됩니다. 라벨에 없는 범주는 '표시 없음'으로 두세요.</p>
+    <div class="builder">
+      <div>
+        <div class="two">
+          <div class="field"><label for="gName">옷 이름</label><input class="input" id="gName" maxlength="20" placeholder="예: 교복 셔츠"></div>
+          <div class="field"><label for="gFiber">주된 섬유 (라벨의 혼용률)</label><select class="input" id="gFiber"></select></div>
+        </div>
+        <div id="picks"></div>
+      </div>
+      <div class="out">
+        <div class="tag" id="tagOut" aria-live="polite"></div>
+        <div class="row" style="margin-top:var(--space-4)">
+          <button class="btn" type="button" id="saveLabel">내 라벨로 저장</button>
+          <button class="btn btn--ghost" type="button" id="resetLabel">처음부터</button>
+        </div>
+        <div class="saved" id="savedBox"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel hidden" id="p-quiz" role="tabpanel" aria-labelledby="t-quiz">
+    <h2>상황 퀴즈 — 라벨 보고 판단하기</h2>
+    <p class="lead">판단과 그 이유를 둘 다 맞혀야 1점입니다. 기호 뜻을 알아야 이유를 고를 수 있어요.</p>
+    <div class="quiz" id="quizBox"></div>
+  </section>
+
+  <section class="panel hidden" id="p-care" role="tabpanel" aria-labelledby="t-care">
+    <h2>섬유별 관리 팁</h2>
+    <p class="lead">라벨의 혼용률에서 가장 많이 든 섬유를 기준으로 보세요. 기호와 팁이 다르면 <b>라벨 기호가 우선</b>입니다.</p>
+    <div class="table-wrap stack"><table><thead><tr><th>섬유</th><th>특징</th><th>세탁</th><th>건조·다림질</th><th>주의</th></tr></thead><tbody id="fiberRows"></tbody></table></div>
+
+    <h2>얼룩 제거 기본 가이드 (예시)</h2>
+    <p class="lead">생긴 지 오래될수록 잘 지워지지 않습니다. 먼저 라벨에서 물세탁·표백 가능 여부를 확인하세요.</p>
+    <div class="safety">
+      <h3>안전 먼저</h3>
+      <ul id="safetyList"></ul>
+    </div>
+    <div class="table-wrap stack"><table><thead><tr><th>얼룩</th><th>먼저 할 일</th><th>이렇게 지우기</th><th>하지 말 것</th></tr></thead><tbody id="stainRows"></tbody></table></div>
+  </section>
+
+  <section class="panel hidden" id="p-sheet" role="tabpanel" aria-labelledby="t-sheet">
+    <div class="no-print">
+      <h2>활동지 — 내 옷 라벨 3개 해독</h2>
+      <p class="lead">'라벨 해독'에서 저장한 라벨을 칸에 넣거나 빈칸으로 인쇄해 집에서 옷 라벨을 옮겨 그려 오게 하세요.</p>
+      <div class="sheet-pick two" id="sheetPick"></div>
+      <div class="row" style="margin-bottom:var(--space-6)">
+        <button class="btn" type="button" id="printBtn">활동지 인쇄</button>
+      </div>
+    </div>
+    <div class="sheet" id="sheet"></div>
+  </section>
+</main>
+
+<footer class="wrap no-print">
+  기호 출처: 국제 기준(ISO 3758·GINETEX) 기호입니다 — GINETEX 기호표 <a href="https://www.ginetex.net/userfiles/files/Textile_care_symbols_en.pdf" target="_blank" rel="noopener">ginetex.net/…/Textile_care_symbols_en.pdf</a>. 우리나라 KS K 0021 기호·교과서 표와 일부 다를 수 있으니 교과서 표와 대조 후 사용하세요. 2023년 ISO 개정에서 손세탁·다림질 온도 일부가 바뀌었다는 보도가 있어 최신 교과서 값을 우선하세요. 저장은 이 기기의 브라우저에만 됩니다.
+</footer>
+
+<div class="toast hidden" id="toast" role="status"></div>
+
+<script>
+/* ============ CONFIG — 여기만 고치면 됩니다 ============ */
+const CONFIG = {
+  storageKey: 'laundry-care-v1',
+  maxSaved: 8,
+  // 범주: 라벨에 적히는 순서(세탁→표백→건조→다림질→전문 관리)
+  cats: [
+    { id: 'wash',   name: '물세탁',   shape: '물통',   desc: '숫자 = 최고 물 온도(℃), 밑줄 1개 = 약하게, 2개 = 매우 약하게' },
+    { id: 'bleach', name: '표백',     shape: '삼각형', desc: '빗금 2줄 = 산소계만, X = 표백 금지' },
+    { id: 'tumble', name: '기계 건조', shape: '사각형 + 원', desc: '점 1개 = 낮은 온도(최고 60℃), 2개 = 보통 온도(최고 80℃)' },
+    { id: 'natural',name: '자연 건조', shape: '사각형 + 선', desc: '세로선 = 걸어서, 가로선 = 뉘어서, 모서리 빗금 = 그늘에서' },
+    { id: 'iron',   name: '다림질',   shape: '다리미', desc: '점 1개 ≈ 110℃(스팀 없이), 2개 ≈ 150℃, 3개 ≈ 200℃ 이하' },
+    { id: 'pro',    name: '전문 관리(드라이클리닝)', shape: '원', desc: 'P·F = 드라이클리닝 용제 종류, W = 전문 물세탁, 밑줄 = 약하게' },
+  ],
+  // g: 그림 종류, say: 해독 문장, stop: 금지 문장 여부
+  symbols: [
+    { id: 'w95',  cat: 'wash', g: { k: 'tub', t: '95' }, name: '95℃ 이하 물세탁', why: '삶을 수 있을 정도로 높은 온도까지 견딤. 흰 면·마 수건, 행주 등.', say: '95℃ 이하의 물로 세탁기에서 세탁할 수 있어요.' },
+    { id: 'w60',  cat: 'wash', g: { k: 'tub', t: '60' }, name: '60℃ 이하 물세탁', why: '면 속옷·수건처럼 튼튼한 옷. 따뜻한 물로 빨 수 있음.', say: '60℃ 이하의 물로 세탁기에서 세탁할 수 있어요.' },
+    { id: 'w40',  cat: 'wash', g: { k: 'tub', t: '40' }, name: '40℃ 이하 물세탁', why: '일반 세탁 코스 가능. 색 옷은 찬물에 가깝게.', say: '40℃ 이하의 물로 세탁기에서 세탁할 수 있어요.' },
+    { id: 'w40b', cat: 'wash', g: { k: 'tub', t: '40', bars: 1 }, name: '40℃ 이하, 약하게', why: '밑줄 1개 = 회전·탈수를 약하게(합성섬유 코스 등).', say: '40℃ 이하의 물에서 약한 코스로 세탁하세요.' },
+    { id: 'w30',  cat: 'wash', g: { k: 'tub', t: '30' }, name: '30℃ 이하 물세탁', why: '미지근하거나 찬물. 색이 빠지기 쉬운 옷.', say: '30℃ 이하의 물로 세탁하세요.' },
+    { id: 'w30b', cat: 'wash', g: { k: 'tub', t: '30', bars: 1 }, name: '30℃ 이하, 약하게', why: '찬물 + 약한 코스.', say: '30℃ 이하의 물에서 약한 코스로 세탁하세요.' },
+    { id: 'w30bb',cat: 'wash', g: { k: 'tub', t: '30', bars: 2 }, name: '30℃ 이하, 매우 약하게', why: '밑줄 2개 = 울 코스처럼 아주 약하게. 니트류.', say: '30℃ 이하의 물에서 아주 약한 코스(울 코스 등)로 세탁하세요.' },
+    { id: 'whand',cat: 'wash', g: { k: 'tub', hand: true }, name: '손세탁', why: '최고 40℃. 세탁기 일반 코스 X. 비비거나 비틀어 짜지 말고 눌러 빨기.', say: '손으로 세탁하세요(물 온도 40℃ 이하). 비비거나 비틀어 짜지 마세요.' },
+    { id: 'wno',  cat: 'wash', g: { k: 'tub', x: true }, name: '물세탁 금지', why: '물에 넣으면 줄거나 모양이 변할 수 있음. 전문 관리 기호를 확인.', say: '물세탁을 하지 마세요.', stop: true },
+
+    { id: 'bany', cat: 'bleach', g: { k: 'tri' }, name: '모든 표백제 사용 가능', why: '염소계(락스류)·산소계 모두 가능. 흰 면 등.', say: '필요하면 표백제(염소계·산소계)를 쓸 수 있어요.' },
+    { id: 'bo2',  cat: 'bleach', g: { k: 'tri', lines: true }, name: '산소계 표백제만', why: '염소계를 쓰면 색이 빠지거나 섬유가 상함.', say: '표백이 필요하면 산소계 표백제만 쓰세요(염소계 금지).' },
+    { id: 'bno',  cat: 'bleach', g: { k: 'tri', x: true }, name: '표백 금지', why: '어떤 표백제도 쓰지 않음.', say: '표백제를 쓰지 마세요.', stop: true },
+
+    { id: 't2',   cat: 'tumble', g: { k: 'sq', circle: true, dots: 2 }, name: '건조기 보통 온도', why: '건조기 사용 가능, 보통 온도(배기 최고 80℃).', say: '건조기를 보통 온도(최고 80℃)로 쓸 수 있어요.' },
+    { id: 't1',   cat: 'tumble', g: { k: 'sq', circle: true, dots: 1 }, name: '건조기 낮은 온도', why: '저온 코스만(배기 최고 60℃). 높은 온도는 줄어듦.', say: '건조기는 낮은 온도(최고 60℃)로만 쓰세요.' },
+    { id: 'tno',  cat: 'tumble', g: { k: 'sq', circle: true, x: true }, name: '건조기 금지', why: '열과 회전으로 줄거나 변형될 수 있음.', say: '건조기를 쓰지 마세요.', stop: true },
+
+    { id: 'nl',   cat: 'natural', g: { k: 'sq', vl: 1 }, name: '걸어서 말리기', why: '옷걸이·빨랫줄에 걸어 말림.', say: '옷걸이나 빨랫줄에 걸어서 말리세요.' },
+    { id: 'nls',  cat: 'natural', g: { k: 'sq', vl: 1, shade: true }, name: '그늘에 걸어서', why: '햇빛에 색이 바래거나 누렇게 변할 수 있음.', say: '햇빛을 피해 그늘에 걸어서 말리세요.' },
+    { id: 'nd',   cat: 'natural', g: { k: 'sq', vl: 2 }, name: '짜지 않고 걸어서', why: '물기를 짜지 않은 채 걸어 물이 떨어지게 말림.', say: '짜지 말고 물기가 있는 채로 걸어서 말리세요.' },
+    { id: 'nf',   cat: 'natural', g: { k: 'sq', hl: 1 }, name: '뉘어서 말리기', why: '걸면 무게로 늘어나는 니트 등. 평평하게 펴서.', say: '평평한 곳에 뉘어서 말리세요(걸면 늘어나요).' },
+    { id: 'nfs',  cat: 'natural', g: { k: 'sq', hl: 1, shade: true }, name: '그늘에 뉘어서', why: '늘어남 + 햇빛 손상 둘 다 주의.', say: '그늘에서 평평하게 뉘어서 말리세요.' },
+
+    { id: 'i3',   cat: 'iron', g: { k: 'iron', dots: 3 }, name: '높은 온도 다림질', why: '최고 약 200℃. 면·마.', say: '다리미를 높은 온도(약 200℃ 이하)로 써도 돼요.' },
+    { id: 'i2',   cat: 'iron', g: { k: 'iron', dots: 2 }, name: '중간 온도 다림질', why: '최고 약 150℃. 울·폴리에스터 혼방 등.', say: '다리미는 중간 온도(약 150℃ 이하)로 쓰세요.' },
+    { id: 'i1',   cat: 'iron', g: { k: 'iron', dots: 1 }, name: '낮은 온도 다림질', why: '최고 약 110℃, 스팀 없이. 스팀은 손상을 줄 수 있음. 천을 덧대기.', say: '다리미는 낮은 온도(약 110℃ 이하)로, 스팀 없이 쓰세요.' },
+    { id: 'ino',  cat: 'iron', g: { k: 'iron', x: true }, name: '다림질 금지', why: '열에 녹거나 광택이 생길 수 있음.', say: '다림질을 하지 마세요.', stop: true },
+
+    { id: 'pP',   cat: 'pro', g: { k: 'circ', t: 'P' }, name: '드라이클리닝 (P)', why: '세탁소의 일반 드라이클리닝 용제 사용 가능.', say: '세탁소 드라이클리닝을 맡길 수 있어요.' },
+    { id: 'pPb',  cat: 'pro', g: { k: 'circ', t: 'P', bars: 1 }, name: '드라이클리닝 약하게 (P)', why: '밑줄 = 약한 공정. 맡길 때 라벨을 보여 주기.', say: '드라이클리닝은 약한 공정으로 맡기세요.' },
+    { id: 'pF',   cat: 'pro', g: { k: 'circ', t: 'F' }, name: '석유계 드라이클리닝 (F)', why: '석유계(탄화수소) 용제로만.', say: '석유계 용제 드라이클리닝으로만 맡기세요.' },
+    { id: 'pW',   cat: 'pro', g: { k: 'circ', t: 'W' }, name: '전문 물세탁 (W)', why: '세탁소의 전문 웨트클리닝. 집 세탁과 다름.', say: '세탁소 전문 물세탁(웨트클리닝)을 맡길 수 있어요.' },
+    { id: 'pno',  cat: 'pro', g: { k: 'circ', x: true }, name: '드라이클리닝 금지', why: '용제에 녹거나 손상되는 소재.', say: '드라이클리닝을 하지 마세요.', stop: true },
+
+  ],
+  fibers: [
+    { id: 'cotton', name: '면', trait: '물을 잘 흡수, 튼튼함, 구김이 잘 생김', wash: '세탁기 가능, 흰 옷은 높은 온도도 견딤', dry: '햇볕 건조 가능, 높은 온도 다림질', warn: '처음 빨 때 줄어들 수 있음, 색 옷은 따로', tip: '면은 줄어들 수 있으니 처음엔 찬물·저온 건조가 안전해요.' },
+    { id: 'linen', name: '마(린넨)', trait: '시원하고 땀을 잘 흡수, 구김이 매우 잘 생김', wash: '물세탁 가능, 약하게', dry: '젖었을 때 펴서 말리기, 높은 온도 다림질', warn: '세게 비비면 보풀·주름 자국', tip: '마는 덜 마른 상태에서 다리면 구김이 잘 펴져요.' },
+    { id: 'wool', name: '모(울)', trait: '따뜻함, 탄력, 물+비빔+열에 줄어듦(축융)', wash: '손세탁이나 울 코스, 중성세제, 찬물', dry: '뉘어서 그늘 건조, 천 덧대고 중간 온도', warn: '뜨거운 물·세게 비비기·건조기 금지', tip: '울은 비비면 줄어들어요. 중성세제로 눌러 빨고 뉘어서 말리세요.' },
+    { id: 'silk', name: '견(실크)', trait: '광택, 부드러움, 물·땀·햇빛에 약함', wash: '드라이클리닝 권장, 물세탁 가능 표시면 중성세제 손세탁', dry: '그늘 건조, 낮은 온도로 뒷면 다림질', warn: '염소계 표백제 금지, 햇빛에 누렇게 변함', tip: '실크는 햇빛과 염소계 표백제를 피하고 라벨의 전문 관리 기호를 확인하세요.' },
+    { id: 'poly', name: '폴리에스터', trait: '구김이 적고 빨리 마름, 정전기, 땀 흡수 적음', wash: '세탁기 가능, 미지근한 물', dry: '걸어서 건조, 낮은~중간 온도 다림질', warn: '다른 옷의 때·색이 옮을 수 있음(재오염), 높은 열에 번들거림', tip: '폴리에스터는 빨리 마르지만 높은 열에 약해요. 다리미 온도를 확인하세요.' },
+    { id: 'nylon', name: '나일론', trait: '가볍고 질김, 열·햇빛에 약함', wash: '세탁망에 넣어 약하게', dry: '그늘 건조, 낮은 온도 다림질', warn: '햇빛에 누렇게 변할 수 있음', tip: '나일론은 열과 햇빛에 약해요. 그늘에서 말리세요.' },
+    { id: 'rayon', name: '레이온', trait: '부드럽고 시원함, 젖으면 약해짐', wash: '드라이클리닝 또는 약한 손세탁', dry: '짜지 말고 그늘에 뉘어서, 낮은 온도', warn: '물에 젖으면 줄거나 찢어지기 쉬움', tip: '레이온은 젖으면 약해져요. 비틀어 짜지 마세요.' },
+  ],
+  stains: [
+    { name: '김치·카레 국물', first: '마르기 전에 휴지로 눌러 국물 흡수', how: '주방세제를 묻혀 두드려 기름을 먼저 빼고 헹굼. 남은 색은 라벨이 허락하면 산소계 표백제', dont: '뜨거운 물·문지르기(번짐)' },
+    { name: '커피·주스', first: '찬물로 뒷면에서 헹구기', how: '세탁세제를 묻혀 두드린 뒤 세탁', dont: '설탕이 든 얼룩을 그대로 말리기' },
+    { name: '피', first: '바로 찬물로 헹구기', how: '찬물에 담갔다가 세탁세제로 두드리기', dont: '뜨거운 물(단백질이 굳어 지워지지 않음)' },
+    { name: '튀김·기름', first: '휴지로 기름 흡수', how: '주방세제를 묻혀 두드리고 미지근한 물로 헹굼', dont: '물만으로 문지르기' },
+    { name: '볼펜 잉크', first: '아래에 마른 수건 깔기', how: '보건실·선생님과 함께 소독용 알코올을 솜에 묻혀 두드려 수건으로 옮기기', dont: '불 근처에서 사용, 아세테이트 등 약한 섬유에 바로 사용' },
+    { name: '흙·진흙', first: '완전히 마른 뒤 털어내기', how: '세탁세제를 묻혀 솔로 가볍게 두드린 후 세탁', dont: '젖은 상태에서 문지르기' },
+  ],
+  safety: [
+    '염소계 표백제와 산성 세제(욕실 세정제 등)를 절대 섞지 마세요 — 유독 가스가 나와요.',
+    '표백제·알코올은 고무장갑을 끼고, 창문을 연 곳에서 쓰세요. 학생은 어른과 함께합니다.',
+    '옷의 안 보이는 곳(솔기 안쪽)에 먼저 시험해 색이 빠지는지 확인하세요.',
+    '얼룩은 문지르지 말고 바깥쪽에서 안쪽으로 두드리세요(번짐 방지).',
+  ],
+  // 퀴즈: ans = 'yes'|'no'|'change', reasons[0]이 정답(화면에서는 섞임)
+  quiz: [
+    { garment: '울 스웨터', label: ['whand', 'bno', 'nfs', 'i1', 'pP'], q: '울 스웨터를 세탁기 일반 코스에 넣어 빨아도 될까?', ans: 'no',
+      reasons: ['물통 안에 손이 있으니 손세탁 표시 — 세탁기의 센 회전에 울이 줄어든다', '표백 금지 표시가 있으니 세탁기도 쓸 수 없다', '다리미 점이 1개라서 물 온도가 너무 낮다', '울은 물에 닿으면 바로 녹는다'],
+      exp: '물통 속 손 = 손세탁(40℃ 이하). 울은 물·비빔·열이 겹치면 줄어들어요(축융). 손으로 눌러 빨고, 그늘에 뉘어 말려요.' },
+    { garment: '흰 면 티셔츠', label: ['w60', 'bany', 't2', 'nl', 'i3'], q: '누렇게 된 흰 면 티셔츠에 염소계 표백제를 써도 될까?', ans: 'yes',
+      reasons: ['빈 삼각형은 염소계·산소계 모든 표백제를 쓸 수 있다는 뜻', '60℃ 물세탁이 되면 무엇이든 괜찮다', '다리미 점 3개는 표백제 사용 허가 표시다', '면은 원래 표백제를 쓰면 안 된다'],
+      exp: '아무 표시 없는 삼각형 = 모든 표백제 사용 가능. 빗금 2줄이면 산소계만, X면 표백 금지예요. 사용할 때는 장갑과 환기!' },
+    { garment: '체육복(폴리에스터)', label: ['w40b', 'bo2', 'tno', 'nls', 'i1'], q: '내일 입어야 해서 건조기에 넣어 빨리 말려도 될까?', ans: 'no',
+      reasons: ['사각형 안의 원에 X — 기계(건조기) 건조 금지', '삼각형에 빗금이 있어서 건조기가 안 된다', '물통 밑줄은 건조기 금지라는 뜻이다', '폴리에스터는 물에 젖으면 안 된다'],
+      exp: '사각형 + 원 = 건조기. 여기에 X가 있으니 쓰면 안 돼요. 그늘에 걸어서(사각형 세로선 + 모서리 빗금) 말리세요. 폴리에스터는 빨리 마르는 편이에요.' },
+    { garment: '실크 블라우스', label: ['wno', 'bno', 'nls', 'i1', 'pP'], q: '얼룩이 생긴 실크 블라우스를 집에서 물에 담가 빨아도 될까?', ans: 'no',
+      reasons: ['물통에 X — 물세탁 금지, 원 안 P를 보고 드라이클리닝을 맡긴다', '다리미 점 1개라 물에 넣으면 안 된다', '실크는 무조건 뜨거운 물로만 빤다', '삼각형 X는 물을 쓰지 말라는 뜻이다'],
+      exp: '물통 X = 물세탁 금지. 원 안의 P = 드라이클리닝 가능. 세탁소에 얼룩 위치를 알려 주며 맡기세요.' },
+    { garment: '교복 셔츠(면·폴리 혼방)', label: ['w40b', 'bo2', 't1', 'nl', 'i2'], q: '구김이 심해서 다리미를 가장 센 온도(약 200℃)로 다려도 될까?', ans: 'change',
+      reasons: ['다리미 점 2개 = 약 150℃ 이하 — 중간 온도로 낮추면 된다', '다리미 점 2개 = 두 번만 다리라는 뜻', '건조기 점 1개라서 다림질은 안 된다', '셔츠는 온도와 상관없이 다려도 된다'],
+      exp: '다리미 속 점 개수 = 온도. 1개 약 110℃, 2개 약 150℃, 3개 약 200℃ 이하. 혼방 셔츠를 너무 뜨겁게 다리면 번들거리거나 녹을 수 있어요.' },
+    { garment: '니트 가디건', label: ['w30bb', 'bno', 'tno', 'nf', 'i1'], q: '빨래 후 옷걸이에 걸어 말려도 될까?', ans: 'change',
+      reasons: ['사각형 안 가로선 = 뉘어서 말리기 — 걸면 무게로 늘어나니 평평하게 펴서 말린다', '사각형 안 가로선 = 한 번만 말리라는 뜻', '물통 밑줄 2개 = 옷걸이 2개를 쓰라는 뜻', '건조기 X라서 말리면 안 된다'],
+      exp: '가로선 = 뉘어서, 세로선 = 걸어서. 젖은 니트는 무거워서 걸면 어깨와 길이가 늘어나요.' },
+    { garment: '진한 색 청바지', label: ['w30', 'bno', 'tno', 'nls', 'i2'], q: '빨리 마르게 햇볕이 쨍한 곳에 널어도 될까?', ans: 'change',
+      reasons: ['사각형 모서리 빗금 = 그늘 건조 — 햇빛에 색이 바래니 그늘에 널면 된다', '세로선이 있으니 햇볕에서만 말려야 한다', '표백 금지라서 햇빛도 쓰면 안 된다', '30℃ 표시는 햇볕 온도 제한이다'],
+      exp: '모서리의 빗금은 그늘을 뜻해요. 진한 색 옷은 뒤집어서 그늘에 말리면 색이 덜 바래요.' },
+    { garment: '면 수건', label: ['w60', 'bany', 't2', 'nl', 'i3'], q: '수건을 60℃ 물로 세탁기에 빨아도 될까?', ans: 'yes',
+      reasons: ['물통 안 숫자 60 = 최고 60℃까지 세탁기 세탁 가능', '숫자 60은 60분 동안 빨라는 뜻', '수건은 라벨과 상관없이 삶아야 한다', '빈 삼각형이 있어서 뜨거운 물이 된다'],
+      exp: '물통 속 숫자는 물 온도의 최댓값(℃)이에요. 60이면 60℃ 이하로 빨 수 있어요. 밑줄이 없으니 일반 코스도 괜찮아요.' },
+  ],
+  judgeText: { yes: '그대로 해도 된다', no: '안 된다', change: '방법을 바꾸면 된다' },
+};
+/* ======================================================= */
+
+const $ = (s, el = document) => el.querySelector(s);
+const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+const esc = (s) => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const symById = (id) => CONFIG.symbols.find(s => s.id === id);
+const shuffle = (a) => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+
+/* ---- 저장 ---- */
+let store = { saved: [], best: null };
+try { const d = JSON.parse(localStorage.getItem(CONFIG.storageKey) || 'null'); if (d && Array.isArray(d.saved)) store = Object.assign(store, d); } catch (e) { /* 저장소 사용 불가 — 메모리로만 동작 */ }
+function persist() { try { localStorage.setItem(CONFIG.storageKey, JSON.stringify(store)); } catch (e) { toast('이 브라우저에서는 저장이 되지 않아요. 화면을 닫으면 사라져요.'); } }
+let toastTimer;
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.remove('hidden'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.add('hidden'), 3500); }
+
+/* ---- 기호 그리기 (viewBox 48×54, 선은 currentColor) ---- */
+function drawSym(id, label) {
+  const s = symById(id); if (!s) return '';
+  const g = s.g; let body = ''; const sw = 'stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"';
+  const bars = (n, y0) => Array.from({ length: n || 0 }, (_, i) => `<line x1="8" y1="${y0 + i * 5}" x2="40" y2="${y0 + i * 5}" ${sw}/>`).join('');
+  const dots = (n, cx, cy, gap) => Array.from({ length: n }, (_, i) => `<circle cx="${cx + (i - (n - 1) / 2) * gap}" cy="${cy}" r="2.6" fill="currentColor"/>`).join('');
+  const X = (x1, y1, x2, y2) => `<g class="x" stroke-width="2.6" stroke-linecap="round"><line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/><line x1="${x2}" y1="${y1}" x2="${x1}" y2="${y2}"/></g>`;
+  if (g.k === 'tub') {
+    body += `<path d="M4 13 L10 40 H38 L44 13" ${sw}/><path d="M7 16 q4.25 -4 8.5 0 t8.5 0 t8.5 0 t8.5 0" ${sw}/>`;
+    if (g.t) body += `<text x="24" y="35" text-anchor="middle" font-size="13" font-weight="700" fill="currentColor">${g.t}</text>`;
+    if (g.hand) body += `<path d="M19 37 V25 a1.8 1.8 0 0 1 3.6 0 V30 M22.6 29 V21 a1.8 1.8 0 0 1 3.6 0 V29 M26.2 29 V22.5 a1.8 1.8 0 0 1 3.6 0 V31 l2.4 -2.6 a1.8 1.8 0 0 1 2.8 2.2 L30 38" ${sw} stroke-width="2"/>`;
+    body += bars(g.bars, 45);
+    if (g.x) body += X(5, 6, 43, 46);
+  } else if (g.k === 'tri') {
+    body += `<path d="M24 7 L44 42 H4 Z" ${sw}/>`;
+    if (g.lines) body += `<line x1="17" y1="38" x2="25" y2="22" ${sw}/><line x1="23" y1="38" x2="31" y2="22" ${sw}/>`;
+    if (g.x) body += X(6, 8, 42, 46);
+  } else if (g.k === 'sq') {
+    body += `<rect x="6" y="8" width="36" height="36" ${sw}/>`;
+    if (g.circle) body += `<circle cx="24" cy="26" r="13" ${sw}/>` + dots(g.dots || 0, 24, 26, 7);
+    if (g.vl === 1) body += `<line x1="24" y1="14" x2="24" y2="38" ${sw}/>`;
+    if (g.vl === 2) body += `<line x1="20" y1="14" x2="20" y2="38" ${sw}/><line x1="28" y1="14" x2="28" y2="38" ${sw}/>`;
+    if (g.hl === 1) body += `<line x1="12" y1="26" x2="36" y2="26" ${sw}/>`;
+    if (g.shade) body += `<line x1="6" y1="16" x2="14" y2="8" ${sw}/><line x1="6" y1="22" x2="20" y2="8" ${sw}/>`;
+    if (g.x) body += X(4, 6, 44, 46);
+  } else if (g.k === 'iron') {
+    body += `<path d="M5 38 L11 23 Q13 18 19 18 H42 V38 Z" ${sw}/><path d="M21 18 V12 H38 Q41 12 41 15 V18" ${sw}/>` + dots(g.dots || 0, 27, 30, 7);
+    if (g.x) body += X(5, 8, 43, 44);
+  } else if (g.k === 'circ') {
+    body += `<circle cx="24" cy="24" r="17" ${sw}/>`;
+    if (g.t) body += `<text x="24" y="30.5" text-anchor="middle" font-size="18" font-weight="700" fill="currentColor">${g.t}</text>`;
+    body += bars(g.bars, 48);
+    if (g.x) body += X(8, 8, 40, 40);
+  }
+  const a11y = label === false ? 'aria-hidden="true"' : `role="img" aria-label="${esc(s.name)}"`;
+  return `<svg class="sym" viewBox="0 0 48 54" ${a11y}>${body}</svg>`;
+}
+
+/* ---- 탭 ---- */
+$$('.tab').forEach(t => t.addEventListener('click', () => showTab(t.id.slice(2))));
+$('.tabs [role=tablist]').addEventListener('keydown', (e) => {
+  if (!['ArrowLeft', 'ArrowRight'].includes(e.key)) return;
+  const tabs = $$('.tab'); const i = tabs.findIndex(t => t.getAttribute('aria-selected') === 'true');
+  const n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length]; n.focus(); showTab(n.id.slice(2));
+});
+function showTab(name) {
+  $$('.tab').forEach(t => { const on = t.id === 't-' + name; t.setAttribute('aria-selected', on); t.tabIndex = on ? 0 : -1; });
+  $$('.panel').forEach(p => p.classList.toggle('hidden', p.id !== 'p-' + name));
+  if (name === 'sheet') renderSheetPick();
+}
+
+/* ---- 머리 띠 ---- */
+$('#mastStrip').innerHTML = ['w30', 'bno', 'tno', 'nfs', 'i1', 'pP'].map(id => drawSym(id, false)).join('');
+
+/* ---- 기호 사전 ---- */
+let dictCat = 'all';
+function renderDict() {
+  $('#dictFilter').innerHTML = [{ id: 'all', name: '전체' }, ...CONFIG.cats].map(c => `<button type="button" data-cat="${c.id}" aria-pressed="${dictCat === c.id}">${esc(c.name.replace(/\(.*\)/, ''))}</button>`).join('');
+  const cats = CONFIG.cats.filter(c => dictCat === 'all' || c.id === dictCat);
+  $('#dictList').innerHTML = cats.map(c => `
+    <section class="cat">
+      <div class="cat-head"><h3>${esc(c.name)}</h3><p>${esc(c.shape)} · ${esc(c.desc)}</p></div>
+      <div class="cat-list">${CONFIG.symbols.filter(s => s.cat === c.id).map(s => `
+        <div class="entry">${drawSym(s.id)}<div><b>${esc(s.name)}</b><span class="why">${esc(s.why)}</span></div></div>`).join('')}
+      </div>
+    </section>`).join('');
+}
+$('#dictFilter').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; dictCat = b.dataset.cat; renderDict(); });
+
+/* ---- 라벨 해독 ---- */
+let current = {};
+$('#gFiber').innerHTML = '<option value="">모름 / 선택 안 함</option>' + CONFIG.fibers.map(f => `<option value="${f.id}">${esc(f.name)}</option>`).join('');
+function renderPicks() {
+  $('#picks').innerHTML = CONFIG.cats.map(c => `
+    <fieldset class="pick"><legend>${esc(c.name)}</legend><div class="opts">
+      <div class="opt"><input type="radio" name="pk-${c.id}" id="pk-${c.id}-none" value="" ${current[c.id] ? '' : 'checked'}><label class="none" for="pk-${c.id}-none">표시<br>없음</label></div>
+      ${CONFIG.symbols.filter(s => s.cat === c.id).map(s => `<div class="opt"><input type="radio" name="pk-${c.id}" id="pk-${s.id}" value="${s.id}" ${current[c.id] === s.id ? 'checked' : ''}><label for="pk-${s.id}" title="${esc(s.name)}">${drawSym(s.id)}</label></div>`).join('')}
+    </div></fieldset>`).join('');
+}
+$('#picks').addEventListener('change', (e) => { const cat = e.target.name.slice(3); current[cat] = e.target.value || undefined; renderTag(); });
+$('#gName').addEventListener('input', renderTag);
+$('#gFiber').addEventListener('change', renderTag);
+
+function sentences(label) {
+  return CONFIG.cats.map(c => label[c.id] && symById(label[c.id])).filter(Boolean);
+}
+function renderTag() {
+  const name = $('#gName').value.trim(); const fiber = CONFIG.fibers.find(f => f.id === $('#gFiber').value);
+  const list = sentences(current);
+  // 물세탁 금지인데 전문 관리 표시가 없을 때 안내
+  const extra = [];
+  if (current.wash === 'wno' && !current.pro) extra.push('물세탁 금지예요. 라벨에 원(드라이클리닝) 기호가 있는지 다시 확인하세요.');
+  if (current.wash === 'wno' && current.pro === 'pno') extra.push('물세탁·드라이클리닝 모두 금지예요. 얼룩만 부분 손질하거나 판매처에 문의하세요.');
+  $('#tagOut').innerHTML = `
+    <div class="tag-title">${esc(name || '이름 없는 옷')}</div>
+    <div class="tag-fiber">${fiber ? '주된 섬유: ' + esc(fiber.name) : '섬유: 선택 안 함'}</div>
+    <div class="tag-syms">${list.length ? list.map(s => drawSym(s.id)).join('') : '<span class="muted">왼쪽에서 기호를 고르세요.</span>'}</div>
+    ${list.length ? `<ol>${list.map(s => `<li class="${s.stop ? 'stop' : ''}">${esc(s.say)}</li>`).join('')}${extra.map(t => `<li>${esc(t)}</li>`).join('')}</ol>` : ''}
+    ${fiber ? `<p class="tip">${esc(fiber.tip)}</p>` : ''}`;
+}
+function renderSaved() {
+  const box = $('#savedBox');
+  if (!store.saved.length) { box.innerHTML = ''; return; }
+  box.innerHTML = `<h3>저장한 라벨 (${store.saved.length}/${CONFIG.maxSaved})</h3><ul>${store.saved.map((l, i) => `
+    <li><span class="nm">${esc(l.name || '이름 없는 옷')}</span><span class="mini">${sentences(l.syms).map(s => drawSym(s.id, false)).join('')}</span>
+      <button class="linkbtn" type="button" data-load="${i}">열기</button><button class="linkbtn del" type="button" data-del="${i}">삭제</button></li>`).join('')}</ul>`;
+}
+$('#savedBox').addEventListener('click', (e) => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.load != null) { const l = store.saved[+b.dataset.load]; current = Object.assign({}, l.syms); $('#gName').value = l.name || ''; $('#gFiber').value = l.fiber || ''; renderPicks(); renderTag(); }
+  if (b.dataset.del != null) { const [gone] = store.saved.splice(+b.dataset.del, 1); persist(); renderSaved(); toast(`'${gone.name || '이름 없는 옷'}' 라벨을 지웠어요.`); }
+});
+$('#saveLabel').addEventListener('click', () => {
+  if (!sentences(current).length) { toast('기호를 하나 이상 골라야 저장할 수 있어요.'); return; }
+  const item = { name: $('#gName').value.trim(), fiber: $('#gFiber').value, syms: Object.assign({}, current) };
+  const i = store.saved.findIndex(l => l.name && l.name === item.name);
+  if (i >= 0) store.saved[i] = item; else { if (store.saved.length >= CONFIG.maxSaved) { toast(`라벨은 ${CONFIG.maxSaved}개까지 저장돼요. 하나를 지운 뒤 저장하세요.`); return; } store.saved.push(item); }
+  persist(); renderSaved();
+});
+$('#resetLabel').addEventListener('click', () => { current = {}; $('#gName').value = ''; $('#gFiber').value = ''; renderPicks(); renderTag(); });
+
+/* ---- 퀴즈 ---- */
+let qz;
+function startQuiz() { qz = { order: shuffle(CONFIG.quiz.map((_, i) => i)), i: 0, score: 0, log: [], done: false }; renderQuiz(); }
+function renderQuiz() {
+  const box = $('#quizBox');
+  if (qz.i >= qz.order.length) {
+    if (store.best == null || qz.score > store.best) { store.best = qz.score; persist(); }
+    box.innerHTML = `<div class="qbar"><span>결과</span><span class="num">최고 기록 ${store.best} / ${CONFIG.quiz.length}</span></div>
+      <p class="result-score num">${qz.score} / ${qz.order.length}점</p>
+      <p class="muted">판단과 이유를 모두 맞힌 문제만 점수로 셌어요.</p>
+      <ul class="review">${qz.log.map(l => `<li><span class="mk ${l.ok ? 'o' : 'x'}">${l.ok ? '맞음' : '다시'}</span>${esc(l.q.garment)} — ${esc(l.q.q)}${l.ok ? '' : `<br><span class="muted">${esc(l.q.exp)}</span>`}</li>`).join('')}</ul>
+      <button class="btn" type="button" id="qAgain">다시 하기 (순서 섞기)</button>`;
+    $('#qAgain').addEventListener('click', startQuiz); return;
+  }
+  const q = CONFIG.quiz[qz.order[qz.i]];
+  const rs = shuffle(q.reasons.map((t, i) => ({ t, ok: i === 0 })));
+  box.innerHTML = `
+    <div class="qbar"><span class="num">${qz.i + 1} / ${qz.order.length}</span><span class="num">점수 ${qz.score}</span></div>
+    <div class="tag"><div class="tag-title">${esc(q.garment)}의 라벨</div><div class="tag-syms">${q.label.map(id => drawSym(id)).join('')}</div></div>
+    <p class="scene">${esc(q.q)}</p>
+    <fieldset class="step"><legend>1. 판단</legend>${['yes', 'no', 'change'].map(k => `<label class="choice"><input type="radio" name="judge" value="${k}">${esc(CONFIG.judgeText[k])}</label>`).join('')}</fieldset>
+    <fieldset class="step"><legend>2. 그렇게 판단한 이유</legend>${rs.map((r, i) => `<label class="choice"><input type="radio" name="reason" value="${i}" data-ok="${r.ok}">${esc(r.t)}</label>`).join('')}</fieldset>
+    <div class="row" style="margin-top:var(--space-4)"><button class="btn" type="button" id="qCheck">확인</button></div>
+    <div id="qFb"></div>`;
+  $('#qCheck').addEventListener('click', () => {
+    const j = $('input[name=judge]:checked', box), r = $('input[name=reason]:checked', box);
+    if (!j || !r) { toast('판단과 이유를 모두 골라 주세요.'); return; }
+    const jOk = j.value === q.ans, rOk = r.dataset.ok === 'true', ok = jOk && rOk;
+    $$('input', box).forEach(inp => {
+      inp.disabled = true; const lab = inp.closest('.choice');
+      if (inp.name === 'judge' && inp.value === q.ans) lab.classList.add('right');
+      if (inp.name === 'reason' && inp.dataset.ok === 'true') lab.classList.add('right');
+      if (inp.checked && !((inp.name === 'judge' && jOk) || (inp.name === 'reason' && rOk))) lab.classList.add('wrong');
+    });
+    if (ok) qz.score++;
+    qz.log.push({ q, ok });
+    const why = ok ? '판단과 이유 모두 맞았어요.' : (jOk ? '판단은 맞았지만 이유가 달라요.' : (rOk ? '이유는 맞았지만 판단이 달라요.' : '판단과 이유 모두 다시 보세요.'));
+    $('#qFb').innerHTML = `<div class="feedback"><p class="verdict ${ok ? 'ok' : 'no'}">${ok ? '정답 +1' : '오답'} — 정답: ${esc(CONFIG.judgeText[q.ans])}</p><p class="muted">${why}</p><p style="margin-top:var(--space-2)">${esc(q.exp)}</p>
+      <div class="row" style="margin-top:var(--space-4)"><button class="btn" type="button" id="qNext">${qz.i + 1 < qz.order.length ? '다음 문제' : '결과 보기'}</button></div></div>`;
+    $('#qCheck').remove();
+    $('#qNext').addEventListener('click', () => { qz.i++; renderQuiz(); $('#quizBox').scrollIntoView({ block: 'start' }); });
+    $('#qNext').focus({ preventScroll: true });
+  });
+}
+
+/* ---- 섬유·얼룩 ---- */
+$('#fiberRows').innerHTML = CONFIG.fibers.map(f => `<tr><td>${esc(f.name)}</td><td data-label="특징">${esc(f.trait)}</td><td data-label="세탁">${esc(f.wash)}</td><td data-label="건조·다림질">${esc(f.dry)}</td><td data-label="주의">${esc(f.warn)}</td></tr>`).join('');
+$('#stainRows').innerHTML = CONFIG.stains.map(s => `<tr><td>${esc(s.name)}</td><td data-label="먼저 할 일">${esc(s.first)}</td><td data-label="이렇게 지우기">${esc(s.how)}</td><td data-label="하지 말 것">${esc(s.dont)}</td></tr>`).join('');
+$('#safetyList').innerHTML = CONFIG.safety.map(t => `<li>${esc(t)}</li>`).join('');
+
+/* ---- 활동지 ---- */
+let sheetSel = ['', '', ''];
+function renderSheetPick() {
+  const opts = '<option value="">빈칸(집에서 그려 오기)</option>' + store.saved.map((l, i) => `<option value="${i}">${esc(l.name || '이름 없는 옷 ' + (i + 1))}</option>`).join('');
+  $('#sheetPick').innerHTML = [0, 1, 2].map(k => `<div class="field"><label for="sp${k}">라벨 ${k + 1}</label><select class="input" id="sp${k}" data-k="${k}">${opts}</select></div>`).join('');
+  [0, 1, 2].forEach(k => { const el = $('#sp' + k); if (sheetSel[k] !== '' && store.saved[sheetSel[k]]) el.value = sheetSel[k]; else sheetSel[k] = ''; });
+  renderSheet();
+}
+$('#sheetPick').addEventListener('change', (e) => { sheetSel[+e.target.dataset.k] = e.target.value; renderSheet(); });
+function renderSheet() {
+  const slot = (k) => {
+    const l = sheetSel[k] !== '' ? store.saved[sheetSel[k]] : null;
+    const syms = l ? sentences(l.syms) : [];
+    return `<div class="slot">
+      <div class="slot-label"><div class="cap">라벨 ${k + 1} · 기호를 옮겨 그리세요</div>
+        ${l ? `<div class="syms">${syms.map(s => drawSym(s.id)).join('')}</div>` : ''}</div>
+      <div class="slot-body">
+        <div class="ln"><b>옷 이름·섬유:</b> ${l ? esc(l.name || '') : ''}</div>
+        <div class="ln"><b>세탁:</b></div>
+        <div class="ln"><b>표백·건조:</b></div>
+        <div class="ln"><b>다림질·전문 관리:</b></div>
+        <div class="ln"><b>내가 지킬 관리 방법 한 가지:</b></div>
+      </div></div>`;
+  };
+  $('#sheet').innerHTML = `
+    <div class="sheet-head"><h2>내 옷 라벨 해독 활동지</h2><div class="sheet-meta"><span>학년·반</span><span>번호</span></div></div>
+    ${[0, 1, 2].map(slot).join('')}
+    <p class="sheet-foot">기호 뜻은 교과서 취급표시 표로 확인하세요. 점 = 온도, 밑줄 = 약하게, X = 금지, 모서리 빗금 = 그늘.</p>`;
+}
+$('#printBtn').addEventListener('click', () => window.print());
+window.addEventListener('beforeprint', () => { if ($('#p-sheet').classList.contains('hidden')) renderSheetPick(); });
+
+/* ---- 시작 ---- */
+renderDict(); renderPicks(); renderTag(); renderSaved(); startQuiz(); renderSheet();
+</script>
+</body>
+</html>

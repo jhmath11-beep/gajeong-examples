@@ -1,0 +1,63 @@
+// ⚠ 새로 만든 내 Firebase 프로젝트 전용 규칙입니다.
+// 이미 다른 사이트·앱이 쓰고 있는 프로젝트에 붙이면, 그 프로젝트의 기존 규칙이 이 내용으로 "통째로" 덮어써져
+// 다른 사이트가 조용히 망가집니다. 절대 기존 프로젝트에 붙이지 마세요.
+//
+// 실시간 생각 나눔 벽 (fb-wall) — Cloud Firestore 보안 규칙
+// - 교사(TEACHER_EMAILS 의 Google 계정, 이메일 확인됨)만 방(질문) 만들기·설정 바꾸기·쪽지 숨김/공개/묶기/지우기
+// - 학생(익명 로그인)은 열린 방에 자기 쪽지만 붙임. 남이 쓴 쪽지는 '공개(ok)'된 것만 읽음
+// - '검토 후 공개' 방에서는 학생이 붙인 쪽지가 반드시 '확인 대기(wait)'로 들어감
+// - 이름·연락처는 받지 않음. 모둠 이름이나 별칭만.
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ▼ 교사 이메일 — index.html 의 TEACHER_EMAILS 와 똑같이 맞추세요.
+    function isTeacher() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email in ['선생님@gmail.com'];
+    }
+    function signedIn() { return request.auth != null; }
+    function str(v, lo, hi) { return v is string && v.size() >= lo && v.size() <= hi; }
+
+    // 방 = 질문 하나. 문서 이름이 4자리 방 코드
+    match /rooms/{code} {
+      allow read: if signedIn();
+      allow create: if isTeacher()
+        && code.matches('[0-9]{4}')
+        && request.resource.data.keys().hasOnly(['question', 'moderated', 'open', 'createdAt'])
+        && str(request.resource.data.question, 2, 80)
+        && request.resource.data.moderated is bool
+        && request.resource.data.open is bool
+        && request.resource.data.createdAt == request.time;
+      allow update, delete: if isTeacher();
+
+      // 쪽지
+      match /notes/{noteId} {
+        function room() { return get(/databases/$(database)/documents/rooms/$(code)).data; }
+
+        allow read: if isTeacher()
+          || (signedIn() && resource.data.uid == request.auth.uid)
+          || (signedIn() && resource.data.status == 'ok');
+
+        allow create: if signedIn()
+          && request.resource.data.keys().hasOnly(['uid', 'group', 'text', 'kind', 'status', 'cluster', 'createdAt'])
+          && request.resource.data.keys().hasAll(['uid', 'group', 'text', 'kind', 'status', 'cluster', 'createdAt'])
+          && request.resource.data.uid == request.auth.uid
+          && str(request.resource.data.group, 1, 12)
+          && str(request.resource.data.text, 1, 80)
+          && request.resource.data.kind in ['opinion', 'question', 'experience']
+          && request.resource.data.cluster == ''
+          && request.resource.data.createdAt == request.time
+          && room().open == true
+          && ((room().moderated == true && request.resource.data.status == 'wait')
+              || (room().moderated == false && request.resource.data.status == 'ok'));
+
+        // 학생은 붙인 뒤 고치거나 지울 수 없음(숨김·공개·묶기·지우기는 교사만)
+        allow update, delete: if isTeacher();
+      }
+    }
+
+    // 위에 적지 않은 곳은 모두 막힘(기본 거절)
+  }
+}

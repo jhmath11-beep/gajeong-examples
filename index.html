@@ -56,7 +56,7 @@ code{font-family:Consolas,"D2Coding",monospace;background:var(--amber-soft);colo
 .info{padding:22px 24px;display:flex;flex-direction:column;gap:10px}
 .tags{display:flex;gap:6px;flex-wrap:wrap}
 .tag{font-size:.8rem;font-weight:700;padding:3px 10px;border-radius:var(--r-full)}
-.t-html{background:var(--violet-soft);color:var(--violet)} .t-gas{background:var(--teal-soft);color:var(--teal)} .t-unit{background:var(--amber-soft);color:var(--navy)}
+.t-html{background:var(--violet-soft);color:var(--violet)} .t-gas{background:var(--teal-soft);color:var(--teal)} .t-unit{background:var(--amber-soft);color:var(--navy)} .t-fb{background:var(--or-soft);color:var(--or-strong)}
 .info h3{font-size:1.4rem;font-weight:900}
 .scene{margin:0}
 .feat{margin:0;padding-left:1.1em;font-size:.95rem}
@@ -107,7 +107,7 @@ details.more[open]>summary::after{content:"접기 ▴"}
 
 <header class="hero">
   <span class="eyebrow">수원가정교육연구회 · 바이브코딩 2차 · 별책</span>
-  <h1>가정과 실습 예제집 — <b>바로 수업에 쓰는 샘플 7종</b></h1>
+  <h1>가정과 실습 예제집 — <b>바로 수업에 쓰는 샘플 <span id="cnt">15</span>종</b></h1>
   <p>모두 실제로 동작하는 완성 샘플입니다. <b>그대로 수업에 쓰셔도 되고</b>, 아래 프롬프트로 <b>내 버전을 처음부터 만들어 보거나</b>, <b>도전과제</b>로 하나씩 바꿔 보세요.</p>
   <p>연수에서 만든 샘플을 그대로 수업에 써 보신 선생님들의 만족도가 높았습니다. 오늘도 같은 방식입니다.</p>
 </header>
@@ -120,6 +120,8 @@ details.more[open]>summary::after{content:"접기 ▴"}
     <div class="gas"><div class="k">📊 Apps Script로 · 경로 E (구글 시트)</div>
       <div><b>여러 사람의 입력을 한 곳에 모은다.</b><br>제출 · 집계 · 교사 대시보드. 파일 2개(<code>Code.gs</code> + <code>index.html</code>). 개인 gmail 권장.</div></div>
   </div>
+  <div class="split" style="margin-top:0"><div style="border-top:6px solid var(--or)"><div class="k" style="color:var(--or-strong)">🔥 Firebase로 · 고급 (내 Firebase 프로젝트)</div>
+      <div><b>실시간으로 쌓이고, 사진을 받고, 전시회처럼 보여 준다.</b><br>제출 즉시 TV에 반영 · 작품 사진 제출 · 교사 승인 후 공개. Google 로그인으로 교사 화면 잠금. Apps Script로 충분하면 Apps Script가 더 쉽습니다.</div></div></div>
   <p class="ask">❓ 헷갈리면 이 질문 하나: <b>“학생 30명이 낸 걸 내가 한 화면에서 봐야 하나?”</b> → <b>예 = Apps Script</b>, 아니오 = HTML.<br>
   <span style="font-size:.92rem">HTML로 시작해도 됩니다. 화면을 HTML로 먼저 완성·배포한 뒤, 필요할 때 “구글 시트에 모으기”만 Apps Script로 옮기는 게 가장 안전한 순서입니다.</span></p>
 </section>
@@ -145,10 +147,9 @@ details.more[open]>summary::after{content:"접기 ▴"}
 (여기에 샘플 코드 붙여넣기)</pre>
 </div>
 
-<nav class="filters" aria-label="형식 거르기">
-  <button class="chip on" data-f="all">전체 7</button>
-  <button class="chip" data-f="html">📄 HTML 4</button>
-  <button class="chip" data-f="gas">📊 Apps Script 3</button>
+<nav class="filters" aria-label="거르기">
+  <div id="fType" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+  <div id="fUnit" style="display:flex;gap:8px;flex-wrap:wrap;width:100%"></div>
 </nav>
 
 <main id="list"></main>
@@ -161,7 +162,7 @@ Apps Script 샘플은 체험 모드(이 브라우저에만 저장)로 검증했�
 
 <script>
 const EX = [
-{ id:"cooking", type:"html", unit:"식생활 · 조리", dir:"samples/cooking-lab/", shot:"shots/shot_cooking.png",
+{ id:"cooking", type:"html", area:"식생활", unit:"식생활 · 조리", dir:"samples/cooking-lab/", shot:"shots/shot_cooking.png",
   name:"조리실습 모둠 도우미",
   scene:"조리실습 시간, 모둠 태블릿이나 교실 TV에 띄워 두고 레시피 → 재료·역할 → 단계 타이머 → 위생 체크 → 기록지 순서로 진행합니다.",
   feat:["인원(1~12명)에 맞춰 재료량 자동 환산 · 기본 레시피 4개 + 교사가 추가·편집","역할 무작위 배정(조장·조리·손질·위생·정리·기록, 인원 따라 겸직)","단계별 카운트다운 · 끝나면 소리·깜빡임 · 안전 주의 강조 · TV 크게 보기","위생·안전 12항목 다 체크해야 ‘실습 완료’ · A4 모둠 실습 기록지 인쇄"],
@@ -174,7 +175,7 @@ const EX = [
   ch:{e:["우리 모둠이 고른 새 레시피(예: 달걀말이)를 재료·단계·안전 주의까지 넣어 기본 레시피로 등록해줘.","역할 이름을 우리 학교 실습실에 맞게 바꾸고(예: 설거지 담당 추가) 역할별 색을 넣어줘."],
       m:["타이머가 1분 남았을 때 미리 알림(짧은 소리 + 노란 띠)을 추가해줘.","각 모둠이 [실습 완료]를 누른 시각을 모아 완료 순서표로 보여 주는 화면을 추가해줘."],
       h:["재료 단가를 입력하면 모둠 인원 기준 1인당 재료비와 총액을 계산하고, 예산을 넘으면 경고해줘.","완성된 기록지(모둠·레시피·체크 결과·소감)를 구글 시트로 제출하게 Apps Script(Code.gs + index.html)로 바꿔줘. 교사는 PIN으로 모둠별 제출 현황을 봐."]}},
-{ id:"meal", type:"html", unit:"식생활 · 영양", dir:"samples/meal-balance/", shot:"shots/shot_meal.png",
+{ id:"meal", type:"html", area:"식생활", unit:"식생활 · 영양", dir:"samples/meal-balance/", shot:"shots/shot_meal.png",
   name:"청소년 한 끼 식단 균형 분석기",
   scene:"‘균형 잡힌 식사’ 차시에 학생이 어제 먹은 식단이나 급식 메뉴를 담아 식품구성자전거 6군의 부족/과다를 확인하고, 고친 식단을 활동지에 씁니다.",
   feat:["음식 57개(급식·분식·간식) → 아침·점심·저녁·간식 칸에 담기 · 검색·식품군 필터","식품군별 권장선 대비 부족/적정/과다 막대 · 하루 에너지 합계","식품구성자전거 그림이 채워지고 부족 식품군을 채울 음식 추천","⚙ 설정에서 기준값·음식 표 편집(수업용 예시값) · 식단 저장 · A4 활동지 인쇄"],
@@ -187,7 +188,7 @@ const EX = [
   ch:{e:["우리 학교 이번 주 급식 메뉴 5가지를 음식 목록에 추가해줘(이름·1인분·식품군별 회분량).","결과 화면 맨 위에 ‘오늘의 식단 별점(★1~5)’을 균형 정도에 따라 보여줘."],
       m:["나트륨이 많은 음식에 🧂 배지를 달고, 하루에 3개 넘게 담으면 경고 줄을 보여줘.","남학생/여학생 외에 ‘운동부’ 패턴을 추가하고 설정에서 권장 횟수를 고칠 수 있게 해줘."],
       h:["‘목표 맞추기 게임’ 모드: 부족한 식품군을 가장 적은 음식 개수로 적정까지 채우면 점수를 주고 최고 점수를 저장해줘.","학생들의 하루 식단 결과를 구글 시트에 모으고 교사 화면에서 반 전체 ‘부족 식품군 순위’ 그래프를 보게 Apps Script로 바꿔줘(식습관 조사 샘플 참고)."]}},
-{ id:"allowance", type:"html", unit:"소비생활", dir:"samples/allowance/", shot:"shots/shot_allowance.png",
+{ id:"allowance", type:"html", area:"소비·자원관리", unit:"소비생활", dir:"samples/allowance/", shot:"shots/shot_allowance.png",
   name:"용돈 기입장 & 소비 성향 분석",
   scene:"‘합리적인 소비’ 단원에서 학생이 한두 주 동안 용돈을 기록하고, 필요/욕구 비율과 소비 성향 진단을 근거로 다음 달 계획을 세웁니다.",
   feat:["수입·지출 입력(카테고리 7종 · 필요/욕구 · 결제 수단 · 충동 지출 표시)","월별 목록 · 수정·삭제 · 예산 설정과 80%/초과 경고","카테고리 도넛 · 필요/욕구 비율 · 주별 지출 막대","규칙 기반 소비 성향 5유형 + ‘이렇게 판단했어요’ 근거표 · 샘플 데이터 · CSV · 다음 달 계획 활동지"],
@@ -200,7 +201,7 @@ const EX = [
   ch:{e:["카테고리에 ‘선물·기부’를 추가하고 도넛에서 쓸 색을 정해줘.","소비 성향 유형마다 어울리는 캐릭터 이모지와 한 줄 응원 문구를 붙여줘."],
       m:["저축 목표 달성률 원형 게이지를 만들고, 목표를 달성하면 축하 효과를 보여줘.","지출을 입력할 때 ‘사기 전 3초 질문’(꼭 필요해? 다른 걸로 대신? 일주일 뒤에도 원해?) 창을 띄우고 답을 기록에 남겨줘."],
       h:["학생들의 진단 유형·욕구 비율만(금액·이름 없이) 구글 시트로 모아 반 전체 소비 성향 분포 그래프를 보는 Apps Script 버전을 만들어줘.","두 달치 기록을 비교해 카테고리별 증감과 ‘달라진 점’ 요약을 보여 주는 비교 화면을 추가해줘."]}},
-{ id:"room", type:"html", unit:"주생활", dir:"samples/room-planner/", shot:"shots/shot_room.png",
+{ id:"room", type:"html", area:"주생활", unit:"주생활", dir:"samples/room-planner/", shot:"shots/shot_room.png",
   name:"우리 집 공간 배치 플래너",
   scene:"‘주거 공간 계획’ 차시에 방 크기를 재 오게 하고, 실제 치수 가구를 끌어다 놓으며 동선·채광·안전을 따져 배치안 A/B를 비교·발표합니다.",
   feat:["방 크기(m) → 격자 평면도(1칸 10cm) · 문(열림 반경)·창문 위치","실제 치수 가구 15종 끌어다 놓기·회전·복제 (마우스·터치·키보드)","겹침·벽 밖·문 가림·창문 가림 경고 · 점유율·남은 공간 %","생활 행위 영역 색 · 배치안 A/B/C 저장 · PNG 저장 · 평가 체크리스트 인쇄"],
@@ -213,7 +214,61 @@ const EX = [
   ch:{e:["줄자로 잰 우리 집 실제 가구 3개를 이름·치수로 가구 목록에 추가해줘.","가구 색을 영역별(수면·학습·수납·휴식)로 바꿀 수 있는 팔레트를 추가해줘."],
       m:["문에서 책상·침대까지 클릭으로 이동 경로를 그리면 길이(m)를 재 주는 ‘동선 길이 측정’ 기능을 추가해줘.","배치안 A와 B를 나란히 보여 주고 점유율·경고 수·체크리스트 점수를 비교하는 화면을 추가해줘."],
       h:["거실 + 방 2개를 이어 붙인 ‘우리 집 전체 평면도’와 방 사이 문 연결을 지원하고, 가족 생활 동선이 겹치는 곳을 표시해줘.","노약자·휠체어 사용자 모드: 통로 폭 90cm 미만인 곳과 문턱 주변을 경고하는 ‘유니버설 디자인 점검’을 추가해줘."]}},
-{ id:"ingredients", type:"gas", unit:"식생활 · 교사 업무", dir:"samples/gas-ingredients/", shot:"shots/shot_ingredients.png",
+{ id:"laundry", type:"html", area:"의생활", unit:"의생활 · 의복 관리", dir:"samples/laundry-care/", shot:"shots/shot_laundry.png",
+  name:"세탁 기호 해독 & 옷 관리 도우미",
+  scene:"‘의복 관리’ 차시에 학생이 집에서 옷 라벨을 찍어 오거나 기억해 와서 기호를 조합하고, 세탁 방법 문장을 만든 뒤 상황 퀴즈로 판단력을 확인합니다.",
+  feat:["기호 사전: 물세탁·표백·건조·다림질·전문 세탁 기호를 SVG로 · 뜻과 주의","라벨 해독: 기호를 고르면 실제 라벨 모양에 세탁 방법 문장 자동 생성 · 라벨 저장","상황 퀴즈: 판단 + 이유를 둘 다 맞혀야 1점(찍기 방지) · 오답 해설","섬유별 관리 표 · 얼룩 제거 가이드(안전 수칙) · 라벨 3칸 활동지 인쇄"],
+  p0:"세탁 기호 해독 도우미",
+  steps:["세탁 기호 사전 페이지를 만들어줘. 물세탁·표백·건조·다림질·드라이클리닝 기호를 SVG로 그리고 뜻과 주의를 한 줄씩 붙여줘.",
+         "범주마다 기호를 하나씩 고르면 ‘내 옷 라벨’ 모양에 세탁 방법 문장이 자동으로 나오게 해줘.",
+         "만든 라벨을 이름 붙여 브라우저에 저장하고, 다시 열고 지울 수 있게 해줘.",
+         "라벨 그림과 상황 문제를 보여 주고, 판단과 이유를 둘 다 맞혀야 1점인 퀴즈를 만들어줘. 오답 해설과 다시 하기도 넣어줘.",
+         "섬유별 관리 표와 얼룩 제거 가이드를 추가하고, 라벨 3칸 활동지를 A4로 인쇄되게 해줘."],
+  ch:{e:["퀴즈에 우리 반이 만든 상황 문제 1개를 추가해줘(설정 배열에).","기호 사전 위에 검색창을 넣어 ‘그늘’을 치면 해당 기호만 보이게 해줘."],
+      m:["저장한 라벨 중 하나로 ‘이 옷 건조기 돼?’ 같은 문제를 자동으로 내는 ‘친구 라벨 퀴즈’를 추가해줘.","섬유를 고르면 그 섬유에 맞지 않는 기호 조합(예: 울 + 고온 세탁)을 경고해줘."],
+      h:["교과서 취급표시 표의 기호와 다른 곳이 있으면 설정에서 기호 그림·뜻을 바꿀 수 있는 ‘기호 편집기’를 만들어줘.","학생들이 만든 라벨 문장을 구글 시트로 제출하고, 교사가 반 전체 ‘가장 많이 나온 세탁 실수’를 보는 Apps Script 버전을 만들어줘."]},
+  note:"국제 기준(ISO 3758·GINETEX) 기호입니다. 우리나라 KS K 0021·교과서 표와 일부 다를 수 있으니 교과서 표와 대조 후 쓰세요."},
+{ id:"chore", type:"html", area:"가족·발달", unit:"가족 · 가사 분담", dir:"samples/chore-share/", shot:"shots/shot_chore.png",
+  name:"우리 가족 가사 분담 공정성 분석기",
+  scene:"‘가족 구성원의 역할’ 차시에 일주일 가사 기록을 입력해 누가 얼마나 하는지 보고, ‘보이지 않는 가사’를 찾아 내가 옮겨 맡을 일을 정한 뒤 가족 약속서를 씁니다.",
+  feat:["구성원 호칭(실명 X) × 가사 목록 주간 근무표 · 1회 시간 × 횟수","구성원별 시간 비율 도넛·막대 · ‘보이지 않는 가사’(계획·챙기기) 빗금 표시","공정성 배율 + 해석 문장(‘공정 = 똑같이’가 아님) · 바꿔 보기 시뮬레이션","가족 가사 분담 약속서 인쇄 · 예시 가족 · JSON/CSV"],
+  p0:"우리 가족 가사 분담 분석기",
+  steps:["가족 호칭과 가사 목록을 입력하고, 가사×사람 칸에 주간 횟수와 1회 시간(분)을 적는 근무표를 만들어줘.",
+         "사람별 총 시간과 비율을 계산해서 도넛 그래프와 막대그래프(SVG)로 보여줘.",
+         "‘보이지 않는 가사’ 표시를 넣고, 가장 많이/적게 하는 사람의 배율로 공정성을 해석하는 문장을 규칙으로 만들어줘.",
+         "가사를 다른 사람에게 옮기면 비율이 어떻게 바뀌는지 전·후를 비교하는 ‘바꿔 보기’를 추가해줘.",
+         "옮긴 내용으로 가족 가사 분담 약속서를 인쇄하게 하고, 예시 가족·자동 저장·파일 저장/불러오기·CSV 내보내기를 넣어줘."],
+  ch:{e:["기본 가사에 ‘반려동물 돌보기’를 추가하고 1회 시간을 바꿔줘.","약속서에 가족이 서로에게 쓰는 ‘고마운 점’ 칸을 하나 더 넣어줘."],
+      m:["구성원마다 ‘가용 시간’(학교·직장 제외)을 넣어 가용 시간 대비 가사 비율도 비교해줘.","2주 뒤 다시 기록해 약속 전·후 비율 변화를 나란히 보여 주는 화면을 추가해줘."],
+      h:["학생마다 자기 가족의 역할별 비율만(호칭 없이) 구글 시트로 제출하고, 교사가 반 전체 ‘보이지 않는 가사’ 담당 분포를 보는 Apps Script 버전을 만들어줘.","가사별로 필요한 능력(요리·정리·계획)을 태그로 달고, 내가 새로 배워야 할 가사 기술 목록을 추천해줘."]}},
+{ id:"life", type:"html", area:"가족·발달", unit:"인간 발달 · 생애 설계", dir:"samples/life-plan/", shot:"shots/shot_life.png",
+  name:"나의 생애 설계 타임라인",
+  scene:"‘생애주기와 발달과업’ 차시에 시기별 특징을 보고 과업 카드를 맞는 시기에 놓아 본 뒤, 청소년기 자기 점검을 거쳐 내 생애 연표와 ‘지금 할 수 있는 한 걸음’을 씁니다.",
+  feat:["생애주기 7단계 띠: 신체·인지·정서사회성 특징과 발달과업","과업 카드 14장 매칭(끌어놓기·탭 선택 모두) → 채점·해설","청소년기 자기 점검 12문항 → 강점·키워 볼 영역·관심 요약","시기×영역 생애 연표 + ‘한 걸음’ 목록 · A4 활동지 인쇄"],
+  p0:"나의 생애 설계 타임라인",
+  steps:["생애주기 7단계(영아기~노년기)를 가로 띠로 보여 주고, 누르면 그 시기의 발달 특징과 발달과업 2개가 아래에 나오게 해줘.",
+         "발달과업 카드 14장을 섞어서 보여 주고, 카드를 시기 칸으로 끌어다 놓을 수 있게 해줘. 휴대폰에서는 카드를 누르고 칸을 누르면 옮겨지게.",
+         "채점하기 버튼을 누르면 맞은 카드는 ○, 틀린 카드는 ✕와 정답 시기·해설을 보여 주고 점수를 띄워줘.",
+         "내 생애 설계 칸을 만들어줘: 나이·영역·목표·‘지금 할 수 있는 한 걸음’을 입력하면 시기별 연표 표로 보여 주고 브라우저에 저장되게.",
+         "인쇄 버튼을 누르면 A4 한 장에 연표와 한 걸음 목록(체크 상자 포함)만 깔끔하게 나오게 해줘."],
+  ch:{e:["설정에서 생애주기 나이 구간을 우리 교과서에 맞게 고쳐줘.","자기 점검에 ‘진로’ 영역 3문항을 추가해줘."],
+      m:["매칭에 60초 시간 제한 모드와 최고 기록 저장을 넣어줘.","연표의 목표를 끌어서 다른 시기로 옮길 수 있게 해줘."],
+      h:["내 생애 설계를 PNG 이미지로 내보내는 기능(canvas 그리기)을 추가해줘.","반·번호와 강점 영역·관심 분야만 구글 시트로 제출하고, 교사 화면에 반 전체 ‘관심 분야 순위’ 그래프를 보여 주는 Apps Script 버전을 만들어줘."]},
+  note:"발달 특징·나이 구간은 일반적인 교과서 수준의 내용입니다. 교과서마다 다를 수 있으니 설정에서 맞춰 쓰세요."},
+{ id:"time", type:"html", area:"소비·자원관리", unit:"자원 관리 · 시간 관리", dir:"samples/time-planner/", shot:"shots/shot_time.png",
+  name:"일주일 시간 사용 분석 플래너",
+  scene:"‘시간 자원 관리’ 차시에 계획 시간표와 실제 일주일 기록을 따로 칠해 비교하고, 수면·미디어 비중을 확인한 뒤 중요/긴급 매트릭스로 다음 주 목표 3개를 세웁니다.",
+  feat:["요일 × 30분 칸 시간표에 끌어서 칠하기(마우스·터치) · 활동 11종 색+무늬","계획 / 실제 / 비교: 다른 칸 표시와 계획 일치율","활동별 주간 합계 · 요일별 수면 막대(권장 범위는 예시값) · 미디어 비중 · ‘짚어 볼 점’","중요/긴급 4분면 매트릭스 · 다음 주 목표 3개 · A4 3쪽 인쇄"],
+  p0:"일주일 시간 사용 분석 플래너",
+  steps:["월~일 × 30분 칸 시간표를 만들고, 활동 버튼을 고른 뒤 칸을 누르고 끌면 네모 범위가 그 색으로 칠해지게 해줘.",
+         "칠한 칸을 세서 활동별 주간 합계 막대와 하루 평균을 옆에 보여줘.",
+         "요일별 수면 시간을 막대로 보여 주고, 권장 시간(예시값, 설정에서 수정)보다 적으면 표시해줘.",
+         "‘계획’과 ‘실제’ 시간표를 따로 칠할 수 있게 하고, 비교 화면에서 다른 칸 표시와 활동별 차이(±시간)를 보여줘.",
+         "중요/긴급 4칸 매트릭스에 할 일을 넣고, 다음 주 개선 목표 3개를 적어 A4로 인쇄되게 해줘."],
+  ch:{e:["활동 하나(예: 독서)를 추가하고 색을 정해줘.","권장 수면 시간을 교과서 값으로 고쳐줘."],
+      m:["칸에 마우스를 올리면 ‘월 21:30 · 미디어’ 같은 정보 줄이 시간표 아래에 보이게 해줘.","같은 활동이 이어진 칸을 묶어 칸 안에 활동 이름을 글자로 보여줘."],
+      h:["여러 주 기록을 보관하고 주별 수면·미디어 추이를 꺾은선으로 그려줘.","실제 기록의 활동별 합계만 구글 시트로 제출하고, 교사 화면에 반 평균 수면·미디어 분포를 보여 주는 Apps Script 버전을 만들어줘(개인 시간표 원본은 보내지 않기)."]}},
+{ id:"ingredients", type:"gas", area:"식생활", unit:"식생활 · 교사 업무", dir:"samples/gas-ingredients/", shot:"shots/shot_ingredients.png",
   name:"실습 재료 신청 & 장보기 목록 자동 집계",
   scene:"조리실습 일주일 전, 모둠별로 메뉴·인원·필요 재료를 휴대폰으로 신청 → 교사는 반별 제출 현황과 품목별 총합(장보기 목록)을 바로 인쇄합니다.",
   feat:["품목 표(품목·단위·1인분량)는 구글 시트 ‘품목’ 탭에서 교사가 편집","모둠 신청: 인원 × 1인분량 자동 계산 · ‘모둠이 가져옴’ 체크 · 다시 내면 덮어쓰기","교사 화면(PIN): 반별 제출/미제출 모둠 · 품목별 총합 = 장보기표 인쇄 · 모둠 신청서 인쇄","체험 모드: index.html만 열어도 동작(PIN 1234)"],
@@ -226,7 +281,7 @@ const EX = [
   ch:{e:["품목 시트에 ‘분류’(채소·육류·양념…)를 추가하고 장보기표를 분류별로 묶어줘.","실습 날짜를 반별로 다르게 정하고 신청 화면 위에 크게 보여줘."],
       m:["품목에 단가 열을 추가해 품목별 금액과 반 전체 예상 재료비를 계산하고, 예산을 넘으면 경고해줘.","신청 마감 일시를 정하고, 마감 뒤에는 학생 화면에서 제출이 막히고 ‘마감’ 안내가 뜨게 해줘."],
       h:["모둠 신청이 들어오면 교사 gmail로 요약 메일을 보내는 기능(MailApp)을 추가해줘. 하루 한 번만 모아서.","실습 후 모둠별 ‘남은 재료·버린 재료’를 입력받아 다음 실습 1인분량을 조정하는 추천을 보여줘."]}},
-{ id:"survey", type:"gas", unit:"식생활 · 청소년", dir:"samples/gas-survey/", shot:"shots/shot_survey.png",
+{ id:"survey", type:"gas", area:"식생활", unit:"식생활 · 청소년", dir:"samples/gas-survey/", shot:"shots/shot_survey.png",
   name:"우리 반 식습관 실태 조사 + 실시간 결과",
   scene:"‘청소년의 식생활’ 도입에서 학생들이 휴대폰으로 응답하면 TV의 교사 화면 그래프가 실시간으로 바뀌고, 반별 비교로 토의를 시작합니다.",
   feat:["문항은 Code.gs 맨 위 배열(단일·복수·서술)로 정의 → 학생 화면·그래프 자동 생성","반 필수·번호 선택(번호 있으면 다시 내기 덮어쓰기, 없으면 익명)","교사 화면(PIN): 문항별 비율 막대 · 반 필터 · 반별 비교 · 10초 자동 새로고침","서술 응답 모아보기(TV에서 가리기) · CSV 내려받기 · 체험 모드"],
@@ -239,7 +294,7 @@ const EX = [
   ch:{e:["문항 하나를 우리 반 주제(예: 에너지 음료 섭취)로 바꾸고 보기를 고쳐줘.","응답을 제출하면 ‘오늘의 건강 식습관 팁’ 하나를 무작위로 보여줘."],
       m:["제출 직후 ‘내 답 vs 우리 반 평균’ 비교 화면을 보여줘(다른 학생 개인 응답은 안 보이게).","문항별로 ‘가장 많이 고른 답’ 한 줄 요약을 TV 화면 맨 위에 크게 보여줘."],
       h:["같은 학생의 1차·2차(수업 전/후) 응답을 비교해 달라진 비율을 보여 주는 사전·사후 비교 기능을 추가해줘.","서술 응답을 키워드별로 묶어(아침·간식·운동 등) 개수 막대로 보여 주는 ‘다짐 키워드 보드’를 추가해줘."]}},
-{ id:"peer", type:"gas", unit:"수행평가 · 전 단원", dir:"samples/gas-peer-review/", shot:"shots/shot_peer.png",
+{ id:"peer", type:"gas", area:"수행평가", unit:"수행평가 · 전 단원", dir:"samples/gas-peer-review/", shot:"shots/shot_peer.png",
   name:"모둠 활동 자기·동료평가 수합",
   scene:"조리실습·프로젝트가 끝난 뒤 학생이 휴대폰으로 자기평가와 모둠원 평가를 내면, 교사는 자기 점수 vs 동료 평균, 차이가 큰 학생, 미제출자를 한눈에 봅니다.",
   feat:["평가 이름·루브릭 항목(1~5점 + 설명)은 Code.gs 맨 위에서 설정","반·모둠·번호 → 자기평가 + 모둠원 각각 평가 + 한마디(모두 필수) · 다시 내면 덮어쓰기","교사 화면(PIN): 항목별 자기/동료 평균 · 학생별 표 · 차이 큰 순 정렬 · 미제출자","한마디 모아보기(TV 가리기) · CSV · 체험 모드"],
@@ -251,7 +306,61 @@ const EX = [
          "미제출자 목록, 차이 큰 순 정렬, 한마디 모아보기(TV 가리기), CSV, 체험 모드를 추가해줘."],
   ch:{e:["루브릭 항목을 이번 실습에 맞게 바꾸고(예: 위생, 협력, 시간 관리, 창의성) 점수 설명을 고쳐줘.","평가 제출 화면에 ‘한마디는 칭찬 1 + 제안 1로’ 예시 문장을 보여줘."],
       m:["자기-동료 점수 차이가 큰 학생 목록을 ‘상담 메모’ 칸과 함께 인쇄하는 기능을 추가해줘.","같은 반 모둠별 평균을 비교하는 막대 그래프를 교사 화면에 추가해줘."],
-      h:["학생이 접근 코드로 자기가 받은 점수와 한마디만(쓴 사람은 가리고) 보는 ‘개인 피드백 카드’ 화면을 만들어줘.","같은 평가를 2회(중간·최종) 진행해 학생별 항목 점수 변화를 꺾은선으로 보여줘."]}}
+      h:["학생이 접근 코드로 자기가 받은 점수와 한마디만(쓴 사람은 가리고) 보는 ‘개인 피드백 카드’ 화면을 만들어줘.","같은 평가를 2회(중간·최종) 진행해 학생별 항목 점수 변화를 꺾은선으로 보여줘."]}},
+{ id:"swap", type:"gas", area:"소비·자원관리", unit:"소비생활 · 지속가능한 소비", dir:"samples/gas-swap/", shot:"shots/shot_swap.png",
+  name:"학급 나눔 장터 (물물교환 게시판)",
+  scene:"‘지속가능한 소비·공유경제’ 단원에서 학생들이 안 쓰는 물건을 게시판에 올리고 교환 신청·수락을 해 보며, 교사는 ‘버려질 뻔한 물건 n개 재사용’ 지표로 활동을 마무리합니다.",
+  feat:["반 + 별칭 + 4자리 비밀번호(해시로만 저장) · 물건 올리기(분류·상태·원하는 교환·이야기)","게시판: 분류 필터·검색 · ‘그냥 나눔’ · 교환 완료 도장","교환 신청 → 주인이 수락/거절 → 두 물건 모두 완료 처리","교사(PIN): 재사용 지표 · 분류별 통계 · 부적절 글 숨김/삭제 · CSV · 체험 모드"],
+  p0:"학급 나눔 장터",
+  steps:["(HTML로 먼저) 게시판에 물건 카드(이름·분류·상태 상/중/하·원하는 교환)가 보이게 하고, 샘플 물건 6개를 넣어줘. 데이터는 localStorage에 저장해줘.",
+         "[올리기] 화면을 추가해줘. 반·별칭·물건 이름·분류·상태를 입력하면 게시판 맨 앞에 카드가 붙게 해줘.",
+         "카드에 [교환 신청] 버튼을 추가해줘. 내 물건을 고르고 메시지를 쓰면 신청이 저장되고, 물건 주인이 수락하면 두 카드에 ‘교환 완료’ 도장이 찍히게 해줘.",
+         "교사 화면을 추가해줘. PIN을 넣으면 분류별 올린 수·교환 완료 수, ‘버려질 뻔한 물건 n개 재사용’이 보이고 부적절한 글을 숨길 수 있게 해줘.",
+         "이 index.html을 Apps Script 웹 앱으로 바꿔줘. Code.gs에 doGet과 시트 저장 함수를 만들고 화면은 google.script.run으로 부르게. 교사 PIN은 서버에서 확인하고, 학생 비밀번호는 해시로만 저장해줘. 두 파일 전체와 배포 순서도."],
+  ch:{e:["분류에 ‘운동용품’을 추가하고 새 버전으로 다시 배포해줘.","‘그냥 나눔’ 물건에는 형광펜 표시 대신 ‘무료’ 도장이 찍히게 바꿔줘."],
+      m:["물건 주인이 자기 글을 내릴 수 있는 [내리기] 버튼을 추가해줘(서버에서 본인 확인).","교사 화면에 ‘이번 장터로 아낀 금액(물건별 예상 가격 합)’ 지표를 추가해줘."],
+      h:["교환 신청마다 두 사람만 볼 수 있는 1:1 쪽지 대화를 추가해줘(새 시트 탭 + 서버 본인 확인).","학기말에 반별 재사용 수를 비교하는 ‘반 대항 나눔 순위’ 화면을 만들어줘."]}},
+{ id:"upcycle", type:"gas", area:"의생활", unit:"의생활 · 업사이클링 프로젝트", dir:"samples/gas-upcycle/", shot:"shots/shot_upcycle.png",
+  name:"업사이클링 모둠 프로젝트 진행 보드",
+  scene:"여러 차시에 걸친 의복 업사이클링 프로젝트에서 모둠이 매 시간 단계 체크와 막힌 점을 기록하고, 교사는 칸반 보드로 반 전체 진행과 멈춘 모둠을 보며 피드백을 남깁니다.",
+  feat:["반 + 모둠 + 모둠 비밀번호(해시) · 단계별 체크(조사 → 구상 → 재료 → 제작 → 발표, 설정 가능)","진행 메모·다음 할 일·막힌 점 · 동시에 저장하면 덮어쓰지 않고 다시 불러오기 안내","교사(PIN): 단계별 칸반 · ‘n일째 멈춤’ 표시 · 막힌 점 모아보기 · 모둠별 피드백 한 줄","TV 진행 현황판(메모 자동 가림) · 비밀번호 초기화 · CSV · 체험 모드"],
+  p0:"업사이클링 프로젝트 진행 보드",
+  steps:["(HTML로 먼저) 반·모둠을 고르면 5단계(조사·디자인 구상·재료 준비·제작·발표) 체크리스트와 진행 메모·다음 할 일·막힌 점 칸이 나오는 화면을 만들고 localStorage에 저장해줘.",
+         "교사 탭에 단계별 열로 모둠 카드가 놓이는 칸반 보드를 추가해줘. 라이브러리 없이.",
+         "Apps Script로 바꿔줘. Code.gs에 doGet, 모둠 진행 저장(LockService, 같은 모둠은 덮어쓰기), PIN 확인 후 전체 진행을 주는 교사용 함수를 넣고 google.script.run으로 연결해줘. 두 파일 전체와 배포 순서도.",
+         "모둠 비밀번호(해시 저장)와, 오래 업데이트 안 된 모둠에 ‘n일째 멈춤’ 표시, 교사가 모둠별 피드백 한 줄을 쓰면 학생 화면에 보이는 기능을 추가해줘.",
+         "TV용 크게 보기(메모 가리기), 막힌 점 모아보기, CSV, 체험 모드를 추가해줘."],
+  ch:{e:["단계별 체크 항목을 우리 반 프로젝트에 맞게 바꿔줘(설정 배열).","모둠 카드에 모둠 작품 이름을 크게 보여 줘."],
+      m:["칸반 아래에 단계별로 끝낸 모둠 수를 보여 주는 진행 막대를 추가해줘.","막힌 점에 교사가 ‘해결됨’ 표시를 하면 학생 화면에서 지워지게 해줘."],
+      h:["발표 단계에서 모둠이 작품 사진을 구글 드라이브에 올리고 보드에 보이게 해줘(권한·개인정보 설계 포함).","모둠별 단계 완료 날짜를 기록해 ‘단계별 걸린 시간’ 그래프로 보여줘."]}},
+{ id:"gallery", type:"fb", area:"수행평가", unit:"수행평가 · 작품 제작 단원", dir:"samples/fb-gallery/", shot:"shots/shot_gallery.png",
+  name:"작품 제출함 & 온라인 전시회",
+  scene:"바느질 소품·업사이클링·식단 포스터처럼 만든 작품을 학생이 휴대폰으로 찍어 내면, 교사는 자료실에서 반별로 받아 보고 승인한 작품만 전시실 벽에 걸어 TV 슬라이드쇼로 감상합니다.",
+  feat:["학생: 반·번호·제목·설명 + 사진 1~3장(카메라 바로 찍기) · 보낼 때 자동 축소 · 내가 낸 작품·선생님 코멘트 보기","교사(Google 로그인): 자료실 — 반·단원 필터, 출석부식 제출 현황(미제출 번호), 사진 내려받기(반_번호_제목), CSV","전시실: 승인한 작품만 액자+캡션으로(번호 숨김) · 마음에 들어요 1인 1회 · 감상평은 교사 승인 후 공개","TV 슬라이드쇼(←/→) · 실시간 반영 · 체험 모드(Firebase 없이 이 브라우저에서)"],
+  p0:"작품 제출함과 온라인 전시회",
+  steps:["(체험 모드 HTML 먼저) Firebase 없이 localStorage에만 저장하는 작품 제출 화면을 만들어줘. 반·번호·제목·설명·사진 1장, 아래에 제출 목록.",
+         "사진은 보내기 전에 canvas로 긴 변 1280px 이하 JPEG로 줄이고, 700KB를 넘으면 화질을 낮춰 다시 줄여 줘. 줄인 크기를 화면에 보여 줘.",
+         "저장 함수를 api 하나로 모아서, 맨 위 FIREBASE_CONFIG가 비어 있으면 지금처럼 localStorage, 차 있으면 Firestore(공식 CDN 모듈)로 저장하게 바꿔 줘. 학생은 익명 로그인(signInAnonymously).",
+         "교사 화면은 Google 로그인 후 TEACHER_EMAILS에 있을 때만 보이게 하고, 학생은 자기 문서만 만들고 교사만 전체를 읽는 firestore.rules를 만들어 줘. 새 Firebase 프로젝트용이야.",
+         "onSnapshot으로 승인된 작품만 실시간 전시실에 띄우고, 교사가 승인·숨김을 누르면 바로 바뀌게. 그다음 마음에 들어요 1인 1회와 감상평(교사 승인 후 공개)."],
+  ch:{e:["전시회 제목과 단원 목록을 우리 수업에 맞게 바꿔줘.","반별 인원을 실제 인원으로 바꿔서 미제출 번호가 맞게 나오게 해줘."],
+      m:["전시실 위에 ‘단원별 마음에 들어요 많이 받은 작품 3점’ 띠를 추가해줘.","자료실에서 고른 작품만 모아 한 장짜리 인쇄용 전시 목록을 만들어줘."],
+      h:["작품마다 루브릭 3항목 교사 채점 칸을 추가하고, 규칙에서 교사만 쓰게 막은 뒤 CSV에 넣어줘.","학생끼리 서로의 작품에 루브릭 동료평가를 남기고, 교사만 평균을 보게 해줘(규칙 포함)."]},
+  note:"Firebase는 내 새 프로젝트에 연결합니다(무료 Spark 요금제). 사진은 Storage(유료 전환 필요) 대신 줄여서 Firestore에 넣습니다. firestore.rules는 새 프로젝트에만 붙여 넣으세요 — 다른 앱이 쓰는 프로젝트에 덮어쓰면 그 앱의 규칙이 사라집니다."},
+{ id:"wall", type:"fb", area:"전 단원·토의", unit:"전 단원 · 토의·의견 나눔", dir:"samples/fb-wall/", shot:"shots/shot_wall.png",
+  name:"실시간 생각 나눔 벽",
+  scene:"‘우리 반 음식물 쓰레기를 줄이는 방법은?’ 같은 질문을 띄우면 학생이 휴대폰으로 쪽지를 붙이고, 교사는 TV 코르크 판에서 쪽지를 끌어 묶으며 토의를 정리합니다.",
+  feat:["교사: 질문 만들기 → 4자리 방 코드 · ‘검토 후 공개’ 켜고 끄기 · 쪽지 받기 멈춤","학생: 방 코드 + 모둠/별칭 · 80자 쪽지 · 분류 3종(의견·질문·경험, 색+글자) · 내 쪽지 상태","교사 벽: 실시간 쌓임 · 분류별/묶음별 보기 · 끌어 묶기(전자칠판 터치 가능) · 즉시 숨김","TV로 보기 · 결과 CSV · 인쇄 · 지난 질문 다시 열기 · 체험 모드"],
+  p0:"실시간 생각 나눔 벽",
+  steps:["(체험 모드 HTML 먼저) 질문 하나와 쪽지 입력 칸, 붙인 쪽지가 코르크 판 위에 쌓이는 화면을 만들어줘. localStorage 저장, 분류 3종(의견·질문·경험)은 색과 글자로 구분.",
+         "교사 화면에서 쪽지를 끌어서 묶음을 만들고 묶음 이름을 바꿀 수 있게 해줘. 터치(pointer 이벤트)로도 되게.",
+         "Firestore로 바꿔줘. FIREBASE_CONFIG가 비어 있으면 지금처럼 체험 모드. 교사가 방을 만들면 4자리 코드가 생기고, 학생은 익명 로그인으로 그 방에 쪽지를 붙여. onSnapshot으로 실시간.",
+         "교사만 숨김·공개·묶기를 할 수 있게 Google 로그인 + TEACHER_EMAILS, 그리고 같은 조건의 firestore.rules를 만들어줘(새 프로젝트용). 학생은 자기 쪽지만 만들기.",
+         "‘검토 후 공개’ 모드, 쪽지 받기 멈춤, TV로 보기(전체 화면), 결과 CSV와 인쇄를 추가해줘."],
+  ch:{e:["쪽지 분류 이름을 ‘찬성·반대·질문’으로 바꿔줘.","쪽지 글자 수 제한을 50자로 줄이고 남은 글자 수를 보여 줘."],
+      m:["벽 아래에 묶음별 쪽지 수 막대그래프와 인쇄용 요약 한 장을 추가해줘.","쪽지에 교사가 별표를 달면 TV에서 크게 보이게 해줘."],
+      h:["쪽지마다 학생 투표(1인 1표)를 넣고, 중복 투표를 규칙에서 막아줘(작품 전시회의 마음에 들어요 방식 참고).","수업이 끝나면 묶음별로 정리된 결과를 구글 시트로 내보내는 버튼을 추가해줘."]},
+  note:"Firebase는 내 새 프로젝트에 연결합니다. firestore.rules는 새 프로젝트에만 붙여 넣으세요. 방 코드를 아는 사람은 쪽지를 붙일 수 있으니 수업이 끝나면 ‘쪽지 받기 멈춤’을 누르세요."}
 ];
 
 const P0 = n => `[${n}]이라는 웹앱을 만들 거야. 지금은 첫 화면만 만들어줘.
@@ -266,23 +375,29 @@ const TXT = {}; let k = 0;
 const reg = t => { const id = "t" + (k++); TXT[id] = t; return id; };
 
 function card(x){
-  const isG = x.type === "gas";
+  const isG = x.type === "gas", isF = x.type === "fb";
   const route = isG
     ? `<b>📊 Apps Script · 경로 E</b> — 파일 2개(<code>Code.gs</code> + <code>index.html</code>). 키우기 1·2단계는 HTML로 화면을 먼저 만들어 경로 B로 배포해 두고, 3단계에서 Apps Script로 옮깁니다. 배포: 시트 → 확장 프로그램 → Apps Script → 배포 → 새 배포 → 웹 앱 · 실행: 나 · 액세스: <b>모든 사용자</b>. 개인 gmail 권장.`
+    : isF
+    ? `<b>🔥 Firebase · 고급</b> — <code>index.html</code>은 경로 B(GitHub Pages)로 배포하고, 데이터는 <b>내가 새로 만든 Firebase 프로젝트</b>에 모읍니다. <code>firestore.rules</code>는 <b>새 프로젝트에만</b> 붙여넣기 — 이미 쓰는 프로젝트에 붙이면 기존 규칙이 통째로 덮어써져 다른 사이트가 망가집니다. 설정이 비어 있으면 체험 모드로 동작.`
     : `<b>📄 HTML 하나 · 경로 B</b> — <code>index.html</code> 하나를 GitHub 저장소에 올리면 끝. 기록은 그 기기 브라우저에 저장되고 서버로 가지 않습니다.`;
+  const tagCls = isG ? "t-gas" : isF ? "t-fb" : "t-html", tagTxt = isG ? "📊 Apps Script" : isF ? "🔥 Firebase · 고급" : "📄 HTML 하나";
   const lv = (cls, name, arr) => `<div class="lv ${cls}"><h5>${name}</h5><ul>${arr.map(c => `<li><span>${esc(c)}</span><button class="copy" data-t="${reg(c)}" aria-label="도전과제 복사">복사</button></li>`).join("")}</ul></div>`;
   return `<article class="ex" data-type="${x.type}" id="ex-${x.id}">
   <div class="ex-top">
     <a class="shot" href="${x.dir}index.html" target="_blank" rel="noopener"><img src="${x.shot}" alt="${esc(x.name)} 샘플 화면" loading="lazy"></a>
     <div class="info">
-      <div class="tags"><span class="tag ${isG ? "t-gas" : "t-html"}">${isG ? "📊 Apps Script" : "📄 HTML 하나"}</span><span class="tag t-unit">${x.unit}</span></div>
+      <div class="tags"><span class="tag ${tagCls}">${tagTxt}</span><span class="tag t-unit">${x.unit}</span></div>
       <h3>${esc(x.name)}</h3>
       <p class="scene">${esc(x.scene)}</p>
       <ul class="feat">${x.feat.map(f => `<li>${esc(f)}</li>`).join("")}</ul>
+      ${x.note ? `<p class="note">${esc(x.note)}</p>` : ""}
       <div class="btns">
-        <a class="btn main" href="${x.dir}index.html" target="_blank" rel="noopener">샘플 열기${isG ? " (체험 모드 · PIN 1234)" : ""}</a>
+        <a class="btn main" href="${x.dir}index.html" target="_blank" rel="noopener">샘플 열기${isG ? " (체험 모드 · PIN 1234)" : isF ? " (체험 모드)" : ""}</a>
         <a class="btn" href="${x.dir}index.html" download="index.html">index.html 받기</a>
-        ${isG ? `<a class="btn" href="https://github.com/jhmath11-beep/gajeong-examples/blob/main/${x.dir}설치방법.md" target="_blank" rel="noopener">설치방법</a><a class="btn" href="https://github.com/jhmath11-beep/gajeong-examples/blob/main/${x.dir}Code.gs" target="_blank" rel="noopener">Code.gs</a>` : ""}
+        ${isG || isF ? `<a class="btn" href="https://github.com/jhmath11-beep/gajeong-examples/blob/main/${x.dir}설치방법.md" target="_blank" rel="noopener">설치방법</a>` : ""}
+        ${isG ? `<a class="btn" href="https://github.com/jhmath11-beep/gajeong-examples/blob/main/${x.dir}Code.gs" target="_blank" rel="noopener">Code.gs</a>` : ""}
+        ${isF ? `<a class="btn" href="https://github.com/jhmath11-beep/gajeong-examples/blob/main/${x.dir}firestore.rules" target="_blank" rel="noopener">firestore.rules</a>` : ""}
       </div>
     </div>
   </div>
@@ -304,6 +419,7 @@ function card(x){
 
 document.getElementById("list").innerHTML = EX.map(card).join("");
 TXT.base = document.getElementById("base").textContent;
+document.getElementById("cnt").textContent = EX.length;
 
 const toast = document.getElementById("toast"); let tt;
 function say(m){ toast.textContent = m; toast.classList.add("on"); clearTimeout(tt); tt = setTimeout(() => toast.classList.remove("on"), 1600); }
@@ -314,10 +430,25 @@ document.addEventListener("click", async e => {
   catch { const a = document.createElement("textarea"); a.value = t; document.body.appendChild(a); a.select(); document.execCommand("copy"); a.remove(); }
   say("복사했어요 — AI 대화창에 붙여넣기");
 });
-document.querySelectorAll(".chip").forEach(c => c.addEventListener("click", () => {
-  document.querySelectorAll(".chip").forEach(x => x.classList.toggle("on", x === c));
-  document.querySelectorAll(".ex").forEach(a => a.hidden = !(c.dataset.f === "all" || a.dataset.type === c.dataset.f));
-}));
+// 거르기: 형식(HTML/Apps Script) × 영역 — 둘 다 맞는 카드만
+const AREAS = [...new Set(EX.map(x => x.area))];
+const F = { type: "all", area: "all" };
+const n = f => EX.filter(f).length;
+document.getElementById("fType").innerHTML =
+  `<button class="chip on" data-k="type" data-v="all">전체 ${EX.length}</button>` +
+  `<button class="chip" data-k="type" data-v="html">📄 HTML ${n(x => x.type === "html")}</button>` +
+  `<button class="chip" data-k="type" data-v="gas">📊 Apps Script ${n(x => x.type === "gas")}</button>` +
+  (n(x => x.type === "fb") ? `<button class="chip" data-k="type" data-v="fb">🔥 Firebase ${n(x => x.type === "fb")}</button>` : "");
+document.getElementById("fUnit").innerHTML =
+  `<button class="chip on" data-k="area" data-v="all">모든 영역</button>` +
+  AREAS.map(a => `<button class="chip" data-k="area" data-v="${a}">${a} ${n(x => x.area === a)}</button>`).join("");
+document.querySelector(".filters").addEventListener("click", e => {
+  const c = e.target.closest(".chip"); if (!c) return;
+  F[c.dataset.k] = c.dataset.v;
+  document.querySelectorAll(`.chip[data-k="${c.dataset.k}"]`).forEach(x => x.classList.toggle("on", x === c));
+  EX.forEach(x => document.getElementById("ex-" + x.id).hidden =
+    !((F.type === "all" || x.type === F.type) && (F.area === "all" || x.area === F.area)));
+});
 </script>
 </body>
 </html>

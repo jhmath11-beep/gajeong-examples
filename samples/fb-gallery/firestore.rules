@@ -1,0 +1,121 @@
+// ⚠ 새로 만든 내 Firebase 프로젝트 전용 규칙입니다.
+// 이미 다른 사이트·앱이 쓰고 있는 프로젝트에 붙이면, 그 프로젝트의 기존 규칙이 이 내용으로 "통째로" 덮어써져
+// 다른 사이트가 조용히 망가집니다. 절대 기존 프로젝트에 붙이지 마세요.
+//
+// 작품 제출함 & 온라인 전시회 (fb-gallery) — Cloud Firestore 보안 규칙
+// - 학생: 익명 로그인. 자기 작품만 만들고·보고·고칠 수 있음(승인 상태·마음에 들어요 수는 못 바꿈)
+// - 교사: TEACHER_EMAILS 의 Google 계정(이메일 확인됨)만 전체 읽기·전시·숨김·삭제·코멘트
+// - 전시실: '전시 중(status == ok)'인 작품과 '공개된' 감상평만 로그인한 누구나(익명 포함) 읽기
+// - 이름·연락처는 받지 않음. 반·번호·별칭만.
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ▼ 교사 이메일 — index.html 의 TEACHER_EMAILS 와 똑같이 맞추세요.
+    function isTeacher() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email in ['선생님@gmail.com'];
+    }
+    function signedIn() { return request.auth != null; }
+    function mine(d) { return signedIn() && d.uid == request.auth.uid; }
+    function str(v, lo, hi) { return v is string && v.size() >= lo && v.size() <= hi; }
+
+    // 사진 1~3장, 합계 700,000자 이하(base64 JPEG). 문서 전체는 Firestore가 1MiB 넘으면 거절.
+    function photosOk(p) {
+      return p is list && (
+        (p.size() == 1 && p[0] is string && p[0].size() <= 700000) ||
+        (p.size() == 2 && p[0] is string && p[1] is string
+          && p[0].size() + p[1].size() <= 700000) ||
+        (p.size() == 3 && p[0] is string && p[1] is string && p[2] is string
+          && p[0].size() + p[1].size() + p[2].size() <= 700000));
+    }
+    function workOk(d) {
+      return str(d.cls, 1, 10)
+        && d.num is int && d.num >= 1 && d.num <= 40
+        && str(d.unit, 1, 20)
+        && str(d.title, 1, 40)
+        && str(d.desc, 0, 200)
+        && photosOk(d.photos);
+    }
+    function likeDoc(workId) {
+      return /databases/$(database)/documents/likes/$(workId + '_' + request.auth.uid);
+    }
+
+    // 작품
+    match /works/{workId} {
+      allow read: if isTeacher()
+        || mine(resource.data)
+        || (signedIn() && resource.data.status == 'ok');
+
+      // 학생이 새로 낼 때: 정해진 칸만, 내 uid, 검토 대기, 마음에 들어요 0, 시각은 서버 시각
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['uid', 'cls', 'num', 'unit', 'title', 'desc', 'photos', 'status', 'likes', 'createdAt', 'updatedAt'])
+        && request.resource.data.keys().hasAll(['uid', 'cls', 'num', 'unit', 'title', 'desc', 'photos', 'status', 'likes', 'createdAt', 'updatedAt'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.status == 'wait'
+        && request.resource.data.likes == 0
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time
+        && workOk(request.resource.data);
+
+      allow update: if isTeacher()
+        // 학생이 내 작품을 고칠 때: 내용 칸만 바꾸고, 상태는 다시 '검토 대기'로
+        || (mine(resource.data)
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['cls', 'num', 'unit', 'title', 'desc', 'photos', 'status', 'updatedAt'])
+          && request.resource.data.status == 'wait'
+          && request.resource.data.updatedAt == request.time
+          && workOk(request.resource.data))
+        // 마음에 들어요: 전시 중인 작품의 likes 를 정확히 1만 올리고, 같은 일괄 처리에서 내 likes 문서를 처음 만들 때만
+        || (signedIn()
+          && resource.data.status == 'ok'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes'])
+          && request.resource.data.likes == resource.data.likes + 1
+          && !exists(likeDoc(workId))
+          && existsAfter(likeDoc(workId)));
+
+      allow delete: if isTeacher();
+    }
+
+    // 마음에 들어요 기록 — 문서 이름이 "작품id_내uid" 라서 한 사람이 한 작품에 한 번만 만들 수 있음(고치기·지우기 불가)
+    match /likes/{likeId} {
+      allow read: if isTeacher() || mine(resource.data);
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['workId', 'uid', 'createdAt'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.workId is string
+        && likeId == request.resource.data.workId + '_' + request.auth.uid
+        && request.resource.data.createdAt == request.time
+        && getAfter(/databases/$(database)/documents/works/$(request.resource.data.workId)).data.likes
+           == get(/databases/$(database)/documents/works/$(request.resource.data.workId)).data.likes + 1;
+      allow delete: if isTeacher();
+    }
+
+    // 감상평 — 별칭만, 교사가 공개해야 보임
+    match /comments/{commentId} {
+      allow read: if isTeacher()
+        || mine(resource.data)
+        || (signedIn() && resource.data.status == 'ok');
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['workId', 'uid', 'alias', 'text', 'status', 'createdAt'])
+        && request.resource.data.keys().hasAll(['workId', 'uid', 'alias', 'text', 'status', 'createdAt'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.status == 'wait'
+        && request.resource.data.createdAt == request.time
+        && str(request.resource.data.alias, 1, 12)
+        && str(request.resource.data.text, 2, 100)
+        && request.resource.data.workId is string
+        && get(/databases/$(database)/documents/works/$(request.resource.data.workId)).data.status == 'ok';
+      allow update, delete: if isTeacher();
+    }
+
+    // 교사 코멘트 — 문서 이름 = 작품 id. 그 작품을 낸 학생과 교사만 읽음
+    match /feedback/{workId} {
+      allow read: if isTeacher() || mine(resource.data);
+      allow write: if isTeacher();
+    }
+
+    // 위에 적지 않은 곳은 모두 막힘(기본 거절)
+  }
+}

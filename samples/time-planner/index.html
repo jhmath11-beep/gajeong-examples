@@ -1,0 +1,699 @@
+<!--
+  무엇을 하는 앱: 요일×30분 칸 시간표에 활동을 칠해 '계획'과 '실제' 일주일을 기록하고, 활동별 합계·하루 평균·수면·미디어 비중·계획 대비 차이를 분석한 뒤 우선순위 매트릭스와 다음 주 개선 목표로 정리하는 플래너
+  수업 장면: 자원 관리와 자립(시간 관리) — 월요일에 계획표를 칠하고 일주일 동안 실제를 기록 → 수업 시간에 두 장을 비교·분석 → 할 일을 중요/긴급 4분면에 배치하고 개선 목표 3개를 적어 A4로 인쇄해 제출
+  설정 바꾸는 곳: 아래 <script> 맨 위 CONFIG (활동 이름·색·무늬, 하루 시작 시각, 청소년 권장 수면 시간(예시값), 미디어로 셀 활동, 샘플 시간표)
+-->
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>일주일 시간 사용 분석 플래너</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Asta+Sans:wght@400;600;800&display=swap">
+<style>
+/* Hallmark · pre-emit critique: P4 H5 E4 S5 R4 V5
+ * Hallmark · genre: editorial · tone: utilitarian · theme: custom (주간 시간 기록표 — 모눈 용지 + 먹색 띠 머리칸)
+ * macrostructure: workbench / ledger grid + analysis rail · anchor hue: 165 (graph-paper green) · accent: signal orange 45
+ * fonts: Black Han Sans (display — headings·inverted header bars) · Asta Sans (body·UI·numbers, tabular)
+ * contrast (measured): ink 16.2:1, muted 6.2:1, accent-ink 6.2:1, on-ink bars 16.2:1, ink on activity tints ≥7.6:1 (AA)
+ */
+:root {
+  --color-paper:     oklch(96.8% 0.008 165);
+  --color-paper-2:   oklch(93.6% 0.012 165);
+  --color-sheet:     oklch(98.8% 0.004 165);
+  --color-grid:      oklch(88% 0.025 165);     /* 모눈 */
+  --color-grid-hour: oklch(70% 0.040 165);
+  --color-rule:      oklch(80% 0.015 165);
+  --color-ink:       oklch(21% 0.015 200);
+  --color-ink-2:     oklch(36% 0.015 200);
+  --color-muted:     oklch(47% 0.015 190);
+  --color-on-ink:    oklch(97% 0.006 165);
+  --color-accent:    oklch(66% 0.170 45);      /* 신호 주황 — 표시·경고 */
+  --color-accent-ink:oklch(50% 0.150 42);      /* 주황 글자(AA) */
+  --color-accent-soft:oklch(94% 0.040 60);
+  --color-ok:        oklch(45% 0.090 160);
+  --color-hatch:     oklch(32% 0.020 200);     /* 무늬 선 */
+  --color-focus:     oklch(48% 0.160 255);
+
+  /* 활동 색 — CONFIG.activities 의 color 가 이 이름을 가리켜요 */
+  --act-sleep:  oklch(78% 0.060 265);
+  --act-school: oklch(84% 0.070 95);
+  --act-acad:   oklch(78% 0.080 55);
+  --act-study:  oklch(82% 0.090 125);
+  --act-meal:   oklch(84% 0.070 25);
+  --act-move:   oklch(86% 0.020 200);
+  --act-sport:  oklch(80% 0.090 160);
+  --act-media:  oklch(75% 0.110 0);
+  --act-chore:  oklch(84% 0.050 220);
+  --act-hobby:  oklch(85% 0.080 300);
+  --act-free:   oklch(90% 0.030 80);
+
+  --font-display: "Black Han Sans", "Malgun Gothic", sans-serif;
+  --font-body: "Asta Sans", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+
+  --fs-xs: 0.8125rem; --fs-sm: 0.9375rem; --fs-base: 1rem; --fs-lg: 1.25rem; --fs-xl: 1.625rem; --fs-2xl: clamp(1.875rem, 2.6vw + 1rem, 2.875rem);
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-6: 24px; --sp-8: 32px; --sp-12: 48px;
+  --cell-h: 18px;
+  --container: 88rem;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur: 150ms;
+}
+* { box-sizing: border-box; }
+html, body { overflow-x: clip; }
+body { margin: 0; font-family: var(--font-body); font-weight: 400; color: var(--color-ink); background: var(--color-paper); font-size: var(--fs-base); line-height: 1.6; word-break: keep-all; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 400; font-style: normal; line-height: 1.15; margin: 0; letter-spacing: 0; min-width: 0; }
+p { margin: 0; }
+button, input, select { font: inherit; color: inherit; }
+.wrap { max-width: var(--container); margin: 0 auto; padding-inline: clamp(0.75rem, 3vw, 2rem); }
+.muted { color: var(--color-muted); }
+.hidden { display: none !important; }
+:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+
+/* ── 머리 ─────────────── */
+.mast { padding-block: var(--sp-6) var(--sp-4); display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: var(--sp-4) var(--sp-8); }
+.mast h1 { font-size: var(--fs-2xl); }
+.mast p { color: var(--color-ink-2); font-size: var(--fs-sm); margin-top: var(--sp-2); }
+.idbox { display: flex; border: 2px solid var(--color-ink); font-size: var(--fs-sm); }
+.idbox span { padding: var(--sp-1) var(--sp-3); border-right: 1px solid var(--color-ink); white-space: nowrap; color: var(--color-muted); }
+.idbox span::after { content: ""; display: inline-block; width: 2.5em; }
+.idbox span:last-child { border-right: 0; }
+
+/* 먹색 띠 머리칸 — 서식의 칸 제목 */
+.bar-h { background: var(--color-ink); color: var(--color-on-ink); padding: var(--sp-2) var(--sp-3); display: flex; justify-content: space-between; align-items: baseline; gap: var(--sp-3); flex-wrap: wrap; }
+.bar-h h2 { font-size: var(--fs-lg); }
+.bar-h small { font-size: var(--fs-xs); opacity: .85; }
+.box { border: 2px solid var(--color-ink); background: var(--color-sheet); }
+.box-body { padding: var(--sp-4); }
+
+/* ── 버튼 ─────────────── */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-2); min-height: 44px; padding: 0 var(--sp-4); border: 2px solid var(--color-ink); background: var(--color-sheet); cursor: pointer; white-space: nowrap; border-radius: 0; font-weight: 600; transition: background-color var(--dur) var(--ease-out), color var(--dur) var(--ease-out); }
+.btn:hover { background: var(--color-paper-2); }
+.btn:active { transform: translateY(1px); }
+.btn.solid { background: var(--color-ink); color: var(--color-on-ink); }
+.btn.solid:hover { background: var(--color-ink-2); }
+.btn.thin { border-width: 1px; border-color: var(--color-rule); font-weight: 400; }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btnrow { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+
+/* 시트 선택: 붙은 칸 */
+.seg { display: inline-flex; border: 2px solid var(--color-ink); }
+.seg button { min-height: 44px; padding: 0 var(--sp-4); border: 0; border-right: 2px solid var(--color-ink); background: var(--color-sheet); cursor: pointer; white-space: nowrap; font-weight: 600; transition: background-color var(--dur) var(--ease-out); }
+.seg button:last-child { border-right: 0; }
+.seg button:hover { background: var(--color-paper-2); }
+.seg button[aria-pressed="true"] { background: var(--color-ink); color: var(--color-on-ink); }
+
+/* ── 작업 영역 ─────────────── */
+.work { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sp-6); align-items: start; }
+@media (min-width: 64rem) { .work { grid-template-columns: minmax(0, 34rem) minmax(0, 1fr); } }
+.controls { display: grid; gap: var(--sp-3); margin-bottom: var(--sp-3); }
+.ctl-row { display: flex; flex-wrap: wrap; gap: var(--sp-2) var(--sp-4); align-items: center; justify-content: space-between; }
+
+/* 활동 팔레트 = 범례 */
+.palette { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: 1px solid var(--color-ink); border-left: 1px solid var(--color-ink); }
+@media (min-width: 30rem) { .palette { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (min-width: 64rem) { .palette { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.pal { display: flex; align-items: center; gap: var(--sp-2); min-height: 44px; padding: 0 var(--sp-2); border: 0; border-right: 1px solid var(--color-ink); border-bottom: 1px solid var(--color-ink); background: var(--color-sheet); cursor: pointer; text-align: left; white-space: nowrap; font-size: var(--fs-sm); min-width: 0; }
+.pal:hover { background: var(--color-paper-2); }
+.pal .sw { flex: 0 0 auto; width: 22px; height: 22px; border: 1px solid var(--color-ink); }
+.pal .nm { overflow: hidden; text-overflow: ellipsis; }
+.pal[aria-pressed="true"] { box-shadow: inset 0 0 0 3px var(--color-ink); font-weight: 800; }
+.pal.erase .sw { background: var(--color-sheet); position: relative; }
+.pal.erase .sw::after { content: ""; position: absolute; inset: 0; background: linear-gradient(to top right, transparent calc(50% - 1px), var(--color-accent-ink) calc(50% - 1px) calc(50% + 1px), transparent calc(50% + 1px)); }
+
+/* 활동 칸 색 + 무늬(흑백 인쇄·색각 대비) */
+.c, .sw { background-color: var(--act); }
+.pt-diag  { background-image: repeating-linear-gradient(45deg, var(--color-hatch) 0 1px, transparent 1px 6px); }
+.pt-rdiag { background-image: repeating-linear-gradient(-45deg, var(--color-hatch) 0 1px, transparent 1px 6px); }
+.pt-hz    { background-image: repeating-linear-gradient(0deg, var(--color-hatch) 0 1px, transparent 1px 5px); }
+.pt-vt    { background-image: repeating-linear-gradient(90deg, var(--color-hatch) 0 1px, transparent 1px 5px); }
+.pt-cross { background-image: repeating-linear-gradient(0deg, var(--color-hatch) 0 1px, transparent 1px 6px), repeating-linear-gradient(90deg, var(--color-hatch) 0 1px, transparent 1px 6px); }
+.pt-dot   { background-image: radial-gradient(var(--color-hatch) 1px, transparent 1.4px); background-size: 6px 6px; }
+.pt-solid { background-image: none; }
+
+/* ── 시간표 격자 ─────────────── */
+.grid-wrap { border: 2px solid var(--color-ink); background: var(--color-sheet); }
+.tgrid { display: grid; grid-template-columns: 3rem repeat(7, minmax(0, 1fr)); user-select: none; -webkit-user-select: none; }
+.tgrid .dh { font-family: var(--font-display); text-align: center; padding: var(--sp-1) 0; background: var(--color-ink); color: var(--color-on-ink); border-left: 1px solid var(--color-ink-2); }
+.tgrid .dh.corner { border-left: 0; font-family: var(--font-body); font-size: var(--fs-xs); }
+.tgrid .tm { height: var(--cell-h); font-size: 0.6875rem; color: var(--color-muted); text-align: right; padding-right: var(--sp-1); line-height: 1; border-top: 1px solid transparent; touch-action: pan-y; }
+
+.tgrid .tm:nth-child(9) { color: var(--color-ink); font-weight: 600; }
+.tgrid .tm.hr { color: var(--color-ink); font-weight: 600; transform: translateY(-0.45em); }
+.tgrid .c { --act: var(--color-sheet); height: var(--cell-h); border-left: 1px solid var(--color-grid); border-top: 1px dotted var(--color-grid); position: relative; cursor: crosshair; touch-action: none; }
+.tgrid .c.hr { border-top: 1px solid var(--color-grid-hour); }
+.tgrid.locked .c { touch-action: pan-y; cursor: default; }
+.tgrid .c.pv { outline: 2px solid var(--color-ink); outline-offset: -2px; z-index: 1; }
+.tgrid .c.diff::after { content: ""; position: absolute; top: 0; right: 0; border-style: solid; border-width: 0 7px 7px 0; border-color: transparent var(--color-accent-ink) transparent transparent; }
+.grid-foot { display: flex; justify-content: space-between; gap: var(--sp-3); flex-wrap: wrap; padding: var(--sp-2) var(--sp-3); border-top: 2px solid var(--color-ink); font-size: var(--fs-xs); color: var(--color-ink-2); }
+.diff-key::before { content: ""; display: inline-block; width: 0; height: 0; border-style: solid; border-width: 0 8px 8px 0; border-color: transparent var(--color-accent-ink) transparent transparent; margin-right: var(--sp-1); }
+.hint { font-size: var(--fs-xs); color: var(--color-muted); }
+
+/* 범위로 칠하기 (키보드·휴대폰 대안) */
+details.quick { border: 1px solid var(--color-rule); background: var(--color-sheet); }
+details.quick summary { cursor: pointer; padding: var(--sp-2) var(--sp-3); min-height: 44px; display: flex; align-items: center; font-weight: 600; }
+.quick-body { padding: 0 var(--sp-3) var(--sp-3); display: grid; gap: var(--sp-3); }
+.days { display: flex; flex-wrap: wrap; gap: 0; }
+.days label { display: inline-grid; place-items: center; width: 44px; height: 44px; border: 1px solid var(--color-rule); margin: 0 -1px -1px 0; cursor: pointer; }
+.days label:has(input:checked) { background: var(--color-ink); color: var(--color-on-ink); border-color: var(--color-ink); }
+.days input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.days label:has(input:focus-visible) { outline: 2px solid var(--color-focus); outline-offset: 1px; position: relative; z-index: 1; }
+.qrow { display: flex; flex-wrap: wrap; gap: var(--sp-2); align-items: end; }
+.fld { display: grid; gap: 2px; font-size: var(--fs-xs); color: var(--color-ink-2); }
+.fld input, .fld select { min-height: 44px; padding: 0 var(--sp-2); border: 1px solid var(--color-ink-2); background: var(--color-sheet); border-radius: 0; font-size: var(--fs-base); color: var(--color-ink); }
+.err { color: var(--color-accent-ink); font-size: var(--fs-sm); min-height: 1.3em; }
+
+/* ── 분석 ─────────────── */
+.ana { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sp-6); }
+.stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: 1px solid var(--color-ink); border-left: 1px solid var(--color-ink); }
+@media (min-width: 40rem) { .stats { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.stat { padding: var(--sp-3); border-right: 1px solid var(--color-ink); border-bottom: 1px solid var(--color-ink); min-width: 0; }
+.stat .k { font-size: var(--fs-xs); color: var(--color-ink-2); display: block; }
+.stat .v { font-family: var(--font-display); font-size: var(--fs-xl); line-height: 1.2; }
+.stat .v small { font-family: var(--font-body); font-size: var(--fs-sm); margin-left: 2px; }
+.stat.warn .v { color: var(--color-accent-ink); }
+table.tot { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
+table.tot th, table.tot td { padding: var(--sp-1) var(--sp-2); border-bottom: 1px solid var(--color-rule); text-align: left; vertical-align: middle; }
+table.tot thead th { font-weight: 600; font-size: var(--fs-xs); color: var(--color-ink-2); border-bottom: 2px solid var(--color-ink); white-space: nowrap; }
+table.tot td.n { text-align: right; white-space: nowrap; width: 1%; }
+table.tot .act { display: flex; align-items: center; gap: var(--sp-2); white-space: nowrap; }
+table.tot .act .sw { width: 14px; height: 14px; border: 1px solid var(--color-ink); flex: 0 0 auto; }
+@media (max-width: 29.99rem) {
+  .box-body { padding: var(--sp-3) var(--sp-2); }
+  table.tot th, table.tot td { padding-inline: 3px; }
+  table.tot .act { white-space: normal; }
+}
+.hbar { position: relative; height: 12px; min-width: 32px; }
+.hbar i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--color-ink-2); }
+.hbar i.plan { background: transparent; border: 1px solid var(--color-ink); top: -2px; bottom: -2px; }
+.pos { color: var(--color-accent-ink); font-weight: 600; }
+.neg { color: var(--color-ok); font-weight: 600; }
+.sleep-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 0; }
+.sleep-days .col { display: grid; justify-items: center; min-width: 0; }
+.sleep-days .track { position: relative; width: 100%; height: 120px; border-bottom: 1px solid var(--color-ink); }
+.sleep-days .band { position: absolute; left: 0; right: 0; border-top: 1px dashed var(--color-ink); border-bottom: 1px dashed var(--color-ink); background: var(--color-paper-2); }
+.sleep-days .b { position: absolute; bottom: 0; left: 18%; right: 18%; background: var(--act-sleep); border: 1px solid var(--color-ink); border-bottom: 0; }
+.sleep-days .col.low .b { background-image: repeating-linear-gradient(45deg, var(--color-accent-ink) 0 1px, transparent 1px 5px); }
+.sleep-days .val { position: absolute; left: 0; right: 0; text-align: center; font-size: 0.75rem; font-weight: 600; color: var(--color-ink); line-height: 1.4; }
+.sleep-days .lb { font-size: var(--fs-xs); margin-top: 2px; }
+.sleep-cap { font-size: var(--fs-xs); color: var(--color-muted); margin-top: var(--sp-2); }
+.notes { list-style: none; padding: 0; margin: 0; display: grid; gap: var(--sp-2); font-size: var(--fs-sm); }
+.notes li { padding-left: 1.4em; position: relative; }
+.notes li::before { content: "▲"; position: absolute; left: 0; color: var(--color-accent-ink); font-size: 0.7em; top: 0.35em; }
+.notes li.ok::before { content: "■"; color: var(--color-ok); }
+.empty { color: var(--color-muted); font-size: var(--fs-sm); padding: var(--sp-3) 0; }
+
+/* ── 우선순위 매트릭스 ─────────────── */
+.lower { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sp-6); margin-top: var(--sp-8); }
+@media (min-width: 64rem) { .lower { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); } }
+.mx-add { display: flex; flex-wrap: wrap; gap: var(--sp-2); align-items: end; margin-bottom: var(--sp-3); }
+.mx-add .fld { flex: 1 1 12rem; }
+.mx-add .fld input { width: 100%; }
+.mx { display: grid; grid-template-columns: 1.6rem minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) minmax(0, 1fr); }
+.mx .axis { font-size: var(--fs-xs); color: var(--color-ink-2); font-weight: 600; display: grid; place-items: center; padding: var(--sp-1); }
+.mx .axis.v { writing-mode: vertical-rl; }
+.q { border: 1px solid var(--color-ink); margin: 0 -1px -1px 0; min-height: 150px; padding: var(--sp-2) var(--sp-3); display: flex; flex-direction: column; gap: var(--sp-1); min-width: 0; }
+.q h3 { font-size: var(--fs-base); display: flex; justify-content: space-between; gap: var(--sp-2); flex-wrap: wrap; }
+.q h3 small { font-family: var(--font-body); font-size: var(--fs-xs); color: var(--color-ink-2); font-weight: 400; }
+.q.q1 { background: var(--color-accent-soft); }
+.q.q1 h3 { color: var(--color-accent-ink); }
+.q ul { list-style: none; margin: 0; padding: 0; }
+.q li { display: flex; align-items: center; gap: var(--sp-1); border-bottom: 1px dotted var(--color-rule); font-size: var(--fs-sm); }
+.q li span { flex: 1 1 auto; min-width: 0; }
+.q li select { min-height: 36px; border: 1px solid var(--color-rule); background: var(--color-sheet); font-size: var(--fs-xs); max-width: 5.5rem; border-radius: 0; }
+@media (max-width: 47.99rem) {
+  .q { padding: var(--sp-2); }
+  .q li { flex-wrap: wrap; padding-bottom: var(--sp-1); }
+  .q li span { flex: 1 1 100%; padding-top: var(--sp-1); }
+  .q li select { flex: 1 1 auto; max-width: none; }
+}
+.x { width: 36px; height: 36px; border: 0; background: transparent; cursor: pointer; color: var(--color-muted); flex: 0 0 auto; }
+.x:hover { color: var(--color-accent-ink); }
+.goals { display: grid; gap: var(--sp-3); counter-reset: g; }
+.goal { display: grid; grid-template-columns: 2rem minmax(0, 1fr); align-items: center; gap: var(--sp-2); }
+.goal::before { counter-increment: g; content: counter(g); font-family: var(--font-display); font-size: var(--fs-xl); text-align: center; }
+.goal input { width: 100%; min-height: 44px; padding: 0 var(--sp-2); border: 0; border-bottom: 2px solid var(--color-ink); background: transparent; border-radius: 0; }
+.goal input:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+
+.foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--sp-3); align-items: center; padding-block: var(--sp-8) var(--sp-12); font-size: var(--fs-xs); color: var(--color-muted); }
+.status { position: fixed; right: var(--sp-4); bottom: var(--sp-4); z-index: 20; background: var(--color-ink); color: var(--color-on-ink); padding: var(--sp-2) var(--sp-4); font-size: var(--fs-sm); opacity: 0; transform: translateY(8px); transition: opacity 300ms var(--ease-out), transform 300ms var(--ease-out); pointer-events: none; max-width: calc(100% - 2 * var(--sp-4)); }
+.status.on { opacity: 1; transform: none; pointer-events: auto; }
+.status button { margin-left: var(--sp-3); background: transparent; color: inherit; border: 1px solid var(--color-on-ink); padding: 2px var(--sp-2); cursor: pointer; }
+.print-only { display: none; }
+@media (prefers-reduced-motion: reduce) { * { transition-duration: 1ms !important; } }
+
+/* ── 인쇄: A4 ─────────────── */
+@media print {
+  @page { size: A4 portrait; margin: 10mm; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { background: none; font-size: 9.5pt; }
+  .noprint, .status, .foot, details.quick, .controls { display: none !important; }
+  .print-only { display: block; }
+  .mast { padding: 0 0 3mm; }
+  .mast h1 { font-size: 18pt; }
+  .work { grid-template-columns: 1fr; gap: 3mm; }
+  .tgrid { --cell-h: 3.35mm; }
+  .tgrid .tm { font-size: 6pt; }
+  .tgrid .dh { padding: 0.5mm 0; }
+  .grid-wrap { break-inside: avoid; }
+  .print-legend { display: flex !important; flex-wrap: wrap; gap: 1mm 4mm; font-size: 8pt; margin-top: 2mm; }
+  .print-legend span { display: inline-flex; align-items: center; gap: 1mm; }
+  .print-legend .sw { width: 4mm; height: 4mm; border: 1px solid var(--color-ink); }
+  .ana { break-before: page; gap: 4mm; }
+  .lower { margin-top: 4mm; grid-template-columns: 1fr 1fr; gap: 4mm; }
+  .box, .stats, .q { break-inside: avoid; }
+  .q { min-height: 28mm; }
+  .q li select, .x { display: none; }
+  .goal input { min-height: 8mm; }
+  .sleep-days .track { height: 26mm; }
+}
+.print-legend { display: none; }
+</style>
+</head>
+<body>
+
+<header class="wrap mast">
+  <div>
+    <h1>일주일 시간 사용 분석 플래너</h1>
+    <p>기술·가정 — 자원 관리와 자립 · 계획한 일주일과 실제 일주일을 칠해서 비교해요</p>
+  </div>
+  <div class="idbox" aria-label="인쇄용 기록란"><span>학년</span><span>반</span><span>번호</span></div>
+</header>
+
+<main class="wrap">
+  <div class="work">
+    <!-- 시간표 -->
+    <section aria-labelledby="gridTitle">
+      <div class="controls">
+        <div class="ctl-row">
+          <div class="seg" role="group" aria-label="시간표 고르기">
+            <button data-sheet="plan" aria-pressed="false">계획</button>
+            <button data-sheet="actual" aria-pressed="true">실제</button>
+            <button data-sheet="compare" aria-pressed="false">비교</button>
+          </div>
+          <div class="btnrow">
+            <button class="btn thin" id="lockBtn" aria-pressed="false">칠하기 잠금</button>
+            <button class="btn thin" id="clearBtn">이 시간표 비우기</button>
+          </div>
+        </div>
+        <div class="palette" id="palette" role="group" aria-label="칠할 활동"></div>
+        <p class="hint" id="paintHint">칸을 누르고 끌면 네모 범위가 한 번에 칠해져요. 휴대폰은 왼쪽 시각 줄을 밀어 화면을 올리거나, ‘칠하기 잠금’을 켜고 스크롤하세요.</p>
+        <details class="quick">
+          <summary>시간 범위로 칠하기</summary>
+          <form class="quick-body" id="quickForm" novalidate>
+            <div class="days" id="qDays" role="group" aria-label="요일"></div>
+            <div class="qrow">
+              <label class="fld">시작<input type="time" id="qFrom" step="1800" value="22:30"></label>
+              <label class="fld">끝<input type="time" id="qTo" step="1800" value="06:00"></label>
+              <label class="fld">활동<select id="qAct"></select></label>
+              <button class="btn solid" type="submit">칠하기</button>
+            </div>
+            <p class="err" id="qErr" role="alert"></p>
+          </form>
+        </details>
+      </div>
+      <div class="grid-wrap">
+        <div class="bar-h"><h2 id="gridTitle">실제 기록</h2><small id="gridSub">하루 = 06:00 ~ 다음 날 06:00</small></div>
+        <div class="tgrid" id="tgrid" aria-describedby="paintHint"></div>
+        <div class="grid-foot"><span id="filled"></span><span class="diff-key" id="diffKey">계획과 다른 칸</span></div>
+      </div>
+      <div class="print-legend" id="printLegend"></div>
+    </section>
+
+    <!-- 분석 -->
+    <section class="ana" aria-labelledby="anaTitle">
+      <div class="box">
+        <div class="bar-h"><h2 id="anaTitle">한눈에 보기</h2><small id="anaSub"></small></div>
+        <div class="stats" id="stats"></div>
+      </div>
+      <div class="box">
+        <div class="bar-h"><h2>활동별 주간 합계</h2><small id="totSub"></small></div>
+        <div class="box-body"><table class="tot" id="totTable"></table></div>
+      </div>
+      <div class="box">
+        <div class="bar-h"><h2>요일별 수면</h2><small id="sleepSub"></small></div>
+        <div class="box-body">
+          <div class="sleep-days" id="sleepDays" role="img"></div>
+          <p class="sleep-cap" id="sleepCap"></p>
+        </div>
+      </div>
+      <div class="box">
+        <div class="bar-h"><h2>짚어 볼 점</h2></div>
+        <div class="box-body"><ul class="notes" id="notes"></ul></div>
+      </div>
+    </section>
+  </div>
+
+  <div class="lower">
+    <section class="box" aria-labelledby="mxTitle">
+      <div class="bar-h"><h2 id="mxTitle">우선순위 매트릭스</h2><small>이번 주 할 일을 중요·긴급으로 나눠요</small></div>
+      <div class="box-body">
+        <form class="mx-add noprint" id="mxForm" novalidate>
+          <label class="fld">할 일<input type="text" id="mxText" maxlength="40" placeholder="예: 수행평가 보고서 쓰기"></label>
+          <label class="fld">칸<select id="mxQ"><option value="1">중요·긴급</option><option value="2">중요·안 긴급</option><option value="3">안 중요·긴급</option><option value="4">안 중요·안 긴급</option></select></label>
+          <button class="btn solid" type="submit">넣기</button>
+        </form>
+        <div class="mx" id="mx"></div>
+      </div>
+    </section>
+    <section class="box" aria-labelledby="goalTitle">
+      <div class="bar-h"><h2 id="goalTitle">다음 주 개선 목표</h2><small>분석을 보고 딱 3개만</small></div>
+      <div class="box-body">
+        <div class="goals" id="goals">
+          <label class="goal"><input type="text" maxlength="60" data-g="0" aria-label="개선 목표 1"></label>
+          <label class="goal"><input type="text" maxlength="60" data-g="1" aria-label="개선 목표 2"></label>
+          <label class="goal"><input type="text" maxlength="60" data-g="2" aria-label="개선 목표 3"></label>
+        </div>
+        <div class="btnrow noprint" style="margin-top:var(--sp-4)"><button class="btn thin" id="suggestBtn">분석에서 제안 받기</button></div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<footer class="wrap foot">
+  <span>기록은 이 기기의 브라우저에만 저장돼요. 이름·연락처는 적지 않아요.</span>
+  <span class="btnrow">
+    <button class="btn thin" id="sampleBtn">샘플 데이터</button>
+    <button class="btn thin" id="exportBtn">파일로 저장</button>
+    <button class="btn thin" id="importBtn">파일 불러오기</button>
+    <button class="btn solid" id="printBtn">A4 인쇄</button>
+    <input type="file" id="importFile" accept=".json,application/json" class="hidden">
+  </span>
+</footer>
+<div class="status" id="status" role="status"></div>
+
+<script>
+/* ===== CONFIG — 수업에 맞게 여기만 고치면 돼요 ===== */
+const CONFIG = {
+  storageKey: 'time-planner-v1',
+  dayStart: 6,                 // 하루를 06:00 ~ 다음 날 06:00 으로 봐요(밤잠이 한 칸에 이어지도록)
+  days: ['월', '화', '수', '목', '금', '토', '일'],
+  // 청소년 권장 수면 시간 — 예시값입니다. 교과서·보건 자료로 확인해 고치세요.
+  sleepMin: 8, sleepMax: 10,
+  sleepId: 'sleep',
+  mediaIds: ['media'],         // '미디어 비중'에 넣을 활동
+  // 활동: color 는 <style> 맨 위 :root 의 --act-… 이름, pattern 은 diag·rdiag·hz·vt·cross·dot·solid
+  activities: [
+    { id: 'sleep',  name: '수면',        color: '--act-sleep',  pattern: 'hz' },
+    { id: 'school', name: '학교 수업',   color: '--act-school', pattern: 'solid' },
+    { id: 'acad',   name: '학원·과외',   color: '--act-acad',   pattern: 'diag' },
+    { id: 'study',  name: '스스로 공부', color: '--act-study',  pattern: 'rdiag' },
+    { id: 'meal',   name: '식사',        color: '--act-meal',   pattern: 'dot' },
+    { id: 'move',   name: '이동',        color: '--act-move',   pattern: 'vt' },
+    { id: 'sport',  name: '운동',        color: '--act-sport',  pattern: 'cross' },
+    { id: 'media',  name: '미디어',      color: '--act-media',  pattern: 'diag' },
+    { id: 'chore',  name: '가사·돌봄',   color: '--act-chore',  pattern: 'rdiag' },
+    { id: 'hobby',  name: '여가·취미',   color: '--act-hobby',  pattern: 'dot' },
+    { id: 'free',   name: '자유·쉬기',   color: '--act-free',   pattern: 'solid' }
+  ],
+  // 샘플 데이터: [요일들(0=월), 시작, 끝, 활동]
+  sample: {
+    plan: [
+      ['0123456', '06:00', '07:00', 'sleep'], ['01234', '07:00', '07:30', 'meal'], ['01234', '07:30', '08:00', 'move'],
+      ['01234', '08:00', '12:00', 'school'], ['01234', '12:00', '13:00', 'meal'], ['01234', '13:00', '15:30', 'school'],
+      ['01234', '15:30', '16:00', 'move'], ['024', '16:00', '18:00', 'acad'], ['13', '16:00', '17:00', 'sport'], ['13', '17:00', '18:00', 'study'],
+      ['01234', '18:00', '19:00', 'meal'], ['01234', '19:00', '20:30', 'study'], ['01234', '20:30', '21:00', 'chore'],
+      ['01234', '21:00', '22:00', 'media'], ['01234', '22:00', '22:30', 'free'], ['01234', '22:30', '06:00', 'sleep'],
+      ['56', '07:00', '08:00', 'sleep'], ['56', '08:00', '09:00', 'meal'], ['56', '09:00', '11:00', 'study'], ['56', '11:00', '12:00', 'chore'],
+      ['56', '12:00', '13:00', 'meal'], ['5', '13:00', '15:00', 'sport'], ['6', '13:00', '15:00', 'hobby'], ['56', '15:00', '17:00', 'free'],
+      ['56', '17:00', '18:00', 'media'], ['56', '18:00', '19:00', 'meal'], ['56', '19:00', '21:00', 'hobby'], ['56', '21:00', '22:00', 'media'],
+      ['56', '22:00', '23:00', 'free'], ['5', '23:00', '06:00', 'sleep'], ['6', '22:30', '06:00', 'sleep']
+    ],
+    actual: [
+      ['0123456', '06:00', '07:00', 'sleep'], ['01234', '07:00', '07:30', 'sleep'], ['01234', '07:30', '08:00', 'move'],
+      ['01234', '08:00', '12:00', 'school'], ['01234', '12:00', '13:00', 'meal'], ['01234', '13:00', '15:30', 'school'],
+      ['01234', '15:30', '16:00', 'move'], ['024', '16:00', '18:00', 'acad'], ['13', '16:00', '17:00', 'media'], ['13', '17:00', '18:00', 'study'],
+      ['01234', '18:00', '19:00', 'meal'], ['01234', '19:00', '20:00', 'study'], ['01234', '20:00', '21:00', 'media'], ['03', '20:30', '21:00', 'chore'],
+      ['01234', '21:00', '23:30', 'media'], ['01234', '23:30', '06:00', 'sleep'], ['4', '23:30', '01:00', 'media'], ['4', '01:00', '06:00', 'sleep'],
+      ['56', '07:00', '10:00', 'sleep'], ['56', '10:00', '11:00', 'meal'], ['56', '11:00', '13:00', 'media'], ['56', '13:00', '14:00', 'meal'],
+      ['5', '14:00', '16:00', 'sport'], ['6', '14:00', '16:00', 'hobby'], ['56', '16:00', '18:00', 'media'], ['56', '18:00', '19:00', 'meal'],
+      ['5', '19:00', '20:00', 'chore'], ['6', '19:00', '21:00', 'study'], ['5', '20:00', '24:00', 'media'], ['6', '21:00', '23:00', 'media'],
+      ['5', '24:00', '06:00', 'sleep'], ['6', '23:00', '06:00', 'sleep']
+    ],
+    todos: [
+      { text: '내일까지 내는 수행평가', q: 1 }, { text: '운동 습관 만들기', q: 2 }, { text: '가족과 대화 시간', q: 2 },
+      { text: '친구 단톡방 답장', q: 3 }, { text: '쇼츠 영상 보기', q: 4 }
+    ]
+  }
+};
+/* ===== CONFIG 끝 ===== */
+
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const ROWS = 48, DAYS = 7, N = ROWS * DAYS;
+const ACT = Object.fromEntries(CONFIG.activities.map((a) => [a.id, a]));
+const idx = (d, r) => d * ROWS + r;
+const h = (cells) => cells / 2;                         // 칸 수 → 시간
+const fmtH = (x) => (Math.round(x * 10) / 10).toString();
+const rowOf = (t) => { const [hh, mm] = t.split(':').map(Number); return (((hh * 60 + mm) - CONFIG.dayStart * 60) % 1440 + 1440) % 1440 / 30; };
+const timeOf = (r) => { const m = (CONFIG.dayStart * 60 + r * 30) % 1440; return String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0'); };
+const swatch = (a) => `<span class="sw pt-${a.pattern}" style="--act: var(${a.color})"></span>`;
+
+/* ── 상태·저장 ── */
+const blank = () => ({ view: 'actual', brush: CONFIG.activities[0].id, locked: false, plan: Array(N).fill(''), actual: Array(N).fill(''), todos: [], goals: ['', '', ''] });
+let S;
+function load() {
+  try { const d = JSON.parse(localStorage.getItem(CONFIG.storageKey) || 'null'); if (d && d.plan && d.plan.length === N) return { ...blank(), ...d }; } catch (e) {}
+  return blank();
+}
+function save() { try { localStorage.setItem(CONFIG.storageKey, JSON.stringify(S)); } catch (e) { say('브라우저 저장이 막혀 있어요. 파일로 저장을 이용하세요.'); } }
+let sayT;
+function say(msg, undo) {
+  const el = $('#status'); el.innerHTML = esc(msg) + (undo ? ' <button type="button">되돌리기</button>' : '');
+  if (undo) el.querySelector('button').onclick = () => { undo(); el.classList.remove('on'); };
+  el.classList.add('on'); clearTimeout(sayT); sayT = setTimeout(() => el.classList.remove('on'), undo ? 6000 : 2600);
+}
+const paintSheet = () => (S.view === 'plan' ? 'plan' : 'actual');   // 비교 화면에서는 실제를 칠해요
+
+/* ── 격자 ── */
+function buildGrid() {
+  let html = `<div class="dh corner">시각</div>` + CONFIG.days.map((d) => `<div class="dh">${d}</div>`).join('');
+  for (let r = 0; r < ROWS; r++) {
+    const hr = r % 2 === 0;
+    html += `<div class="tm${hr && r ? ' hr' : ''}">${hr ? timeOf(r).slice(0, 2) : ''}</div>`;
+    for (let d = 0; d < DAYS; d++) html += `<div class="c${hr ? ' hr' : ''}" data-i="${idx(d, r)}" title="${CONFIG.days[d]} ${timeOf(r)}"></div>`;
+  }
+  $('#tgrid').innerHTML = html;
+}
+let cellEls = [];
+function renderGrid() {
+  if (!cellEls.length) cellEls = $$('#tgrid .c');
+  const sheet = S[paintSheet()], cmp = S.view === 'compare';
+  cellEls.forEach((el) => {
+    const i = +el.dataset.i, a = ACT[sheet[i]];
+    el.className = 'c' + (el.classList.contains('hr') ? ' hr' : '') + (a ? ' pt-' + a.pattern : '') + (cmp && (S.plan[i] || sheet[i]) && S.plan[i] !== sheet[i] ? ' diff' : '');
+    el.style.setProperty('--act', a ? `var(${a.color})` : 'var(--color-sheet)');
+    el.title = `${CONFIG.days[Math.floor(i / ROWS)]} ${timeOf(i % ROWS)}${a ? ' · ' + a.name : ''}`;
+  });
+  const filled = sheet.filter(Boolean).length;
+  $('#filled').textContent = `칠한 칸 ${fmtH(h(filled))}시간 / 168시간`;
+  $('#gridTitle').textContent = { plan: '계획 시간표', actual: '실제 기록', compare: '비교 — 실제 위에 차이 표시' }[S.view];
+  $('#diffKey').classList.toggle('hidden', !cmp);
+  $('#tgrid').classList.toggle('locked', S.locked);
+  $('#lockBtn').setAttribute('aria-pressed', S.locked); $('#lockBtn').textContent = S.locked ? '칠하기 잠금 해제' : '칠하기 잠금';
+  $$('.seg button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.sheet === S.view));
+}
+function renderPalette() {
+  $('#palette').innerHTML = CONFIG.activities.map((a) => `<button class="pal" data-act="${a.id}" aria-pressed="${S.brush === a.id}">${swatch(a)}<span class="nm">${a.name}</span></button>`).join('')
+    + `<button class="pal erase" data-act="" aria-pressed="${S.brush === ''}"><span class="sw"></span><span class="nm">지우개</span></button>`;
+  $('#printLegend').innerHTML = CONFIG.activities.map((a) => `<span>${swatch(a)}${a.name}</span>`).join('');
+  $('#qAct').innerHTML = CONFIG.activities.map((a) => `<option value="${a.id}">${a.name}</option>`).join('') + '<option value="">지우기</option>';
+  $('#qDays').innerHTML = CONFIG.days.map((d, i) => `<label><input type="checkbox" value="${i}" ${i < 5 ? 'checked' : ''}>${d}</label>`).join('');
+}
+$('#palette').addEventListener('click', (e) => { const b = e.target.closest('.pal'); if (!b) return; S.brush = b.dataset.act; $('#qAct').value = S.brush; save(); $$('.pal').forEach((p) => p.setAttribute('aria-pressed', p === b)); });
+
+// 끌어서 네모 범위 칠하기 (마우스·터치·펜 공통)
+let drag = null;
+const rectCells = (a, b) => {
+  const d1 = Math.min(Math.floor(a / ROWS), Math.floor(b / ROWS)), d2 = Math.max(Math.floor(a / ROWS), Math.floor(b / ROWS));
+  const r1 = Math.min(a % ROWS, b % ROWS), r2 = Math.max(a % ROWS, b % ROWS); const out = [];
+  for (let d = d1; d <= d2; d++) for (let r = r1; r <= r2; r++) out.push(idx(d, r));
+  return out;
+};
+function preview(list) { cellEls.forEach((el) => el.classList.remove('pv')); list.forEach((i) => cellEls[i].classList.add('pv')); }
+$('#tgrid').addEventListener('pointerdown', (e) => {
+  const c = e.target.closest('.c'); if (!c || S.locked || e.button > 0) return;
+  e.preventDefault();
+  drag = { start: +c.dataset.i, end: +c.dataset.i }; $('#tgrid').setPointerCapture(e.pointerId); preview([drag.start]);
+});
+$('#tgrid').addEventListener('pointermove', (e) => {
+  if (!drag) return;
+  const el = document.elementFromPoint(e.clientX, e.clientY); const c = el && el.closest('#tgrid .c');
+  if (c && +c.dataset.i !== drag.end) { drag.end = +c.dataset.i; preview(rectCells(drag.start, drag.end)); }
+});
+function commit(list, act) {
+  const sheet = S[paintSheet()], before = list.map((i) => sheet[i]);
+  list.forEach((i) => { sheet[i] = act; });
+  save(); renderAll();
+  return () => { list.forEach((i, k) => { sheet[i] = before[k]; }); save(); renderAll(); };
+}
+$('#tgrid').addEventListener('pointerup', () => { if (!drag) return; const list = rectCells(drag.start, drag.end); drag = null; preview([]); commit(list, S.brush); });
+$('#tgrid').addEventListener('pointercancel', () => { drag = null; preview([]); });
+
+$('#quickForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const days = $$('#qDays input:checked').map((i) => +i.value), f = $('#qFrom').value, t = $('#qTo').value;
+  let msg = '';
+  if (!days.length) msg = '요일을 하나 이상 고르세요.';
+  else if (!f || !t) msg = '시작과 끝 시각을 넣으세요.';
+  else if (rowOf(f) % 1 || rowOf(t) % 1) msg = '시각은 30분 단위(예: 22:30)로 넣어 주세요.';
+  else if (f === t) msg = '시작과 끝이 같아요.';
+  $('#qErr').textContent = msg; if (msg) return;
+  const a = rowOf(f), b = rowOf(t) || ROWS;
+  if (b <= a) { $('#qErr').textContent = `하루는 ${timeOf(0)}에 시작해요. ${timeOf(0)}을 넘는 범위는 두 번에 나눠 칠해 주세요.`; return; }
+  const list = []; days.forEach((d) => { for (let r = a; r < b; r++) list.push(idx(d, r)); });
+  const undo = commit(list, $('#qAct').value);
+  say(`${days.map((d) => CONFIG.days[d]).join('·')} ${f}~${t} 칠했어요.`, undo);
+});
+
+$('.seg').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; S.view = b.dataset.sheet; save(); renderAll(); });
+$('#lockBtn').addEventListener('click', () => { S.locked = !S.locked; save(); renderGrid(); });
+$('#clearBtn').addEventListener('click', () => {
+  const key = paintSheet(), before = S[key].slice();
+  if (!before.some(Boolean)) return;
+  S[key] = Array(N).fill(''); save(); renderAll();
+  say(`${key === 'plan' ? '계획' : '실제'} 시간표를 비웠어요.`, () => { S[key] = before; save(); renderAll(); });
+});
+
+/* ── 분석 ── */
+function analyze(sheet) {
+  const tot = {}; CONFIG.activities.forEach((a) => { tot[a.id] = 0; });
+  sheet.forEach((v) => { if (v) tot[v] = (tot[v] || 0) + 1; });
+  const sleepDays = CONFIG.days.map((_, d) => {
+    let s = 0, any = 0; for (let r = 0; r < ROWS; r++) { const v = sheet[idx(d, r)]; if (v) any++; if (v === CONFIG.sleepId) s++; }
+    return { d, hours: h(s), recorded: any > 0 };
+  });
+  const rec = sleepDays.filter((x) => x.recorded);
+  const filled = sheet.filter(Boolean).length;
+  const media = CONFIG.mediaIds.reduce((x, id) => x + (tot[id] || 0), 0);
+  const awake = filled - (tot[CONFIG.sleepId] || 0);
+  return { tot, sleepDays, rec, filled, days: rec.length || 1, media, awake,
+    sleepAvg: rec.length ? rec.reduce((x, y) => x + y.hours, 0) / rec.length : 0,
+    mediaShare: awake ? media / awake : 0 };
+}
+function renderAnalysis() {
+  const key = S.view === 'plan' ? 'plan' : 'actual', A = analyze(S[key]), P = analyze(S.plan), cmp = S.view === 'compare';
+  $('#anaSub').textContent = cmp ? '실제 기록 기준 · 계획과 비교' : (key === 'plan' ? '계획 시간표 기준' : '실제 기록 기준');
+  if (!A.filled) {
+    $('#stats').innerHTML = `<div class="stat" style="grid-column:1/-1"><p class="empty">아직 칠한 칸이 없어요. 활동을 고르고 시간표를 칠하거나 ‘샘플 데이터’를 눌러 보세요.</p></div>`;
+    $('#totTable').innerHTML = ''; $('#sleepDays').innerHTML = ''; $('#sleepCap').textContent = ''; $('#notes').innerHTML = ''; $('#totSub').textContent = ''; $('#sleepSub').textContent = '';
+    return;
+  }
+  const low = A.sleepAvg < CONFIG.sleepMin;
+  let match = '';
+  if (cmp) {
+    const both = S.plan.reduce((x, v, i) => x + ((v || S.actual[i]) ? 1 : 0), 0);
+    const same = S.plan.reduce((x, v, i) => x + (v && v === S.actual[i] ? 1 : 0), 0);
+    match = both ? Math.round(same / both * 100) : 0;
+  }
+  $('#stats').innerHTML = `
+    <div class="stat${low ? ' warn' : ''}"><span class="k">하루 평균 수면</span><span class="v">${fmtH(A.sleepAvg)}<small>시간</small></span></div>
+    <div class="stat"><span class="k">미디어 비중</span><span class="v">${Math.round(A.mediaShare * 100)}<small>% · 깨어 있는 시간 중</small></span></div>
+    <div class="stat"><span class="k">하루 평균 미디어</span><span class="v">${fmtH(h(A.media) / A.days)}<small>시간</small></span></div>
+    ${cmp ? `<div class="stat"><span class="k">계획과 같은 칸</span><span class="v">${match}<small>%</small></span></div>`
+          : `<div class="stat"><span class="k">기록한 시간</span><span class="v">${fmtH(h(A.filled))}<small>/ 168시간</small></span></div>`}`;
+
+  // 활동별 합계
+  const max = Math.max(1, ...CONFIG.activities.map((a) => Math.max(A.tot[a.id], cmp ? P.tot[a.id] : 0)));
+  $('#totSub').textContent = cmp ? '막대 = 실제 · 테두리 = 계획' : `${A.days}일 기록 기준 하루 평균`;
+  $('#totTable').innerHTML = `<thead><tr><th>활동</th><th style="width:40%"><span class="${cmp ? '' : 'hidden'}">실제 / 계획</span></th><th class="n">주간</th><th class="n">${cmp ? '차이' : '하루 평균'}</th></tr></thead><tbody>` +
+    CONFIG.activities.filter((a) => A.tot[a.id] || (cmp && P.tot[a.id])).sort((x, y) => A.tot[y.id] - A.tot[x.id]).map((a) => {
+      const w = A.tot[a.id] / max * 100, pw = P.tot[a.id] / max * 100, diff = h(A.tot[a.id] - P.tot[a.id]);
+      return `<tr><td><span class="act">${swatch(a)}${a.name}</span></td>
+        <td><div class="hbar" role="img" aria-label="${a.name} ${fmtH(h(A.tot[a.id]))}시간${cmp ? `, 계획 ${fmtH(h(P.tot[a.id]))}시간` : ''}"><i style="width:${w}%"></i>${cmp ? `<i class="plan" style="width:${pw}%"></i>` : ''}</div></td>
+        <td class="n">${fmtH(h(A.tot[a.id]))}시간</td>
+        <td class="n">${cmp ? `<span class="${diff > 0 ? 'pos' : diff < 0 ? 'neg' : ''}">${diff > 0 ? '+' : ''}${fmtH(diff)}</span>` : fmtH(h(A.tot[a.id]) / A.days)}</td></tr>`;
+    }).join('') + '</tbody>';
+
+  // 요일별 수면
+  const top = 14, pct = (x) => Math.min(100, x / top * 100);
+  $('#sleepSub').textContent = `권장 ${CONFIG.sleepMin}~${CONFIG.sleepMax}시간 (예시값)`;
+  $('#sleepDays').setAttribute('aria-label', A.sleepDays.map((x) => `${CONFIG.days[x.d]} ${x.recorded ? fmtH(x.hours) + '시간' : '기록 없음'}`).join(', '));
+  const band = `<div class="band" style="bottom:${pct(CONFIG.sleepMin)}%;height:${pct(CONFIG.sleepMax) - pct(CONFIG.sleepMin)}%"></div>`;
+  $('#sleepDays').innerHTML = A.sleepDays.map((x) => { const v = x.recorded ? pct(x.hours) : 0;
+    return `<div class="col${x.recorded && x.hours < CONFIG.sleepMin ? ' low' : ''}"><div class="track">${band}<div class="b" style="height:${v}%"></div><span class="val" style="bottom:${Math.min(v, 84)}%">${x.recorded ? fmtH(x.hours) : '–'}</span></div><span class="lb">${CONFIG.days[x.d]}</span></div>`; }).join('');
+  const lows = A.sleepDays.filter((x) => x.recorded && x.hours < CONFIG.sleepMin);
+  $('#sleepCap').textContent = `점선 띠 = 권장 범위(예시값, CONFIG에서 수정). 빗금 막대 = 권장보다 적게 잔 날${lows.length ? ` — ${lows.map((x) => CONFIG.days[x.d]).join('·')}` : ' 없음'}. 하루는 06:00~다음 날 06:00로 셉니다.`;
+
+  // 짚어 볼 점 (규칙 기반)
+  const notes = [];
+  if (lows.length) notes.push(['', `권장(예시값 ${CONFIG.sleepMin}시간)보다 적게 잔 날이 ${lows.length}일이에요. 가장 적은 날은 ${CONFIG.days[lows.sort((a, b) => a.hours - b.hours)[0].d]}요일 ${fmtH(lows[0].hours)}시간이에요.`]);
+  else if (A.rec.length) notes.push(['ok', '기록한 날은 모두 권장 수면 시간(예시값)을 채웠어요.']);
+  if (A.mediaShare >= 0.25) notes.push(['', `깨어 있는 시간의 ${Math.round(A.mediaShare * 100)}%가 미디어예요. 언제 가장 길었는지 시간표에서 찾아보세요.`]);
+  const unrec = 168 - h(A.filled);
+  if (unrec >= 1) notes.push(['', `아직 칠하지 않은 시간이 ${fmtH(unrec)}시간 있어요. 기억나는 대로 채우면 분석이 정확해져요.`]);
+  if (cmp) {
+    const gaps = CONFIG.activities.map((a) => ({ a, d: h(A.tot[a.id] - P.tot[a.id]) })).filter((x) => Math.abs(x.d) >= 2).sort((x, y) => Math.abs(y.d) - Math.abs(x.d)).slice(0, 3);
+    gaps.forEach((x) => notes.push(['', `${x.a.name}: 계획보다 ${fmtH(Math.abs(x.d))}시간 ${x.d > 0 ? '더 썼어요' : '덜 썼어요'}.`]));
+    if (!S.plan.some(Boolean)) notes.push(['', '계획 시간표가 비어 있어요. ‘계획’을 눌러 먼저 칠해 주세요.']);
+  }
+  $('#notes').innerHTML = notes.map(([c, t]) => `<li class="${c}">${esc(t)}</li>`).join('') || '<li class="ok">특별히 짚을 점이 없어요.</li>';
+}
+
+/* ── 우선순위 매트릭스 ── */
+const QN = { 1: ['중요·긴급', '먼저 하기'], 2: ['중요·안 긴급', '시간 정해 꼭 하기'], 3: ['안 중요·긴급', '짧게 끝내거나 줄이기'], 4: ['안 중요·안 긴급', '줄이기'] };
+function renderMatrix() {
+  const q = (n) => `<div class="q q${n}" data-q="${n}"><h3>${QN[n][0]}<small>${QN[n][1]}</small></h3><ul>${S.todos.filter((t) => t.q === n).map((t) =>
+    `<li><span>${esc(t.text)}</span><select data-move="${t.id}" aria-label="${esc(t.text)} 옮기기">${[1, 2, 3, 4].map((k) => `<option value="${k}" ${k === n ? 'selected' : ''}>${QN[k][0]}</option>`).join('')}</select><button class="x" data-del="${t.id}" aria-label="${esc(t.text)} 지우기">✕</button></li>`).join('')}</ul></div>`;
+  $('#mx').innerHTML = `<span></span><span class="axis">긴급함</span><span class="axis">긴급하지 않음</span>
+    <span class="axis v">중요함</span>${q(1)}${q(2)}<span class="axis v">중요하지 않음</span>${q(3)}${q(4)}`;
+}
+$('#mxForm').addEventListener('submit', (e) => {
+  e.preventDefault(); const t = $('#mxText').value.trim();
+  if (!t) { $('#mxText').focus(); say('할 일을 적어 주세요.'); return; }
+  S.todos.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 5), text: t, q: +$('#mxQ').value });
+  $('#mxText').value = ''; save(); renderMatrix(); $('#mxText').focus();
+});
+$('#mx').addEventListener('change', (e) => { const s = e.target.closest('[data-move]'); if (!s) return; const t = S.todos.find((x) => x.id === s.dataset.move); t.q = +s.value; save(); renderMatrix(); });
+$('#mx').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-del]'); if (!b) return;
+  const i = S.todos.findIndex((x) => x.id === b.dataset.del), t = S.todos.splice(i, 1)[0]; save(); renderMatrix();
+  say('할 일을 지웠어요.', () => { S.todos.splice(i, 0, t); save(); renderMatrix(); });
+});
+
+/* ── 개선 목표 ── */
+function renderGoals() { $$('#goals input').forEach((i) => { i.value = S.goals[+i.dataset.g] || ''; }); }
+$('#goals').addEventListener('input', (e) => { const i = e.target.closest('[data-g]'); if (!i) return; S.goals[+i.dataset.g] = i.value; save(); });
+$('#suggestBtn').addEventListener('click', () => {
+  const A = analyze(S.actual), P = analyze(S.plan), ideas = [];
+  const lows = A.sleepDays.filter((x) => x.recorded && x.hours < CONFIG.sleepMin);
+  if (lows.length) ideas.push(`${lows.map((x) => CONFIG.days[x.d]).join('·')}요일에 지금보다 30분 일찍 자기`);
+  if (A.mediaShare >= 0.25) ideas.push(`미디어 하루 ${Math.max(1, Math.round(h(A.media) / A.days - 1))}시간 이내로 줄이기`);
+  const q2 = S.todos.find((t) => t.q === 2); if (q2) ideas.push(`'${q2.text}'에 고정 시간 정해 두기`);
+  CONFIG.activities.forEach((a) => { const d = h(A.tot[a.id] - P.tot[a.id]); if (d <= -2 && a.id !== CONFIG.sleepId) ideas.push(`${a.name} 계획 시간 지키기 (이번 주 ${fmtH(-d)}시간 부족)`); });
+  if (!ideas.length) { say('실제 기록을 더 칠하면 제안이 나와요.'); return; }
+  let k = 0; S.goals = S.goals.map((g) => g.trim() ? g : (ideas[k++] || ''));
+  save(); renderGoals(); if (!k) say('목표 칸이 이미 다 차 있어요.');
+});
+
+/* ── 샘플·파일·인쇄 ── */
+function fillSample(rows) {
+  const arr = Array(N).fill('');
+  rows.forEach(([days, f, t, act]) => { const a = rowOf(f), b = rowOf(t === '24:00' ? '00:00' : t) || ROWS; [...days].forEach((d) => { for (let r = a; r < b; r++) arr[idx(+d, r)] = act; }); });
+  return arr;
+}
+$('#sampleBtn').addEventListener('click', () => {
+  if ((S.plan.some(Boolean) || S.actual.some(Boolean)) && !confirm('지금 칠한 시간표를 샘플로 바꿀까요? (파일로 저장해 두면 다시 불러올 수 있어요)')) return;
+  S.plan = fillSample(CONFIG.sample.plan); S.actual = fillSample(CONFIG.sample.actual);
+  S.todos = CONFIG.sample.todos.map((t, i) => ({ ...t, id: 's' + i })); S.view = 'compare'; save(); renderAll();
+});
+$('#exportBtn').addEventListener('click', () => {
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(S)], { type: 'application/json' }));
+  a.download = '시간사용분석.json'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+});
+$('#importBtn').addEventListener('click', () => $('#importFile').click());
+$('#importFile').addEventListener('change', async (e) => {
+  const f = e.target.files[0]; if (!f) return;
+  try { const d = JSON.parse(await f.text()); if (!Array.isArray(d.plan) || d.plan.length !== N) throw 0; S = { ...blank(), ...d }; save(); renderAll(); say('불러왔어요.'); }
+  catch (err) { say('이 앱에서 저장한 파일이 아니에요.'); }
+  e.target.value = '';
+});
+$('#printBtn').addEventListener('click', () => window.print());
+
+function renderAll() { renderGrid(); renderAnalysis(); renderMatrix(); renderGoals(); }
+S = load(); buildGrid(); renderPalette(); renderAll();
+</script>
+</body>
+</html>

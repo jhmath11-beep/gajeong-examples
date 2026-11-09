@@ -1,0 +1,658 @@
+<!--
+  무엇을 하는 앱: 가족 구성원(호칭)별로 한 주 동안 맡은 가사의 횟수·시간을 근무표에 적으면, 시간 비율·공정성 지표·'보이지 않는 가사'를 분석하고, 가사를 옮겨 보는 시뮬레이션 후 가족 가사 분담 약속서를 인쇄하는 도구
+  수업 장면: 가족(가족 구성원의 역할과 가사 분담) — 일주일 관찰 기록 입력(또는 예시 가족) → 분석 그래프·해석 문장 읽기 → '바꿔 보기'로 내가 맡을 가사 정하기 → 약속서 인쇄해 가족 서명 받기
+  설정 바꾸는 곳: 아래 <script> 맨 위 CONFIG (기본 가사 목록·1회 소요 시간, 예시 가족, 공정성 해석 기준값 rules). 실명 대신 호칭만 입력
+-->
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>우리 가족 가사 분담 공정성 분석기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&family=Dongle:wght@300;400;700&display=swap">
+<style>
+/* Hallmark · pre-emit critique: P4 H4 E4 S5 R4 V4
+ * Hallmark · genre: editorial(utilitarian) · theme: custom (time card — 마닐라지 주간 근무표 + 확인 도장) · macrostructure: workbench / ruled roster
+ * axes: light warm paper · rounded-heavy display(Jua) · warm accent(stamp red) · body: Dongle(크게 씀)
+ * contrast: ink on card ≈ 13:1, muted ≈ 6.5:1, stamp ≈ 5.5:1 (AA)
+ */
+:root {
+  --color-desk:        oklch(93% 0.014 80);
+  --color-card:        oklch(97.4% 0.020 88);
+  --color-manila:      oklch(89% 0.055 84);
+  --color-manila-2:    oklch(84% 0.065 82);
+  --color-rule:        oklch(80% 0.040 80);
+  --color-rule-strong: oklch(45% 0.040 60);
+  --color-ink:         oklch(24% 0.030 50);
+  --color-ink-2:       oklch(35% 0.035 50);
+  --color-muted:       oklch(44% 0.030 60);
+  --color-on-ink:      oklch(97% 0.015 88);
+  --color-stamp:       oklch(49% 0.170 28);   /* 확인 도장 — 유일한 강조색 */
+  --color-stamp-soft:  oklch(93% 0.035 28);
+  --color-focus:       oklch(50% 0.150 250);
+  /* 구성원 색(그래프 전용) */
+  --m1: oklch(52% 0.130 30);
+  --m2: oklch(50% 0.110 250);
+  --m3: oklch(55% 0.120 145);
+  --m4: oklch(66% 0.130 75);
+  --m5: oklch(48% 0.110 320);
+  --m6: oklch(55% 0.060 200);
+
+  --font-display: "Jua", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+  --font-body:    "Dongle", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+
+  /* Dongle은 글자가 작게 그려져서 기본 크기를 키움 */
+  --text-xs: 1.3rem; --text-sm: 1.45rem; --text-base: 1.65rem; --text-md: 1.25rem;
+  --text-lg: 1.6rem; --text-xl: clamp(1.75rem, 2.6vw + 1rem, 2.6rem);
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
+  --space-6: 24px; --space-8: 32px; --space-12: 48px;
+  --container: 72rem;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-short: 160ms;
+}
+* { box-sizing: border-box; }
+html, body { overflow-x: clip; }
+body { margin: 0; font-family: var(--font-body); font-size: var(--text-base); line-height: 1.15; color: var(--color-ink); background: var(--color-desk); -webkit-font-smoothing: antialiased; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 400; font-style: normal; line-height: 1.25; margin: 0; overflow-wrap: anywhere; min-width: 0; }
+button, input, select { font: inherit; color: inherit; }
+p { margin: 0; }
+.wrap { max-width: var(--container); margin: 0 auto; padding-inline: clamp(0.75rem, 4vw, 2rem); }
+.hidden { display: none !important; }
+:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 2px; }
+.num, input[type=number] { font-variant-numeric: tabular-nums; }
+.muted { color: var(--color-muted); }
+.disp { font-family: var(--font-display); }
+
+/* 머리 — 근무표 머리칸 */
+.top { padding-top: var(--space-8); }
+.card { background: var(--color-card); border: 1.5px solid var(--color-ink); }
+.card-head { background: var(--color-manila); border-bottom: 1.5px solid var(--color-ink); padding: var(--space-4) var(--space-4) var(--space-3); display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: var(--space-3) var(--space-6); }
+.card-head h1 { font-size: var(--text-xl); letter-spacing: -0.01em; }
+.card-head p { color: var(--color-ink-2); max-width: 36em; }
+.stamp { display: inline-grid; place-items: center; width: 4.6rem; height: 4.6rem; border: 3px solid var(--color-stamp); border-radius: 50%; color: var(--color-stamp); font-family: var(--font-display); font-size: 1rem; line-height: 1.1; text-align: center; transform: rotate(-8deg); flex: none; }
+.fields { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-6); padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--color-rule); }
+.fields span { white-space: nowrap; }
+
+/* 탭 = 근무표 색인 */
+.tabs { position: sticky; top: 0; z-index: 5; background: var(--color-desk); padding-top: var(--space-4); }
+.tabs .wrap { display: flex; gap: 0; overflow-x: auto; scrollbar-width: none; border-bottom: 1.5px solid var(--color-ink); }
+.tab { flex: 1 0 auto; min-height: 46px; padding: 0 var(--space-4); border: 1.5px solid transparent; border-bottom: 0; background: transparent; cursor: pointer; white-space: nowrap; color: var(--color-muted); font-family: var(--font-display); font-size: 1.05rem; margin-bottom: -1.5px; transition: color var(--dur-short) var(--ease-out); }
+.tab:hover { color: var(--color-ink); }
+.tab[aria-selected="true"] { background: var(--color-card); border-color: var(--color-ink); color: var(--color-ink); }
+
+main { padding-block: var(--space-6) var(--space-12); }
+.panel > .card { padding: 0; }
+.sec { padding: var(--space-4); border-bottom: 1px solid var(--color-rule); }
+.sec:last-child { border-bottom: 0; }
+.sec h2 { font-size: var(--text-lg); margin-bottom: var(--space-1); }
+.sec h3 { font-size: var(--text-md); margin-bottom: var(--space-2); }
+.lead { color: var(--color-muted); max-width: 40em; margin-bottom: var(--space-3); }
+
+/* 버튼 */
+.btn { min-height: 44px; padding: 0 var(--space-4); border: 1.5px solid var(--color-ink); border-radius: 0; background: var(--color-ink); color: var(--color-on-ink); cursor: pointer; white-space: nowrap; font-family: var(--font-display); font-size: 1rem; display: inline-flex; align-items: center; justify-content: center;
+  transition: background-color var(--dur-short) var(--ease-out), color var(--dur-short) var(--ease-out); }
+.btn:hover { background: var(--color-ink-2); }
+.btn:active { transform: translateY(1px); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn--ghost { background: transparent; color: var(--color-ink); }
+.btn--ghost:hover { background: var(--color-manila); }
+.btn--stamp { background: transparent; color: var(--color-stamp); border-color: var(--color-stamp); }
+.btn--stamp:hover { background: var(--color-stamp-soft); }
+.row { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
+.x { min-width: 44px; min-height: 44px; border: 0; background: transparent; cursor: pointer; color: var(--color-muted); font-family: var(--font-display); font-size: 1.1rem; }
+.x:hover { color: var(--color-stamp); }
+.input { min-height: 44px; border: 1.5px solid var(--color-rule-strong); border-radius: 0; background: var(--color-card); padding: 0 var(--space-2); min-width: 0; width: 100%; }
+.input:hover { border-color: var(--color-ink); }
+input[type=number].input { text-align: right; padding-right: var(--space-1); }
+label.lab { display: block; color: var(--color-muted); font-size: var(--text-sm); }
+
+/* 구성원 */
+.members { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.mem { display: flex; align-items: center; border: 1.5px solid var(--color-ink); background: var(--color-card); }
+.mem .sw { width: 12px; align-self: stretch; }
+.mem input { border: 0; width: 6.5em; min-height: 44px; padding: 0 var(--space-2); background: transparent; }
+.mem label { display: flex; align-items: center; gap: 4px; padding: 0 var(--space-2); border-left: 1px solid var(--color-rule); min-height: 44px; color: var(--color-muted); font-size: var(--text-sm); white-space: nowrap; cursor: pointer; }
+.mem label input { width: auto; min-height: 0; accent-color: var(--color-stamp); }
+.hint { font-size: var(--text-sm); color: var(--color-muted); margin-top: var(--space-2); }
+.hint b { color: var(--color-stamp); font-weight: 400; }
+
+/* 근무표 격자 */
+.grid-head { display: none; }
+.crow { border: 1.5px solid var(--color-ink); background: var(--color-card); margin-bottom: var(--space-3); }
+.crow-main { display: grid; grid-template-columns: minmax(0, 1fr) 5.5rem 44px; gap: var(--space-2); padding: var(--space-2); background: var(--color-manila); border-bottom: 1px solid var(--color-rule-strong); align-items: end; }
+.crow-main .hid { order: 1; grid-column: 1 / -1; display: flex; align-items: center; gap: var(--space-2); font-size: var(--text-sm); cursor: pointer; }
+.crow-main .hid input { width: 20px; height: 20px; accent-color: var(--color-stamp); }
+.cnts { display: grid; grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr)); gap: var(--space-2); padding: var(--space-2); }
+.cnt { display: grid; grid-template-columns: minmax(0, 1fr) 4rem; align-items: center; gap: var(--space-1); }
+.cnt span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cnt .mlab { display: none; }
+.tot { display: none; }
+.tag-hid { display: inline-block; font-family: var(--font-display); font-size: 0.8rem; color: var(--color-stamp); border: 1.5px solid var(--color-stamp); padding: 1px 6px; transform: rotate(-3deg); white-space: nowrap; }
+@media (min-width: 62rem) {
+  .grid-head, .crow { display: grid; grid-template-columns: minmax(10rem, 1.6fr) 5.5rem 6.5rem repeat(var(--n), minmax(4.5rem, 1fr)) 6.5rem 44px; align-items: center; }
+  .grid-head { border-bottom: 1.5px solid var(--color-ink); background: var(--color-manila); font-family: var(--font-display); font-size: 0.95rem; }
+  .grid-head > div { padding: var(--space-2); border-right: 1px solid var(--color-rule-strong); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .grid-head > div:last-child { border-right: 0; }
+  .grid-box { border: 1.5px solid var(--color-ink); background: var(--color-card); }
+  .crow { border: 0; border-bottom: 1px solid var(--color-rule); margin: 0; }
+  .crow-main, .cnts { display: contents; }
+  .crow > *, .crow-main > *, .cnts > * { padding: var(--space-1) var(--space-2); }
+  .crow-main .hid { order: 0; grid-column: auto; justify-content: center; }
+  .crow-main .hid .t { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .cnt { grid-template-columns: 1fr; }
+  .cnt span.m { display: none; }
+  .tot { display: block; text-align: right; white-space: nowrap; }
+  .crow-main > .x { order: 99; }
+  .crow .lab { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+}
+.foot-tot { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-6); padding: var(--space-3) var(--space-2); }
+
+/* 분석 */
+.kpis { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: 1.5px solid var(--color-ink); border-bottom: 1.5px solid var(--color-ink); }
+.kpi { padding: var(--space-3); border-right: 1px solid var(--color-rule); border-bottom: 1px solid var(--color-rule); min-width: 0; }
+.kpi:nth-child(2n) { border-right: 0; }
+.kpi .k { color: var(--color-muted); font-size: var(--text-sm); }
+.kpi .v { font-family: var(--font-display); font-size: 1.75rem; line-height: 1.2; white-space: nowrap; }
+.kpi .v.warn { color: var(--color-stamp); }
+@media (min-width: 48rem) { .kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); } .kpi { border-bottom: 0; } .kpi:nth-child(2n) { border-right: 1px solid var(--color-rule); } .kpi:last-child { border-right: 0; } }
+.charts { display: grid; gap: var(--space-6); margin-top: var(--space-4); }
+@media (min-width: 52rem) { .charts { grid-template-columns: minmax(0, 15rem) minmax(0, 1fr); align-items: start; } }
+.donut { width: 100%; max-width: 15rem; display: block; margin: 0 auto; }
+.donut text { font-family: var(--font-display); fill: var(--color-ink); }
+.legend { list-style: none; margin: 0; padding: 0; }
+.legend li { display: grid; grid-template-columns: 14px minmax(0, 1fr) auto auto; gap: var(--space-2); align-items: center; padding: var(--space-1) 0; border-bottom: 1px solid var(--color-rule); }
+.legend .sw { width: 14px; height: 14px; }
+.legend .pct { font-family: var(--font-display); font-size: 1.05rem; text-align: right; min-width: 3.5em; }
+.legend .min { color: var(--color-muted); text-align: right; min-width: 5.5em; white-space: nowrap; }
+.bars { display: grid; gap: var(--space-2); }
+.bar-row { display: grid; grid-template-columns: minmax(0, 6rem) minmax(0, 1fr); gap: var(--space-2); align-items: center; }
+.bar-row .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bar { display: flex; height: 22px; background: var(--color-desk); border: 1px solid var(--color-rule-strong); }
+.bar > i { display: block; height: 100%; min-width: 0; }
+.bar > i.inv { background-image: repeating-linear-gradient(45deg, transparent 0 4px, var(--color-card) 4px 6px); }
+.key { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); font-size: var(--text-sm); color: var(--color-muted); margin-top: var(--space-2); }
+.key i { display: inline-block; width: 14px; height: 14px; vertical-align: -2px; margin-right: 4px; border: 1px solid var(--color-rule-strong); }
+.key i.inv { background-color: var(--color-muted); background-image: repeating-linear-gradient(45deg, transparent 0 4px, var(--color-card) 4px 6px); }
+.key i.vis { background: var(--color-muted); }
+.reading { list-style: none; margin: 0; padding: 0; counter-reset: r; }
+.reading li { counter-increment: r; display: grid; grid-template-columns: 2rem minmax(0, 1fr); padding: var(--space-2) 0; border-bottom: 1px dashed var(--color-rule-strong); }
+.reading li::before { content: counter(r); font-family: var(--font-display); color: var(--color-stamp); }
+.reading li.note::before { content: "※"; }
+.empty { padding: var(--space-6) var(--space-4); text-align: left; }
+.chore-bars .bar-row { grid-template-columns: minmax(0, 8rem) minmax(0, 1fr) 3.5rem; }
+.chore-bars .who { font-size: var(--text-sm); color: var(--color-muted); text-align: right; }
+
+/* 바꿔 보기 */
+.move-form { display: grid; gap: var(--space-2); grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: end; }
+.move-form .wide { grid-column: 1 / -1; }
+@media (min-width: 52rem) { .move-form { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1fr) 5rem auto; } .move-form .wide { grid-column: auto; } }
+.moves { list-style: none; margin: var(--space-3) 0 0; padding: 0; border-top: 1px solid var(--color-rule); }
+.moves li { display: flex; align-items: center; gap: var(--space-2); border-bottom: 1px solid var(--color-rule); min-height: 48px; }
+.moves li span { flex: 1; min-width: 0; }
+.compare .bar-row { grid-template-columns: minmax(0, 6rem) minmax(0, 1fr) 6.5rem; }
+.compare .bar { height: 14px; }
+.compare .pair { display: grid; gap: 3px; }
+.compare .bar.after { border-color: var(--color-ink); }
+.compare .delta { text-align: right; white-space: nowrap; }
+.delta.up { color: var(--color-stamp); }
+
+/* 약속서 */
+.promise { background: var(--color-card); border: 3px double var(--color-ink); padding: var(--space-6) var(--space-4); }
+.promise h2 { font-size: var(--text-xl); text-align: center; margin-bottom: var(--space-2); }
+.promise .sub { text-align: center; color: var(--color-muted); }
+.promise table { width: 100%; border-collapse: collapse; margin-top: var(--space-4); }
+.promise th, .promise td { border: 1px solid var(--color-rule-strong); padding: var(--space-2); text-align: left; vertical-align: top; }
+.promise th { font-family: var(--font-display); font-weight: 400; background: var(--color-manila); font-size: 0.95rem; white-space: nowrap; }
+.promise .lines div { border-bottom: 1px solid var(--color-rule-strong); min-height: 2.2rem; }
+.signs { display: grid; grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr)); gap: var(--space-4); margin-top: var(--space-6); }
+.signs div { border-bottom: 1px solid var(--color-ink); padding-top: var(--space-6); display: flex; justify-content: space-between; }
+.signs .seal { color: var(--color-muted); }
+.pr-foot { margin-top: var(--space-4); display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-2); }
+
+.toast { position: fixed; left: 50%; bottom: var(--space-6); transform: translateX(-50%); background: var(--color-ink); color: var(--color-on-ink); padding: var(--space-2) var(--space-4); z-index: 20; max-width: calc(100% - 2rem); display: flex; gap: var(--space-4); align-items: center; }
+.toast button { background: none; border: 0; color: var(--color-manila); text-decoration: underline; cursor: pointer; min-height: 40px; white-space: nowrap; }
+footer { padding-block: var(--space-6); color: var(--color-muted); font-size: var(--text-sm); }
+
+@media (prefers-reduced-motion: reduce) { * { transition-duration: 0.01ms !important; } }
+
+@media print {
+  @page { size: A4; margin: 12mm; }
+  body { background: none; font-size: 15pt; }
+  .top, .tabs, footer, .no-print, .toast, .panel:not(#p-promise) { display: none !important; }
+  #p-promise { display: block !important; }
+  main { padding: 0; } .wrap { max-width: none; padding: 0; }
+  .promise { border-width: 3px; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+</style>
+</head>
+<body>
+
+<header class="wrap top">
+  <div class="card">
+    <div class="card-head">
+      <div>
+        <h1>우리 가족 가사 분담 공정성 분석기</h1>
+        <p>한 주 동안 누가 어떤 집안일을 몇 번 했는지 적고, 시간 비율과 숨은 가사를 확인한 뒤 함께 바꿔 봅니다.</p>
+      </div>
+      <span class="stamp" aria-hidden="true">한 주<br>기록</span>
+    </div>
+    <div class="fields"><span>이름 대신 호칭만 적어요 (엄마·아빠·나·형 …)</span><span class="muted">저장: 이 기기 브라우저에만</span></div>
+  </div>
+</header>
+
+<nav class="tabs" aria-label="단계">
+  <div class="wrap" role="tablist">
+    <button class="tab" role="tab" id="t-input" aria-controls="p-input" aria-selected="true">1 근무표</button>
+    <button class="tab" role="tab" id="t-analysis" aria-controls="p-analysis" aria-selected="false">2 분석</button>
+    <button class="tab" role="tab" id="t-sim" aria-controls="p-sim" aria-selected="false">3 바꿔 보기</button>
+    <button class="tab" role="tab" id="t-promise" aria-controls="p-promise" aria-selected="false">4 약속서</button>
+  </div>
+</nav>
+
+<main class="wrap">
+  <!-- 1 근무표 -->
+  <section class="panel" id="p-input" role="tabpanel" aria-labelledby="t-input">
+    <div class="card">
+      <div class="sec">
+        <h2>가족 구성원</h2>
+        <p class="lead">호칭을 고쳐 쓰고, 이 활동을 하는 사람 한 명에 '나' 표시를 하세요.</p>
+        <div class="members" id="members"></div>
+        <div class="row" style="margin-top:var(--space-3)">
+          <button class="btn btn--ghost" type="button" id="addMember">구성원 추가</button>
+        </div>
+        <p class="hint" id="memberHint"></p>
+      </div>
+      <div class="sec">
+        <h2>주간 가사 근무표</h2>
+        <p class="lead">가사마다 1회에 걸리는 시간(분)과, 한 주 동안 각자 한 횟수를 적으세요. 계획하고 챙기는 일은 '보이지 않는 가사'로 표시해요.</p>
+        <div class="grid-box" id="grid"></div>
+        <div class="row" style="margin-top:var(--space-3)">
+          <button class="btn btn--ghost" type="button" id="addChore">가사 추가</button>
+        </div>
+      </div>
+      <div class="sec">
+        <h2>자료</h2>
+        <div class="row">
+          <button class="btn btn--stamp" type="button" id="sample">예시 가족 불러오기</button>
+          <button class="btn btn--ghost" type="button" id="saveFile">파일로 저장</button>
+          <button class="btn btn--ghost" type="button" id="loadFile">파일 불러오기</button>
+          <button class="btn btn--ghost" type="button" id="csv">CSV 내보내기</button>
+          <button class="btn btn--ghost" type="button" id="reset">새로 시작</button>
+          <input type="file" id="fileIn" accept=".json,application/json" class="hidden">
+        </div>
+        <p class="hint">입력은 바로 이 브라우저에 저장돼요. 다른 기기로 옮길 때는 '파일로 저장'을 쓰세요. CSV는 엑셀·구글 시트에서 열립니다.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2 분석 -->
+  <section class="panel hidden" id="p-analysis" role="tabpanel" aria-labelledby="t-analysis">
+    <div class="card" id="analysis"></div>
+  </section>
+
+  <!-- 3 바꿔 보기 -->
+  <section class="panel hidden" id="p-sim" role="tabpanel" aria-labelledby="t-sim">
+    <div class="card">
+      <div class="sec">
+        <h2>바꿔 보기</h2>
+        <p class="lead">원래 근무표는 그대로 두고, 가사를 다른 사람에게 옮겼을 때 비율이 어떻게 바뀌는지 봅니다. 내가 맡을 가사를 정해 보세요.</p>
+        <div class="move-form">
+          <div class="wide"><label class="lab" for="mvChore">가사</label><select class="input" id="mvChore"></select></div>
+          <div><label class="lab" for="mvFrom">원래 하던 사람</label><select class="input" id="mvFrom"></select></div>
+          <div><label class="lab" for="mvTo">맡을 사람</label><select class="input" id="mvTo"></select></div>
+          <div><label class="lab" for="mvN">주 몇 회</label><input class="input" type="number" id="mvN" min="1" max="21" value="1" inputmode="numeric"></div>
+          <div><button class="btn" type="button" id="mvAdd">옮기기</button></div>
+        </div>
+        <p class="hint" id="mvHint"></p>
+        <ul class="moves" id="moves"></ul>
+      </div>
+      <div class="sec" id="compare"></div>
+    </div>
+  </section>
+
+  <!-- 4 약속서 -->
+  <section class="panel hidden" id="p-promise" role="tabpanel" aria-labelledby="t-promise">
+    <div class="row no-print" style="margin-bottom:var(--space-4)">
+      <button class="btn" type="button" id="printBtn">약속서 인쇄</button>
+      <span class="muted">'바꿔 보기'에서 옮긴 가사가 약속 항목이 됩니다.</span>
+    </div>
+    <div class="promise" id="promise"></div>
+  </section>
+</main>
+
+<footer class="wrap no-print">공정한 분담은 '똑같이'가 아니라 각자의 시간·나이·건강을 고려해 가족이 함께 정하는 것입니다. 해석 문장은 숫자에 따른 참고용이에요.</footer>
+
+<div class="toast hidden" id="toast" role="status"></div>
+
+<script>
+/* ============ CONFIG — 여기만 고치면 됩니다 ============ */
+const CONFIG = {
+  storageKey: 'chore-share-v1',
+  maxMembers: 6,
+  maxCount: 21,           // 한 칸에 적을 수 있는 최대 횟수(하루 3회 × 7일)
+  defaultMembers: ['엄마', '아빠', '나', '동생'],
+  // min = 1회에 걸리는 시간(분, 예시값 — 가족마다 고쳐 쓰기), hidden = 보이지 않는 가사
+  defaultChores: [
+    { name: '식사 준비(요리)', min: 40 },
+    { name: '설거지', min: 20 },
+    { name: '빨래(세탁·널기·개기)', min: 30 },
+    { name: '청소', min: 30 },
+    { name: '장보기', min: 50 },
+    { name: '쓰레기·분리배출', min: 10 },
+    { name: '가족 돌봄(동생·조부모)', min: 30 },
+    { name: '식단·장볼 목록 계획', min: 15, hidden: true },
+    { name: '준비물·일정 챙기기', min: 10, hidden: true },
+  ],
+  // 예시 가족 — 화면 시연용 가상 자료
+  sample: {
+    members: ['엄마', '아빠', '나', '형'],
+    me: 2,
+    chores: [
+      { name: '식사 준비(요리)', min: 40, c: [9, 3, 0, 0] },
+      { name: '설거지', min: 20, c: [6, 4, 2, 2] },
+      { name: '빨래(세탁·널기·개기)', min: 30, c: [3, 1, 0, 0] },
+      { name: '청소', min: 30, c: [2, 2, 1, 0] },
+      { name: '장보기', min: 50, c: [1, 1, 0, 0] },
+      { name: '쓰레기·분리배출', min: 10, c: [0, 4, 0, 2] },
+      { name: '가족 돌봄(할머니 병원)', min: 60, c: [1, 0, 0, 0] },
+      { name: '식단·장볼 목록 계획', min: 15, hidden: true, c: [5, 0, 0, 0] },
+      { name: '준비물·일정 챙기기', min: 10, hidden: true, c: [7, 1, 0, 0] },
+    ],
+  },
+  // 공정성 해석 기준값
+  rules: {
+    evenRatio: 1.5,     // 가장 많이/가장 적게 ≤ 1.5배 → 비교적 고름
+    skewRatio: 3,       // ≤ 3배 → 차이가 있음, 초과 → 크게 치우침
+    topShare: 50,       // 한 사람이 50% 이상 → 쏠림 문장
+    hiddenShare: 70,    // 보이지 않는 가사의 70% 이상을 한 사람 → 문장
+  },
+};
+/* ======================================================= */
+
+const $ = (s, el = document) => el.querySelector(s);
+const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+const esc = (s) => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const uid = () => Math.random().toString(36).slice(2, 9);
+const clampN = (v, max) => { const n = Math.floor(Number(v)); return Number.isFinite(n) ? Math.min(Math.max(n, 0), max) : 0; };
+const mcolor = (i) => `var(--m${(i % 6) + 1})`;
+const fmtMin = (m) => m >= 60 ? `${Math.floor(m / 60)}시간 ${m % 60 ? (m % 60) + '분' : ''}`.trim() : `${m}분`;
+const josa = (w, a, b) => { const c = w.charCodeAt(w.length - 1); return (c >= 0xAC00 && c <= 0xD7A3 && (c - 0xAC00) % 28) ? a : b; };
+
+/* ---- 상태 ---- */
+function blank() {
+  const members = CONFIG.defaultMembers.map(name => ({ id: uid(), name }));
+  return { members, me: members[2] ? members[2].id : members[0].id, chores: CONFIG.defaultChores.map(c => ({ id: uid(), name: c.name, min: c.min, hidden: !!c.hidden, c: {} })), moves: [] };
+}
+function fromSample() {
+  const s = CONFIG.sample; const members = s.members.map(name => ({ id: uid(), name }));
+  return { members, me: members[s.me].id, chores: s.chores.map(c => ({ id: uid(), name: c.name, min: c.min, hidden: !!c.hidden, c: Object.fromEntries(members.map((m, i) => [m.id, c.c[i] || 0])) })), moves: [] };
+}
+function valid(d) { return d && Array.isArray(d.members) && Array.isArray(d.chores) && d.members.length && d.members.every(m => m.id && typeof m.name === 'string'); }
+let S;
+try { const d = JSON.parse(localStorage.getItem(CONFIG.storageKey) || 'null'); S = valid(d) ? Object.assign({ moves: [] }, d) : blank(); } catch (e) { S = blank(); }
+let saveWarned = false;
+function persist() { try { localStorage.setItem(CONFIG.storageKey, JSON.stringify(S)); } catch (e) { if (!saveWarned) { toast('이 브라우저에서는 자동 저장이 안 돼요. "파일로 저장"을 쓰세요.'); saveWarned = true; } } }
+
+let toastTimer;
+function toast(msg, undo) {
+  const t = $('#toast'); t.innerHTML = `<span>${esc(msg)}</span>` + (undo ? '<button type="button">되돌리기</button>' : '');
+  t.classList.remove('hidden'); clearTimeout(toastTimer);
+  if (undo) t.querySelector('button').onclick = () => { undo(); t.classList.add('hidden'); };
+  toastTimer = setTimeout(() => t.classList.add('hidden'), undo ? 7000 : 3500);
+}
+
+/* ---- 계산 ---- */
+function compute(chores) {
+  const per = S.members.map(m => ({ m, min: 0, cnt: 0, hid: 0 }));
+  let total = 0, hidTotal = 0;
+  chores.forEach(ch => per.forEach(p => { const n = ch.c[p.m.id] || 0, t = n * (ch.min || 0); p.min += t; p.cnt += n; if (ch.hidden) p.hid += t; total += t; if (ch.hidden) hidTotal += t; }));
+  per.forEach(p => { p.pct = total ? p.min / total * 100 : 0; });
+  const sorted = per.slice().sort((a, b) => b.min - a.min);
+  const top = sorted[0], low = sorted[sorted.length - 1];
+  const ratio = low && low.min > 0 ? top.min / low.min : (top && top.min > 0 ? Infinity : 0);
+  return { per, total, hidTotal, top, low, ratio, zero: per.filter(p => p.min === 0) };
+}
+function applyMoves(chores, moves) {
+  const out = chores.map(c => ({ ...c, c: { ...c.c } }));
+  moves.forEach(mv => { const ch = out.find(c => c.id === mv.chore); if (!ch) return; const n = Math.min(mv.n, ch.c[mv.from] || 0); ch.c[mv.from] = (ch.c[mv.from] || 0) - n; ch.c[mv.to] = (ch.c[mv.to] || 0) + n; });
+  return out;
+}
+const ratioText = (r) => r === Infinity ? '참여 0명 있음' : r ? `${r.toFixed(1)}배` : '—';
+const nameOf = (id) => (S.members.find(m => m.id === id) || { name: '?' }).name;
+
+function readings(R) {
+  const out = []; const rules = CONFIG.rules; const n = S.members.length;
+  if (!R.total) return [{ t: '아직 기록이 없어요. 근무표에 횟수를 적으면 해석이 나타나요.' }];
+  if (R.zero.length) out.push({ t: `${R.zero.map(p => p.m.name).join(', ')}${josa(R.zero[R.zero.length - 1].m.name, '은', '는')} 이번 주 기록된 가사가 없어요. 할 수 있는 일을 하나부터 정해 볼까요?` });
+  if (R.ratio !== Infinity && R.ratio) {
+    if (R.ratio <= rules.evenRatio) out.push({ t: `가장 많이 한 ${R.top.m.name}${josa(R.top.m.name, '과', '와')} 가장 적게 한 ${R.low.m.name}의 차이가 ${R.ratio.toFixed(1)}배로, 비교적 고르게 나누고 있어요.` });
+    else if (R.ratio <= rules.skewRatio) out.push({ t: `${R.top.m.name}${josa(R.top.m.name, '이', '가')} ${R.low.m.name}보다 ${R.ratio.toFixed(1)}배 많이 해요. 차이가 있으니 이유를 이야기해 보세요.` });
+    else out.push({ t: `${R.top.m.name}${josa(R.top.m.name, '이', '가')} ${R.low.m.name}보다 ${R.ratio.toFixed(1)}배 많이 해요. 한쪽으로 크게 치우쳐 있어요.` });
+  }
+  if (R.top.pct >= rules.topShare) out.push({ t: `${R.top.m.name}${josa(R.top.m.name, '이', '가')} 전체 가사 시간의 ${Math.round(R.top.pct)}%를 맡고 있어요(${n}명이 똑같이 나누면 1인당 ${Math.round(100 / n)}%).` });
+  if (R.hidTotal) {
+    const h = R.per.slice().sort((a, b) => b.hid - a.hid)[0]; const hs = h.hid / R.hidTotal * 100;
+    if (hs >= rules.hiddenShare) out.push({ t: `계획하고 챙기는 '보이지 않는 가사'의 ${Math.round(hs)}%를 ${h.m.name}${josa(h.m.name, '이', '가')} 하고 있어요. 눈에 잘 띄지 않아 고마움을 놓치기 쉬운 일이에요.` });
+    else out.push({ t: `보이지 않는 가사는 여러 사람이 나누고 있어요(가장 많은 사람 ${Math.round(hs)}%).` });
+  } else out.push({ t: "'보이지 않는 가사'(식단 계획, 준비물 챙기기 등)가 기록되지 않았어요. 정말 아무도 안 하는지 살펴보세요." });
+  const me = R.per.find(p => p.m.id === S.me);
+  if (me) out.push({ t: `${me.m.name === '나' ? '나' : '나(' + me.m.name + ')'}는 전체의 ${Math.round(me.pct)}%, 한 주 ${fmtMin(me.min)}을 맡고 있어요.` });
+  out.push({ t: '공정한 분담은 똑같이 나누는 것만이 아니에요. 학교·직장 시간, 나이, 건강을 함께 고려해 가족이 합의하는 것이 중요해요.', note: true });
+  return out;
+}
+
+/* ---- SVG 도넛 ---- */
+function donut(R) {
+  const r = 70, c = 2 * Math.PI * r; let off = 0;
+  const segs = R.per.map((p, i) => { if (!p.min) return ''; const len = p.min / R.total * c; const s = `<circle cx="100" cy="100" r="${r}" fill="none" stroke="${mcolor(i)}" stroke-width="34" stroke-dasharray="${len} ${c - len}" stroke-dashoffset="${-off}" transform="rotate(-90 100 100)"/>`; off += len; return s; }).join('');
+  return `<svg class="donut" viewBox="0 0 200 200" role="img" aria-label="구성원별 가사 시간 비율">
+    <circle cx="100" cy="100" r="${r}" fill="none" stroke="var(--color-desk)" stroke-width="34"/>${segs}
+    <text x="100" y="96" text-anchor="middle" font-size="15">한 주 합계</text>
+    <text x="100" y="120" text-anchor="middle" font-size="16">${esc(fmtMin(R.total))}</text></svg>`;
+}
+function memberBars(R) {
+  const max = Math.max(...R.per.map(p => p.min), 1);
+  return `<div class="bars">${R.per.map((p, i) => `<div class="bar-row"><span class="nm">${esc(p.m.name)}</span>
+    <div class="bar" role="img" aria-label="${esc(p.m.name)} ${p.min}분, 보이지 않는 가사 ${p.hid}분"><i style="width:${(p.min - p.hid) / max * 100}%;background:${mcolor(i)}"></i><i class="inv" style="width:${p.hid / max * 100}%;background-color:${mcolor(i)}"></i></div></div>`).join('')}</div>
+    <div class="key"><span><i class="vis"></i>보이는 가사</span><span><i class="inv"></i>보이지 않는 가사(빗금)</span></div>`;
+}
+
+/* ---- 1 근무표 렌더 ---- */
+function renderMembers() {
+  $('#members').innerHTML = S.members.map((m, i) => `<div class="mem"><span class="sw" style="background:${mcolor(i)}"></span>
+    <input aria-label="구성원 ${i + 1} 호칭" data-mem="${m.id}" value="${esc(m.name)}" maxlength="8">
+    <label><input type="radio" name="me" value="${m.id}" ${S.me === m.id ? 'checked' : ''}>나</label>
+    <button class="x" type="button" data-delmem="${m.id}" aria-label="${esc(m.name)} 빼기">×</button></div>`).join('');
+  $('#addMember').disabled = S.members.length >= CONFIG.maxMembers;
+  $('#memberHint').innerHTML = `구성원은 ${CONFIG.maxMembers}명까지. <b>실명·별명 대신 호칭</b>(엄마, 아빠, 할머니, 형, 나…)만 적어요.`;
+}
+function renderGrid() {
+  const n = S.members.length; const grid = $('#grid'); grid.style.setProperty('--n', n);
+  const tots = S.chores.map(ch => S.members.reduce((a, m) => a + (ch.c[m.id] || 0), 0) * (ch.min || 0));
+  grid.innerHTML = `<div class="grid-head" style="--n:${n}"><div>가사</div><div>1회(분)</div><div>보이지 않음</div>${S.members.map(m => `<div>${esc(m.name)}</div>`).join('')}<div>합계</div><div></div></div>` +
+    S.chores.map((ch, ci) => `<div class="crow" style="--n:${n}" data-ch="${ch.id}">
+      <div class="crow-main">
+        <div><label class="lab" for="cn-${ch.id}">가사 ${ci + 1}</label><input class="input" id="cn-${ch.id}" data-f="name" value="${esc(ch.name)}" maxlength="20"></div>
+        <div><label class="lab" for="cm-${ch.id}">1회(분)</label><input class="input" type="number" id="cm-${ch.id}" data-f="min" min="0" max="600" value="${ch.min}" inputmode="numeric"></div>
+        <label class="hid"><input type="checkbox" data-f="hidden" ${ch.hidden ? 'checked' : ''}><span class="t">보이지 않는 가사</span>${ch.hidden ? '<span class="tag-hid">숨은 일</span>' : ''}</label>
+        <button class="x" type="button" data-delch="${ch.id}" aria-label="${esc(ch.name)} 지우기">×</button>
+      </div>
+      <div class="cnts">${S.members.map((m, i) => `<div class="cnt"><span class="m" style="border-left:6px solid ${mcolor(i)};padding-left:6px">${esc(m.name)}</span><input class="input" type="number" min="0" max="${CONFIG.maxCount}" data-m="${m.id}" value="${ch.c[m.id] || ''}" placeholder="0" inputmode="numeric" aria-label="${esc(ch.name)} — ${esc(m.name)} 횟수"></div>`).join('')}</div>
+      <div class="tot num">${fmtMin(tots[ci])}</div>
+    </div>`).join('') +
+    `<div class="foot-tot"><span class="disp">한 주 합계</span>${S.members.map((m, i) => `<span>${esc(m.name)} <b class="num">${fmtMin(compute(S.chores).per[i].min)}</b></span>`).join('')}</div>`;
+}
+$('#members').addEventListener('input', (e) => { const id = e.target.dataset.mem; if (!id) return; const m = S.members.find(x => x.id === id); m.name = e.target.value.trim() || '이름없음'; persist(); renderGridHeadOnly(); });
+$('#members').addEventListener('change', (e) => { if (e.target.name === 'me') { S.me = e.target.value; persist(); } });
+$('#members').addEventListener('change', (e) => { if (e.target.dataset.mem) renderGrid(); });
+function renderGridHeadOnly() { const hs = $$('.grid-head > div', $('#grid')); S.members.forEach((m, i) => { if (hs[3 + i]) hs[3 + i].textContent = m.name; }); }
+$('#members').addEventListener('click', (e) => {
+  const id = e.target.dataset.delmem; if (!id) return;
+  if (S.members.length <= 2) { toast('구성원은 2명 이상이어야 비교할 수 있어요.'); return; }
+  const snap = JSON.stringify(S); const m = S.members.find(x => x.id === id);
+  S.members = S.members.filter(x => x.id !== id); S.chores.forEach(c => delete c.c[id]); S.moves = S.moves.filter(mv => mv.from !== id && mv.to !== id);
+  if (S.me === id) S.me = S.members[0].id;
+  persist(); renderAll(); toast(`${m.name} 칸을 뺐어요.`, () => { S = JSON.parse(snap); persist(); renderAll(); });
+});
+$('#addMember').addEventListener('click', () => { if (S.members.length >= CONFIG.maxMembers) return; S.members.push({ id: uid(), name: '가족' + (S.members.length + 1) }); persist(); renderAll(); const ins = $$('#members input[data-mem]'); ins[ins.length - 1].select(); });
+$('#grid').addEventListener('input', (e) => {
+  const row = e.target.closest('.crow'); if (!row) return; const ch = S.chores.find(c => c.id === row.dataset.ch);
+  if (e.target.dataset.m) ch.c[e.target.dataset.m] = clampN(e.target.value, CONFIG.maxCount);
+  else if (e.target.dataset.f === 'name') ch.name = e.target.value;
+  else if (e.target.dataset.f === 'min') ch.min = clampN(e.target.value, 600);
+  persist(); updateTotals();
+});
+$('#grid').addEventListener('change', (e) => {
+  const row = e.target.closest('.crow'); if (!row) return; const ch = S.chores.find(c => c.id === row.dataset.ch);
+  if (e.target.dataset.f === 'hidden') { ch.hidden = e.target.checked; persist(); renderGrid(); }
+  if (e.target.type === 'number' && e.target.value !== '') { const v = e.target.dataset.m ? (ch.c[e.target.dataset.m] || 0) : ch.min; if (String(v) !== e.target.value) { e.target.value = v; toast(e.target.dataset.m ? `한 칸은 0~${CONFIG.maxCount}회로 적어요.` : '1회 시간은 0~600분으로 적어요.'); } }
+});
+function updateTotals() {
+  const R = compute(S.chores);
+  $$('#grid .crow').forEach(row => { const ch = S.chores.find(c => c.id === row.dataset.ch); $('.tot', row).textContent = fmtMin(S.members.reduce((a, m) => a + (ch.c[m.id] || 0), 0) * (ch.min || 0)); });
+  $$('#grid .foot-tot b').forEach((b, i) => { b.textContent = fmtMin(R.per[i].min); });
+}
+$('#grid').addEventListener('click', (e) => {
+  const id = e.target.dataset.delch; if (!id) return;
+  const snap = JSON.stringify(S); const ch = S.chores.find(c => c.id === id);
+  S.chores = S.chores.filter(c => c.id !== id); S.moves = S.moves.filter(mv => mv.chore !== id); persist(); renderAll();
+  toast(`'${ch.name}'을(를) 지웠어요.`, () => { S = JSON.parse(snap); persist(); renderAll(); });
+});
+$('#addChore').addEventListener('click', () => { S.chores.push({ id: uid(), name: '', min: 10, hidden: false, c: {} }); persist(); renderGrid(); const ins = $$('#grid input[data-f=name]'); ins[ins.length - 1].focus(); });
+
+/* ---- 자료 ---- */
+$('#sample').addEventListener('click', () => { const snap = JSON.stringify(S); S = fromSample(); persist(); renderAll(); toast('예시 가족을 불러왔어요(가상 자료).', () => { S = JSON.parse(snap); persist(); renderAll(); }); });
+$('#reset').addEventListener('click', () => { const snap = JSON.stringify(S); S = blank(); persist(); renderAll(); toast('빈 근무표로 바꿨어요.', () => { S = JSON.parse(snap); persist(); renderAll(); }); });
+function download(name, text, type) { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500); }
+const today = () => new Date().toISOString().slice(0, 10);
+$('#saveFile').addEventListener('click', () => download(`가사분담_${today()}.json`, JSON.stringify(S, null, 2), 'application/json'));
+$('#loadFile').addEventListener('click', () => $('#fileIn').click());
+$('#fileIn').addEventListener('change', async (e) => {
+  const f = e.target.files[0]; if (!f) return;
+  try { const d = JSON.parse(await f.text()); if (!valid(d)) throw new Error('형식'); S = Object.assign({ moves: [] }, d); persist(); renderAll(); toast('파일을 불러왔어요.'); }
+  catch (err) { toast('불러오지 못했어요. 이 앱에서 "파일로 저장"한 .json 파일인지 확인하세요.'); }
+  e.target.value = '';
+});
+$('#csv').addEventListener('click', () => {
+  const q = (v) => `"${String(v).replace(/"/g, '""')}"`;
+  const rows = [['가사', '1회(분)', '보이지 않는 가사', ...S.members.map(m => m.name + '(회)'), ...S.members.map(m => m.name + '(분)')]];
+  S.chores.forEach(ch => rows.push([ch.name, ch.min, ch.hidden ? 'O' : '', ...S.members.map(m => ch.c[m.id] || 0), ...S.members.map(m => (ch.c[m.id] || 0) * ch.min)]));
+  const R = compute(S.chores);
+  rows.push(['합계(분)', '', '', ...S.members.map(() => ''), ...R.per.map(p => p.min)]);
+  rows.push(['비율(%)', '', '', ...S.members.map(() => ''), ...R.per.map(p => p.pct.toFixed(1))]);
+  download(`가사분담_${today()}.csv`, '﻿' + rows.map(r => r.map(q).join(',')).join('\r\n'), 'text/csv;charset=utf-8');
+});
+
+/* ---- 2 분석 ---- */
+function renderAnalysis() {
+  const R = compute(S.chores); const box = $('#analysis');
+  if (!R.total) { box.innerHTML = `<div class="sec empty"><h2>아직 기록이 없어요</h2><p class="lead">근무표에 횟수를 적거나 예시 가족을 불러오면 분석이 나타나요.</p><button class="btn btn--stamp" type="button" data-go="sample">예시 가족 불러오기</button></div>`; return; }
+  const me = R.per.find(p => p.m.id === S.me);
+  const choreRows = S.chores.filter(ch => S.members.some(m => ch.c[m.id])).map(ch => {
+    const t = S.members.reduce((a, m) => a + (ch.c[m.id] || 0), 0);
+    const main = S.members.slice().sort((a, b) => (ch.c[b.id] || 0) - (ch.c[a.id] || 0))[0];
+    return `<div class="bar-row"><span class="nm">${esc(ch.name || '(이름 없음)')}${ch.hidden ? ' <span class="tag-hid">숨은 일</span>' : ''}</span>
+      <div class="bar" role="img" aria-label="${esc(ch.name)} 분담">${S.members.map((m, i) => ch.c[m.id] ? `<i class="${ch.hidden ? 'inv' : ''}" style="width:${ch.c[m.id] / t * 100}%;background-color:${mcolor(i)}"></i>` : '').join('')}</div>
+      <span class="who">${esc(main.name)}</span></div>`;
+  }).join('');
+  box.innerHTML = `
+    <div class="sec"><h2>한 주 분석</h2><p class="lead">시간 = 횟수 × 1회 걸리는 시간. 보이지 않는 가사도 시간에 포함됩니다.</p>
+      <div class="kpis">
+        <div class="kpi"><div class="k">한 주 가사 합계</div><div class="v num">${fmtMin(R.total)}</div></div>
+        <div class="kpi"><div class="k">가장 많이 / 가장 적게</div><div class="v num ${R.ratio === Infinity || R.ratio > CONFIG.rules.skewRatio ? 'warn' : ''}">${ratioText(R.ratio)}</div></div>
+        <div class="kpi"><div class="k">가장 많이 하는 사람</div><div class="v">${esc(R.top.m.name)} ${Math.round(R.top.pct)}%</div></div>
+        <div class="kpi"><div class="k">${me && me.m.name !== '나' ? '나(' + esc(me.m.name) + ')' : '나'}의 몫</div><div class="v num">${me ? Math.round(me.pct) : 0}%</div></div>
+      </div>
+      <div class="charts">
+        ${donut(R)}
+        <div><ul class="legend">${R.per.map((p, i) => `<li><span class="sw" style="background:${mcolor(i)}"></span><span>${esc(p.m.name)}${p.m.id === S.me && p.m.name !== '나' ? ' (나)' : ''}</span><span class="pct num">${Math.round(p.pct)}%</span><span class="min num">${fmtMin(p.min)}</span></li>`).join('')}</ul>
+          <h3 style="margin-top:var(--space-4)">구성원별 시간</h3>${memberBars(R)}</div>
+      </div>
+    </div>
+    <div class="sec"><h2>읽어 보기</h2><ol class="reading">${readings(R).map(r => `<li class="${r.note ? 'note' : ''}">${esc(r.t)}</li>`).join('')}</ol></div>
+    <div class="sec chore-bars"><h2>가사별로 누가 하나</h2><p class="lead">막대는 횟수 비율, 오른쪽은 가장 많이 하는 사람입니다.</p><div class="bars">${choreRows}</div></div>
+    <div class="sec"><button class="btn" type="button" data-go="sim">바꿔 보기로 가기</button></div>`;
+}
+$('#analysis').addEventListener('click', (e) => { const g = e.target.dataset.go; if (g === 'sample') $('#sample').click(), showTab('analysis'); if (g === 'sim') showTab('sim'); });
+
+/* ---- 3 바꿔 보기 ---- */
+function renderSim() {
+  const opt = (arr, sel) => arr.map(x => `<option value="${x.id}" ${x.id === sel ? 'selected' : ''}>${esc(x.name || '(이름 없음)')}</option>`).join('');
+  const R = compute(S.chores);
+  const prevChore = $('#mvChore').value, prevFrom = $('#mvFrom').value, prevTo = $('#mvTo').value;
+  $('#mvChore').innerHTML = opt(S.chores, prevChore);
+  $('#mvFrom').innerHTML = opt(S.members, S.members.some(m => m.id === prevFrom) ? prevFrom : R.top.m.id);
+  $('#mvTo').innerHTML = opt(S.members, S.members.some(m => m.id === prevTo) ? prevTo : S.me);
+  updateMvHint();
+  $('#moves').innerHTML = S.moves.map((mv, i) => { const ch = S.chores.find(c => c.id === mv.chore); return `<li><span>${esc(ch ? ch.name : '?')} 주 ${mv.n}회: ${esc(nameOf(mv.from))} → <b>${esc(nameOf(mv.to))}</b></span><button class="x" type="button" data-delmv="${i}" aria-label="이 옮기기 취소">×</button></li>`; }).join('') || '<li><span class="muted">아직 옮긴 가사가 없어요.</span></li>';
+  const A = compute(applyMoves(S.chores, S.moves));
+  const max = Math.max(...R.per.map(p => p.min), ...A.per.map(p => p.min), 1);
+  $('#compare').innerHTML = `<h2>바꾸기 전 → 후</h2>
+    <div class="kpis" style="margin:var(--space-2) 0 var(--space-4)">
+      <div class="kpi"><div class="k">가장 많이/적게 (전)</div><div class="v num">${ratioText(R.ratio)}</div></div>
+      <div class="kpi"><div class="k">가장 많이/적게 (후)</div><div class="v num ${A.ratio === Infinity || A.ratio > CONFIG.rules.skewRatio ? 'warn' : ''}">${ratioText(A.ratio)}</div></div>
+      <div class="kpi"><div class="k">최다 담당 (후)</div><div class="v">${R.total ? esc(A.top.m.name) + ' ' + Math.round(A.top.pct) + '%' : '—'}</div></div>
+      <div class="kpi"><div class="k">나의 몫 (전 → 후)</div><div class="v num">${Math.round((R.per.find(p => p.m.id === S.me) || { pct: 0 }).pct)} → ${Math.round((A.per.find(p => p.m.id === S.me) || { pct: 0 }).pct)}%</div></div>
+    </div>
+    <div class="bars compare">${R.per.map((p, i) => { const a = A.per[i]; const d = Math.round(a.pct) - Math.round(p.pct); return `<div class="bar-row"><span class="nm">${esc(p.m.name)}</span>
+      <div class="pair"><div class="bar" role="img" aria-label="전 ${p.min}분"><i style="width:${p.min / max * 100}%;background:${mcolor(i)};opacity:.45"></i></div><div class="bar after" role="img" aria-label="후 ${a.min}분"><i style="width:${a.min / max * 100}%;background:${mcolor(i)}"></i></div></div>
+      <span class="delta num ${d > 0 ? 'up' : ''}">${Math.round(a.pct)}% (${d > 0 ? '+' : ''}${d})</span></div>`; }).join('')}</div>
+    <div class="key"><span><i style="background:var(--color-muted);opacity:.45"></i>전</span><span><i class="vis"></i>후</span></div>
+    <div class="row" style="margin-top:var(--space-4)"><button class="btn" type="button" id="toPromise">이대로 약속서 만들기</button></div>`;
+  $('#toPromise').onclick = () => showTab('promise');
+}
+function updateMvHint() {
+  const ch = S.chores.find(c => c.id === $('#mvChore').value); const from = $('#mvFrom').value;
+  const have = ch ? (applyMoves(S.chores, S.moves).find(c => c.id === ch.id).c[from] || 0) : 0;
+  $('#mvHint').textContent = ch ? `${nameOf(from)}${josa(nameOf(from), '은', '는')} 지금 '${ch.name}'을(를) 주 ${have}회 하고 있어요.` : '';
+  $('#mvN').max = Math.max(have, 1);
+}
+['#mvChore', '#mvFrom'].forEach(s => $(s).addEventListener('change', updateMvHint));
+$('#mvAdd').addEventListener('click', () => {
+  const chore = $('#mvChore').value, from = $('#mvFrom').value, to = $('#mvTo').value, n = clampN($('#mvN').value, CONFIG.maxCount);
+  if (!chore) { toast('먼저 근무표에 가사를 적어 주세요.'); return; }
+  if (from === to) { toast('원래 하던 사람과 맡을 사람이 같아요.'); return; }
+  const have = applyMoves(S.chores, S.moves).find(c => c.id === chore).c[from] || 0;
+  if (!n || n > have) { toast(`${nameOf(from)}의 해당 가사는 주 ${have}회라서 ${have}회까지만 옮길 수 있어요.`); return; }
+  S.moves.push({ chore, from, to, n }); persist(); renderSim();
+});
+$('#moves').addEventListener('click', (e) => { const i = e.target.dataset.delmv; if (i == null) return; S.moves.splice(+i, 1); persist(); renderSim(); });
+
+/* ---- 4 약속서 ---- */
+function renderPromise() {
+  const A = compute(applyMoves(S.chores, S.moves)); const R = compute(S.chores);
+  const rows = S.moves.length ? S.moves.map(mv => { const ch = S.chores.find(c => c.id === mv.chore); return `<tr><td>${esc(nameOf(mv.to))}</td><td>${esc(ch ? ch.name : '')}</td><td class="num">주 ${mv.n}회</td><td>${esc(nameOf(mv.from))}에게서 넘겨받기</td></tr>`; }).join('')
+    : [1, 2, 3].map(() => '<tr><td>&nbsp;</td><td></td><td></td><td></td></tr>').join('');
+  $('#promise').innerHTML = `
+    <h2>우리 가족 가사 분담 약속서</h2>
+    <p class="sub">기록한 한 주를 돌아보고, 함께 나누기로 약속합니다.</p>
+    <table><thead><tr><th>맡을 사람</th><th>가사</th><th>횟수</th><th>비고</th></tr></thead><tbody>${rows}</tbody></table>
+    <table><thead><tr><th>구성원</th><th>지금</th><th>약속 후</th></tr></thead><tbody>${R.per.map((p, i) => `<tr><td>${esc(p.m.name)}</td><td class="num">${Math.round(p.pct)}% · ${fmtMin(p.min)}</td><td class="num">${Math.round(A.per[i].pct)}% · ${fmtMin(A.per[i].min)}</td></tr>`).join('')}</tbody></table>
+    <table><thead><tr><th>서로에게 고마움을 표현하는 방법</th></tr></thead><tbody><tr><td class="lines"><div></div><div></div></td></tr></tbody></table>
+    <div class="signs">${S.members.map(m => `<div><span>${esc(m.name)}</span><span class="seal">(서명)</span></div>`).join('')}</div>
+    <div class="pr-foot"><span>약속한 날: ______년 ___월 ___일</span><span>2주 뒤 점검일: ___월 ___일</span></div>`;
+}
+$('#printBtn').addEventListener('click', () => window.print());
+window.addEventListener('beforeprint', renderPromise);
+
+/* ---- 탭 ---- */
+function showTab(name) {
+  $$('.tab').forEach(t => { const on = t.id === 't-' + name; t.setAttribute('aria-selected', on); t.tabIndex = on ? 0 : -1; });
+  $$('.panel').forEach(p => p.classList.toggle('hidden', p.id !== 'p-' + name));
+  if (name === 'analysis') renderAnalysis(); if (name === 'sim') renderSim(); if (name === 'promise') renderPromise();
+}
+$$('.tab').forEach(t => t.addEventListener('click', () => showTab(t.id.slice(2))));
+$('.tabs [role=tablist]').addEventListener('keydown', (e) => {
+  if (!['ArrowLeft', 'ArrowRight'].includes(e.key)) return;
+  const tabs = $$('.tab'); const i = tabs.findIndex(t => t.getAttribute('aria-selected') === 'true');
+  const nx = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length]; nx.focus(); showTab(nx.id.slice(2));
+});
+
+function renderAll() { renderMembers(); renderGrid(); const cur = $('.tab[aria-selected=true]').id.slice(2); if (cur !== 'input') showTab(cur); }
+renderAll();
+</script>
+</body>
+</html>

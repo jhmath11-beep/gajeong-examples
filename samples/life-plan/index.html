@@ -1,0 +1,772 @@
+<!--
+  무엇을 하는 앱: 생애주기(영아기~노년기)별 발달 특징·발달과업을 보고, 과업을 알맞은 시기에 놓는 매칭 연습을 하고, 청소년기 자기 점검과 '내 생애 설계' 연표를 만드는 활동지
+  수업 장면: 인간 발달과 가족 단원 — 생애주기 학습 → 매칭 연습(개인·짝) → 자기 점검으로 강점 찾기 → 시기별 목표와 '지금 할 수 있는 한 걸음'을 적어 A4로 인쇄해 제출·발표
+  설정 바꾸는 곳: 아래 <script> 맨 위 CONFIG (생애주기 이름·나이 구간·발달 특징·과업 문장, 자기 점검 문항, 관심 분야, 목표 영역)
+-->
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>나의 생애 설계 타임라인</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Orbit&display=swap">
+<style>
+/* Hallmark · pre-emit critique: P4 H4 E4 S5 R4 V5
+ * Hallmark · genre: editorial · tone: utilitarian · theme: custom (연표 기록지 — 괘선 장부 + 인주 채점)
+ * macrostructure: workbench / ruled ledger form · anchor hue: 88 (cream) · accent: 인주 red 30 · ink: green-black 155
+ * fonts: Gowun Dodum (body, single weight — hierarchy by size + rules) · Orbit (numbers·ages only)
+ * contrast (measured): ink 14.8:1, ink-2 9.7:1, muted 6.1:1, accent 6.3:1, accent on accent-soft 5.4:1 (AA)
+ */
+:root {
+  --color-paper:      oklch(96.5% 0.013 88);
+  --color-paper-2:    oklch(93.2% 0.020 88);
+  --color-sheet:      oklch(98.6% 0.006 88);
+  --color-rule:       oklch(82% 0.022 85);
+  --color-rule-2:     oklch(89% 0.018 85);
+  --color-ink:        oklch(24% 0.028 155);
+  --color-ink-2:      oklch(36% 0.026 155);
+  --color-muted:      oklch(47% 0.020 140);
+  --color-accent:     oklch(50% 0.170 30);    /* 인주 */
+  --color-accent-soft:oklch(94% 0.030 30);
+  --color-ok:         oklch(42% 0.100 150);
+  --color-ok-soft:    oklch(94% 0.030 150);
+  --color-on-ink:     oklch(97% 0.010 88);
+  --color-focus:      oklch(45% 0.150 250);
+
+  --font-body: "Gowun Dodum", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+  --font-num:  "Orbit", "Gowun Dodum", "Malgun Gothic", sans-serif;
+
+  --fs-xs: 0.8125rem; --fs-sm: 0.9375rem; --fs-base: 1.0625rem; --fs-lg: 1.3125rem; --fs-xl: 1.75rem; --fs-2xl: clamp(1.75rem, 2.4vw + 1rem, 2.625rem);
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-6: 24px; --sp-8: 32px; --sp-12: 48px;
+  --container: 80rem;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur: 160ms;
+}
+* { box-sizing: border-box; }
+html, body { overflow-x: clip; }
+body { margin: 0; font-family: var(--font-body); font-weight: 400; font-synthesis: none; color: var(--color-ink); background: var(--color-paper); font-size: var(--fs-base); line-height: 1.65; word-break: keep-all; overflow-wrap: anywhere; }
+h1, h2, h3 { font-weight: 400; font-style: normal; line-height: 1.25; margin: 0; overflow-wrap: anywhere; min-width: 0; }
+p { margin: 0; }
+button, input, select, textarea { font: inherit; color: inherit; }
+.wrap { max-width: var(--container); margin: 0 auto; padding-inline: clamp(1rem, 3vw, 2rem); }
+.num { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+.muted { color: var(--color-muted); }
+.hidden { display: none !important; }
+:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* ── 머리: 서식 제목란 ───────────────────────── */
+.mast { border-bottom: 3px double var(--color-ink); background: var(--color-sheet); }
+.mast .wrap { display: grid; gap: var(--sp-3) var(--sp-8); padding-block: var(--sp-6) var(--sp-4); }
+.mast h1 { font-size: var(--fs-2xl); letter-spacing: -0.01em; }
+.mast .sub { color: var(--color-ink-2); font-size: var(--fs-sm); }
+.idbox { display: flex; flex-wrap: wrap; border: 1px solid var(--color-ink); align-self: end; justify-self: start; font-size: var(--fs-sm); }
+.idbox span { padding: var(--sp-1) var(--sp-3); border-right: 1px solid var(--color-ink); white-space: nowrap; }
+.idbox span:last-child { border-right: 0; }
+.idbox b { font-weight: 400; color: var(--color-muted); margin-right: var(--sp-6); }
+@media (min-width: 52rem) { .mast .wrap { grid-template-columns: minmax(0, 1fr) auto; } }
+
+/* ── 탭: 장부 색인 ───────────────────────── */
+.tabs { display: flex; gap: 0; margin-top: var(--sp-6); border-bottom: 1px solid var(--color-ink); overflow-x: auto; scrollbar-width: none; }
+.tab { flex: 0 0 auto; background: transparent; border: 1px solid transparent; border-bottom: 0; padding: var(--sp-2) var(--sp-4); cursor: pointer; white-space: nowrap; color: var(--color-ink-2); position: relative; top: 1px; transition: background-color var(--dur) var(--ease-out); }
+.tab .num { color: var(--color-muted); margin-right: var(--sp-2); font-size: var(--fs-xs); }
+.tab:hover { background: var(--color-paper-2); }
+.tab[aria-selected="true"] { background: var(--color-sheet); border-color: var(--color-ink); color: var(--color-ink); box-shadow: inset 0 3px 0 var(--color-accent); }
+@media (max-width: 39.99rem) {
+  .tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-bottom: 0; }
+  .tab { border: 1px solid var(--color-rule); margin: 0 -1px -1px 0; top: 0; min-height: 44px; text-align: left; }
+  .tab[aria-selected="true"] { border-color: var(--color-ink); position: relative; z-index: 1; }
+  .panel { border-top: 1px solid var(--color-ink); }
+}
+.panel { background: var(--color-sheet); border: 1px solid var(--color-ink); border-top: 0; padding: clamp(var(--sp-4), 3vw, var(--sp-8)); margin-bottom: var(--sp-12); }
+.panel h2 { font-size: var(--fs-xl); }
+.lead { color: var(--color-ink-2); max-width: 46em; margin-top: var(--sp-2); }
+
+/* ── 버튼 ───────────────────────── */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-2); min-height: 44px; padding: 0 var(--sp-4); border: 1px solid var(--color-ink); background: var(--color-sheet); cursor: pointer; white-space: nowrap; border-radius: 0; transition: background-color var(--dur) var(--ease-out), color var(--dur) var(--ease-out); }
+.btn:hover { background: var(--color-paper-2); }
+.btn:active { transform: translateY(1px); }
+.btn.primary { background: var(--color-ink); color: var(--color-on-ink); }
+.btn.primary:hover { background: var(--color-ink-2); }
+.btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+.btn.quiet { border-color: var(--color-rule); }
+.btnrow { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.toolbar { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: end; gap: var(--sp-4); margin-bottom: var(--sp-6); }
+
+/* ── 1. 생애주기 띠 ───────────────────────── */
+.band { display: grid; grid-template-columns: minmax(0, 1fr); border: 1px solid var(--color-ink); margin-top: var(--sp-6); }
+.seg { display: flex; justify-content: space-between; align-items: baseline; gap: var(--sp-3); padding: var(--sp-3) var(--sp-4); border: 0; border-bottom: 1px solid var(--color-rule); background: var(--color-sheet); cursor: pointer; text-align: left; min-height: 48px; transition: background-color var(--dur) var(--ease-out); }
+.seg:nth-child(even) { background: var(--color-paper); }
+.seg:last-child { border-bottom: 0; }
+.seg:hover { background: var(--color-paper-2); }
+.seg .nm { font-size: var(--fs-lg); white-space: nowrap; }
+.seg .ag { font-size: var(--fs-sm); color: var(--color-muted); white-space: nowrap; }
+.seg[aria-pressed="true"] { background: var(--color-ink); color: var(--color-on-ink); }
+.seg[aria-pressed="true"] .ag { color: var(--color-on-ink); }
+.ruler { display: none; }
+@media (min-width: 48rem) {
+  .band { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+  .seg { flex-direction: column; align-items: flex-start; gap: var(--sp-1); border-bottom: 0; border-right: 1px solid var(--color-rule); padding: var(--sp-4) var(--sp-3); min-height: 88px; }
+  .seg:last-child { border-right: 0; }
+  .ruler { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); height: 10px; background: repeating-linear-gradient(90deg, var(--color-ink) 0 1px, transparent 1px 12px); opacity: .5; }
+}
+.stage-detail { display: grid; gap: var(--sp-6); margin-top: var(--sp-6); }
+.stage-detail h3 { font-size: var(--fs-xl); display: flex; align-items: baseline; gap: var(--sp-3); flex-wrap: wrap; }
+.stage-detail h3 .num { font-size: var(--fs-base); color: var(--color-muted); }
+.facts { display: grid; grid-template-columns: minmax(0, 1fr); border-top: 1px solid var(--color-ink); }
+.facts > div { padding: var(--sp-3) 0; border-bottom: 1px solid var(--color-rule); display: grid; gap: var(--sp-1); }
+.facts dt { color: var(--color-muted); font-size: var(--fs-sm); }
+.facts dd { margin: 0; }
+@media (min-width: 48rem) { .facts > div { grid-template-columns: 9rem minmax(0, 1fr); gap: var(--sp-4); } }
+.tasklist { list-style: none; margin: 0; padding: 0; counter-reset: t; }
+.tasklist li { counter-increment: t; padding: var(--sp-2) 0 var(--sp-2) 2.25em; position: relative; border-bottom: 1px dotted var(--color-rule); }
+.tasklist li::before { content: counter(t); position: absolute; left: 0; top: var(--sp-2); width: 1.6em; height: 1.6em; display: grid; place-items: center; border: 1px solid var(--color-accent); color: var(--color-accent); font-family: var(--font-num); font-size: var(--fs-xs); border-radius: 50%; }
+.note { font-size: var(--fs-sm); color: var(--color-muted); margin-top: var(--sp-4); }
+
+/* ── 2. 매칭 연습 ───────────────────────── */
+.match { display: grid; gap: var(--sp-6); }
+@media (min-width: 60rem) { .match { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); align-items: start; } }
+.pool { border: 1px dashed var(--color-rule); padding: var(--sp-3); min-height: 120px; display: flex; flex-direction: column; gap: var(--sp-2); }
+.pool-h { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: var(--sp-2); font-size: var(--fs-sm); color: var(--color-muted); }
+.card { display: block; width: 100%; text-align: left; background: var(--color-sheet); border: 1px solid var(--color-ink-2); padding: var(--sp-2) var(--sp-3); cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; line-height: 1.45; font-size: var(--fs-sm); position: relative; }
+.card:hover { background: var(--color-paper); }
+.card.sel { outline: 2px solid var(--color-accent); outline-offset: 1px; background: var(--color-accent-soft); }
+.card.dragging { opacity: .35; }
+.card.ok { border-color: var(--color-ok); background: var(--color-ok-soft); padding-left: 2.2em; }
+.card.no { border-color: var(--color-accent); background: var(--color-accent-soft); padding-left: 2.2em; }
+.card.ok::before, .card.no::before { position: absolute; left: var(--sp-2); top: var(--sp-2); font-size: var(--fs-lg); line-height: 1; }
+.card.ok::before { content: "○"; color: var(--color-ok); }
+.card.no::before { content: "✕"; color: var(--color-accent); font-size: var(--fs-base); }
+.card .why { display: block; margin-top: var(--sp-1); color: var(--color-ink-2); font-size: var(--fs-xs); }
+.ghost { position: fixed; z-index: 30; pointer-events: none; width: min(320px, 80vw); opacity: .92; box-shadow: 0 6px 16px -8px var(--color-ink); cursor: grabbing; }
+.slots { display: grid; grid-template-columns: minmax(0, 1fr); border: 1px solid var(--color-ink); }
+@media (min-width: 40rem) { .slots { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.slot { border-bottom: 1px solid var(--color-rule); padding: var(--sp-3); min-height: 96px; display: flex; flex-direction: column; gap: var(--sp-2); cursor: pointer; transition: background-color var(--dur) var(--ease-out); }
+@media (min-width: 40rem) { .slot:nth-child(odd) { border-right: 1px solid var(--color-rule); } }
+.slot-h { display: flex; justify-content: space-between; gap: var(--sp-2); align-items: baseline; }
+.slot-h b { font-weight: 400; font-size: var(--fs-lg); }
+.slot-h .num { font-size: var(--fs-xs); color: var(--color-muted); white-space: nowrap; }
+.slot.over, .slot.target:hover { background: var(--color-paper-2); }
+.slot.target { box-shadow: inset 0 0 0 1px var(--color-accent); }
+.slot .empty { color: var(--color-muted); font-size: var(--fs-xs); }
+.score { display: flex; align-items: baseline; gap: var(--sp-3); flex-wrap: wrap; padding: var(--sp-3) var(--sp-4); border: 1px solid var(--color-accent); color: var(--color-accent); margin-bottom: var(--sp-4); }
+.score .num { font-size: var(--fs-xl); }
+
+/* ── 3. 자기 점검 ───────────────────────── */
+.check { width: 100%; border-collapse: collapse; margin-top: var(--sp-6); }
+.check th, .check td { border-bottom: 1px solid var(--color-rule); padding: var(--sp-2) var(--sp-2); text-align: left; vertical-align: middle; }
+.check thead th { font-weight: 400; font-size: var(--fs-xs); color: var(--color-muted); border-bottom: 1px solid var(--color-ink); }
+.check .area td { border-bottom: 1px solid var(--color-ink); padding-top: var(--sp-4); font-size: var(--fs-lg); }
+.check .opt { width: 4.5rem; text-align: center; }
+.check label.r { display: inline-grid; place-items: center; width: 44px; height: 44px; cursor: pointer; }
+.check input[type="radio"] { width: 20px; height: 20px; accent-color: var(--color-ink); margin: 0; cursor: pointer; }
+@media (max-width: 39.99rem) {
+  .check thead { display: none; }
+  .check tr.q { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); padding: var(--sp-2) 0; border-bottom: 1px solid var(--color-rule); }
+  .check tr.q td { border: 0; padding: 0; }
+  .check tr.q td:first-child { grid-column: 1 / -1; padding-bottom: var(--sp-1); }
+  .check .opt { width: auto; }
+  .check .opt label.r { width: 100%; grid-auto-flow: column; gap: var(--sp-1); justify-content: start; font-size: var(--fs-xs); color: var(--color-ink-2); }
+  .check .opt label.r::after { content: attr(data-l); }
+  .check tr.area { display: block; }
+  .check tr.area td { display: block; }
+}
+.interests { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-top: var(--sp-3); }
+.chk { display: inline-flex; align-items: center; gap: var(--sp-2); min-height: 44px; padding: 0 var(--sp-3); border: 1px solid var(--color-rule); cursor: pointer; white-space: nowrap; }
+.chk:has(input:checked) { border-color: var(--color-ink); background: var(--color-paper-2); }
+.chk input { accent-color: var(--color-ink); width: 18px; height: 18px; margin: 0; }
+.summary { margin-top: var(--sp-8); border-top: 3px double var(--color-ink); padding-top: var(--sp-4); display: grid; gap: var(--sp-6); }
+@media (min-width: 52rem) { .summary { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+.bars { display: grid; gap: var(--sp-3); }
+.bar { display: grid; grid-template-columns: 4.5rem minmax(0, 1fr) 3.5rem; gap: var(--sp-3); align-items: center; }
+.bar .track { height: 14px; border: 1px solid var(--color-ink-2); background: var(--color-sheet); }
+.bar .fill { height: 100%; background: var(--color-ink-2); transform-origin: left; }
+.bar.top .fill { background: var(--color-accent); }
+.bar .num { text-align: right; font-size: var(--fs-sm); }
+.verdict p + p { margin-top: var(--sp-3); }
+.verdict .k { color: var(--color-muted); font-size: var(--fs-sm); display: block; }
+
+/* ── 4. 생애 설계 ───────────────────────── */
+.plan-top { display: grid; gap: var(--sp-6); margin-top: var(--sp-6); }
+@media (min-width: 60rem) { .plan-top { grid-template-columns: minmax(0, 4fr) minmax(0, 7fr); align-items: start; } }
+.form { display: grid; gap: var(--sp-3); border: 1px solid var(--color-ink); padding: var(--sp-4); }
+.form h3 { font-size: var(--fs-lg); }
+.field { display: grid; gap: var(--sp-1); }
+.field > span { font-size: var(--fs-sm); color: var(--color-ink-2); }
+.field input, .field select, .field textarea { width: 100%; min-height: 44px; padding: var(--sp-2) var(--sp-3); border: 1px solid var(--color-rule); border-bottom-color: var(--color-ink-2); background: var(--color-paper); border-radius: 0; }
+.field textarea { min-height: 64px; resize: vertical; }
+.field input:focus-visible, .field select:focus-visible, .field textarea:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 0; }
+.row2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--sp-3); }
+.err { color: var(--color-accent); font-size: var(--fs-sm); min-height: 1.4em; }
+.age-now { display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap; }
+.age-now input { width: 6rem; font-family: var(--font-num); }
+.goals { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--color-ink); }
+.goals li { display: grid; grid-template-columns: 4.75rem minmax(0, 1fr) auto; gap: var(--sp-3); padding: var(--sp-3) 0; border-bottom: 1px solid var(--color-rule); align-items: start; }
+.goals .age { font-size: var(--fs-lg); line-height: 1.2; }
+.goals .age small { display: block; font-family: var(--font-body); font-size: var(--fs-xs); color: var(--color-muted); }
+.goals .cat { color: var(--color-muted); font-size: var(--fs-xs); margin-right: var(--sp-2); }
+.goals .step { display: block; font-size: var(--fs-sm); color: var(--color-ink-2); margin-top: var(--sp-1); }
+.goals .step::before { content: "→ 지금: "; color: var(--color-accent); }
+.x { width: 44px; height: 44px; border: 1px solid transparent; background: transparent; cursor: pointer; color: var(--color-muted); }
+.x:hover { border-color: var(--color-rule); color: var(--color-accent); }
+.empty-row { padding: var(--sp-4) 0; color: var(--color-muted); }
+
+.tl-title { display: flex; justify-content: space-between; align-items: baseline; gap: var(--sp-4); flex-wrap: wrap; margin-top: var(--sp-8); padding-bottom: var(--sp-2); border-bottom: 3px double var(--color-ink); }
+.tl-title h3 { font-size: var(--fs-xl); }
+/* 가로 연표 (넓은 화면·인쇄) */
+.tl { width: 100%; border-collapse: collapse; table-layout: fixed; display: none; }
+.tl th, .tl td { border: 1px solid var(--color-rule); padding: var(--sp-2); vertical-align: top; text-align: left; font-size: var(--fs-sm); }
+.tl thead th { border-bottom: 1px solid var(--color-ink); font-weight: 400; background: var(--color-paper); }
+.tl thead th .nm { font-size: var(--fs-base); display: block; }
+.tl thead th .num { color: var(--color-muted); font-size: var(--fs-xs); }
+.tl thead th.now { box-shadow: inset 0 3px 0 var(--color-accent); }
+.tl thead th.now .nm::after { content: " · 지금"; color: var(--color-accent); font-size: var(--fs-xs); }
+.tl tbody th { font-weight: 400; color: var(--color-ink-2); width: 4.5rem; background: var(--color-paper); }
+.tl td .g { display: block; padding-bottom: var(--sp-2); }
+.tl td .g + .g { border-top: 1px dotted var(--color-rule); padding-top: var(--sp-2); }
+.tl td .g .num { color: var(--color-accent); margin-right: var(--sp-1); }
+@media (min-width: 48rem) { .tl { display: table; } .tlv { display: none; } }
+/* 세로 연표 (휴대폰) */
+.tlv { list-style: none; margin: 0; padding: 0 0 0 var(--sp-6); position: relative; }
+.tlv::before { content: ""; position: absolute; left: 7px; top: 6px; bottom: 6px; width: 1px; background: var(--color-ink); }
+.tlv > li { position: relative; padding-bottom: var(--sp-6); }
+.tlv > li::before { content: ""; position: absolute; left: calc(-1 * var(--sp-6) + 2px); top: 8px; width: 11px; height: 11px; border: 1px solid var(--color-ink); background: var(--color-sheet); border-radius: 50%; }
+.tlv > li.now::before { background: var(--color-accent); border-color: var(--color-accent); }
+.tlv .st { display: flex; gap: var(--sp-2); align-items: baseline; flex-wrap: wrap; }
+.tlv .st b { font-weight: 400; font-size: var(--fs-lg); }
+.tlv .st .num { color: var(--color-muted); font-size: var(--fs-xs); }
+.tlv .st em { font-style: normal; color: var(--color-accent); font-size: var(--fs-xs); }
+.tlv .it { padding: var(--sp-2) 0; border-bottom: 1px dotted var(--color-rule); font-size: var(--fs-sm); }
+.tlv .it .num { color: var(--color-accent); margin-right: var(--sp-1); }
+.tlv .it .cat { color: var(--color-muted); font-size: var(--fs-xs); margin-right: var(--sp-1); }
+.tlv .none { color: var(--color-muted); font-size: var(--fs-sm); }
+.steps-h { margin-top: var(--sp-8); font-size: var(--fs-lg); }
+.steps { margin: var(--sp-2) 0 0; padding-left: 1.6em; }
+.steps li { padding: var(--sp-1) 0; border-bottom: 1px dotted var(--color-rule); }
+.steps li .ref { color: var(--color-muted); font-size: var(--fs-xs); margin-left: var(--sp-2); }
+
+.foot { padding-block: var(--sp-6) var(--sp-12); color: var(--color-muted); font-size: var(--fs-xs); display: flex; flex-wrap: wrap; gap: var(--sp-2) var(--sp-6); justify-content: space-between; }
+.status { position: fixed; z-index: 20; right: var(--sp-4); bottom: var(--sp-4); background: var(--color-ink); color: var(--color-on-ink); padding: var(--sp-2) var(--sp-4); font-size: var(--fs-sm); opacity: 0; transform: translateY(8px); transition: opacity 300ms var(--ease-out), transform 300ms var(--ease-out); pointer-events: none; max-width: calc(100% - 2 * var(--sp-4)); }
+.status.on { opacity: 1; transform: none; }
+
+#printSheet { display: none; }
+@media (prefers-reduced-motion: reduce) { * { transition-duration: 1ms !important; } }
+
+/* ── 인쇄: A4 활동지 ───────────────────────── */
+@media print {
+  @page { size: A4 portrait; margin: 14mm 12mm; }
+  body { background: none; font-size: 10.5pt; }
+  .mast, main, .foot, .status { display: none !important; }
+  #printSheet { display: block !important; }
+  .ps-head { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 3px double var(--color-ink); padding-bottom: 3mm; margin-bottom: 4mm; gap: 6mm; }
+  .ps-head h1 { font-size: 18pt; }
+  .ps-head .idbox span { padding: 1mm 3mm; }
+  .ps-head .idbox b { margin-right: 10mm; }
+  #printSheet h2 { font-size: 12pt; margin: 5mm 0 2mm; }
+  #printSheet .tl { display: table !important; }
+  #printSheet .tl th, #printSheet .tl td { font-size: 9pt; padding: 1.5mm; border-color: var(--color-ink-2); }
+  #printSheet .tl thead th.now { box-shadow: none; border-top: 2px solid var(--color-ink); }
+  .ps-steps { margin: 0; padding-left: 6mm; }
+  .ps-steps li { padding: 1.2mm 0; border-bottom: 1px dotted var(--color-ink-2); }
+  .ps-steps li .box { display: inline-block; width: 3.5mm; height: 3.5mm; border: 1px solid var(--color-ink); margin-right: 2mm; vertical-align: -0.5mm; }
+  .ps-self { border: 1px solid var(--color-ink-2); padding: 2mm 3mm; font-size: 9.5pt; }
+  .ps-write { border-bottom: 1px solid var(--color-ink-2); height: 8mm; }
+  .ps-foot { margin-top: 4mm; font-size: 8pt; color: var(--color-muted); }
+  .tl, .ps-steps li, .ps-self, .ps-keep { break-inside: avoid; }
+  #printSheet h2 { break-after: avoid; }
+}
+</style>
+</head>
+<body>
+
+<header class="mast">
+  <div class="wrap">
+    <div>
+      <h1>나의 생애 설계 타임라인</h1>
+      <p class="sub">기술·가정 — 인간 발달과 가족 · 생애주기별 발달과업과 나의 생애 설계</p>
+    </div>
+    <div class="idbox" aria-label="인쇄용 기록란(화면에는 입력하지 않아요)">
+      <span><b>학년</b></span><span><b>반</b></span><span><b>번호</b></span>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <nav class="tabs" role="tablist" aria-label="활동 순서">
+    <button class="tab" role="tab" id="t-stages" aria-controls="p-stages" aria-selected="true"><span class="num">1</span>생애주기 보기</button>
+    <button class="tab" role="tab" id="t-match" aria-controls="p-match" aria-selected="false" tabindex="-1"><span class="num">2</span>매칭 연습</button>
+    <button class="tab" role="tab" id="t-self" aria-controls="p-self" aria-selected="false" tabindex="-1"><span class="num">3</span>나 점검하기</button>
+    <button class="tab" role="tab" id="t-plan" aria-controls="p-plan" aria-selected="false" tabindex="-1"><span class="num">4</span>내 생애 설계</button>
+  </nav>
+
+  <!-- 1. 생애주기 보기 -->
+  <section class="panel" id="p-stages" role="tabpanel" aria-labelledby="t-stages">
+    <h2>사람은 일생 동안 이렇게 자라요</h2>
+    <p class="lead">띠에서 시기를 누르면 그 시기의 발달 특징과 꼭 이뤄야 할 발달과업이 나와요. 나이 구간은 교과서마다 조금씩 달라요.</p>
+    <div class="band" id="band" role="group" aria-label="생애주기"></div>
+    <div class="ruler" aria-hidden="true"></div>
+    <div class="stage-detail" id="stageDetail" aria-live="polite"></div>
+  </section>
+
+  <!-- 2. 매칭 연습 -->
+  <section class="panel hidden" id="p-match" role="tabpanel" aria-labelledby="t-match">
+    <div class="toolbar">
+      <div>
+        <h2>발달과업 매칭 연습</h2>
+        <p class="lead">카드를 알맞은 시기 칸으로 끌어다 놓으세요. 휴대폰에서는 카드를 한 번 누르고, 놓을 칸을 누르면 돼요.</p>
+      </div>
+      <div class="btnrow">
+        <button class="btn primary" id="gradeBtn">채점하기</button>
+        <button class="btn" id="shuffleBtn">다시 섞기</button>
+      </div>
+    </div>
+    <div id="scoreBox" aria-live="polite"></div>
+    <div class="match">
+      <div>
+        <div class="pool-h"><span>남은 카드</span><span class="num" id="poolCount"></span></div>
+        <div class="pool" id="pool" data-stage="" aria-label="남은 카드 — 여기를 누르면 고른 카드를 되돌려요"></div>
+      </div>
+      <div class="slots" id="slots"></div>
+    </div>
+  </section>
+
+  <!-- 3. 자기 점검 -->
+  <section class="panel hidden" id="p-self" role="tabpanel" aria-labelledby="t-self">
+    <h2>청소년기, 지금의 나 점검하기</h2>
+    <p class="lead">맞고 틀린 답은 없어요. 요즘의 나와 가장 가까운 칸을 고르면 강점과 키워 볼 점을 정리해 줘요.</p>
+    <table class="check" id="checkTable">
+      <thead><tr><th>문항</th><th class="opt">자주 그래요</th><th class="opt">가끔 그래요</th><th class="opt">아직이에요</th></tr></thead>
+      <tbody id="checkBody"></tbody>
+    </table>
+    <h3 style="margin-top:var(--sp-8);font-size:var(--fs-lg)">요즘 관심 가는 것 (여러 개 골라도 돼요)</h3>
+    <div class="interests" id="interests"></div>
+    <div class="summary" id="selfSummary" aria-live="polite"></div>
+  </section>
+
+  <!-- 4. 내 생애 설계 -->
+  <section class="panel hidden" id="p-plan" role="tabpanel" aria-labelledby="t-plan">
+    <div class="toolbar">
+      <div>
+        <h2>내 생애 설계</h2>
+        <p class="lead">이루고 싶은 나이와 목표를 적고, 그 목표를 위해 <strong>지금 할 수 있는 한 걸음</strong>을 꼭 함께 적어요.</p>
+      </div>
+      <div class="btnrow">
+        <button class="btn" id="exampleBtn">예시 채우기</button>
+        <button class="btn primary" id="printBtn">활동지 인쇄</button>
+      </div>
+    </div>
+    <label class="age-now"><span>지금 내 나이</span><input type="number" id="ageNow" min="10" max="19" inputmode="numeric" class="field-in"><span class="muted" id="ageStage"></span></label>
+    <div class="plan-top">
+      <form class="form" id="goalForm" novalidate>
+        <h3>목표 하나 더하기</h3>
+        <div class="row2">
+          <label class="field"><span>이루고 싶은 나이</span><input type="number" id="gAge" min="10" max="100" inputmode="numeric" required></label>
+          <label class="field"><span>영역</span><select id="gCat"></select></label>
+        </div>
+        <label class="field"><span>목표</span><input type="text" id="gText" maxlength="60" placeholder="예: 조리 관련 자격증 따기" required></label>
+        <label class="field"><span>지금 할 수 있는 한 걸음</span><textarea id="gStep" maxlength="80" placeholder="예: 이번 주말 가족 저녁 한 끼 직접 만들기" required></textarea></label>
+        <p class="err" id="gErr" role="alert"></p>
+        <div class="btnrow"><button class="btn primary" type="submit">연표에 넣기</button></div>
+      </form>
+      <div>
+        <ul class="goals" id="goalList"></ul>
+      </div>
+    </div>
+    <div class="tl-title"><h3>나의 생애 연표</h3><span class="muted" id="tlCount"></span></div>
+    <div id="timeline"></div>
+    <h3 class="steps-h">지금 할 수 있는 한 걸음 목록</h3>
+    <ol class="steps" id="stepList"></ol>
+  </section>
+</main>
+
+<footer class="wrap foot">
+  <span>기록은 이 기기의 브라우저에만 저장돼요. 이름·연락처는 적지 않아요.</span>
+  <span class="btnrow">
+    <button class="btn quiet" id="exportBtn">파일로 저장</button>
+    <button class="btn quiet" id="importBtn">파일 불러오기</button>
+    <button class="btn quiet" id="resetBtn">처음부터</button>
+    <input type="file" id="importFile" accept=".json,application/json" class="hidden">
+  </span>
+</footer>
+
+<div class="status" id="status" role="status"></div>
+<div id="printSheet"></div>
+
+<script>
+/* ===== CONFIG — 수업에 맞게 여기만 고치면 돼요 ===== */
+const CONFIG = {
+  storageKey: 'life-plan-v1',
+  defaultAge: 14,
+  // 생애주기: 나이 구간은 교과서마다 조금씩 다르므로 사용하는 교과서에 맞춰 고치세요.
+  stages: [
+    { id: 'infant', name: '영아기', from: 0, to: 2,
+      body: '키와 몸무게가 일생에서 가장 빠르게 자란다. 목 가누기 → 앉기 → 기기 → 걷기 순서로 운동 능력이 발달한다.',
+      mind: '보고 듣고 만지는 감각과 움직임으로 세상을 알아 간다. 첫 낱말을 말하기 시작한다.',
+      social: '돌봐 주는 사람(주 양육자)과 애착을 형성하고, 낯가림이 나타난다.',
+      erikson: '신뢰감 대 불신감',
+      tasks: [
+        { id: 'a1', text: '주 양육자와 안정된 애착(신뢰감) 형성하기', why: '영아기에는 돌봄을 받으며 세상을 믿을 수 있다는 신뢰감을 쌓아요.' },
+        { id: 'a2', text: '걷기·손으로 잡기 등 기본 운동 능력 익히기', why: '영아기는 기기·서기·걷기를 처음 익히는 시기예요.' } ] },
+    { id: 'early', name: '유아기', from: 3, to: 5,
+      body: '뛰기·오르기 같은 큰 근육과 가위질·단추 끼우기 같은 작은 근육이 발달한다.',
+      mind: '말이 빠르게 늘고 상상 놀이를 즐긴다. 자기 입장에서 생각하는 경향(자기중심성)이 강하다.',
+      social: '또래와 함께 노는 시간이 늘고, 무엇이든 스스로 해 보려는 마음이 커진다.',
+      erikson: '자율성 대 수치심 · 주도성 대 죄책감',
+      tasks: [
+        { id: 'b1', text: '식사·배변·옷 입기 등 기본 생활 습관 익히기', why: '유아기에는 스스로 하는 힘(자율성)과 함께 기본 생활 습관을 익혀요.' },
+        { id: 'b2', text: '또래와 어울려 놀며 차례 지키기 배우기', why: '유아기 놀이 속에서 처음으로 차례와 간단한 규칙을 배워요.' } ] },
+    { id: 'child', name: '아동기', from: 6, to: 12,
+      body: '성장 속도가 완만하고 고르게 자란다. 운동 능력이 정교해진다.',
+      mind: '눈앞의 구체적인 사물을 바탕으로 논리적으로 생각한다. 읽기·쓰기·셈하기를 익힌다.',
+      social: '학교생활을 시작하며 또래 집단이 중요해지고, 협동과 경쟁을 경험한다.',
+      erikson: '근면성 대 열등감',
+      tasks: [
+        { id: 'c1', text: '읽기·쓰기·셈하기 등 기초 학습 능력 익히기', why: '아동기는 학교에서 기초 학습 능력과 근면성을 기르는 시기예요.' },
+        { id: 'c2', text: '친구들과 협동하며 사회 규칙 지키기', why: '아동기에는 또래 집단 속에서 협동과 규칙을 익혀요.' } ] },
+    { id: 'teen', name: '청소년기', from: 13, to: 18,
+      body: '키와 몸무게가 빠르게 늘고(제2의 급성장기) 2차 성징이 나타난다.',
+      mind: '눈에 보이지 않는 것도 따져 보는 추상적·논리적 사고가 가능해진다.',
+      social: '감정 변화가 크고, 또래 관계가 중요해지며 부모로부터 독립하려는 마음이 커진다.',
+      erikson: '정체감 대 역할 혼미',
+      tasks: [
+        { id: 'd1', text: '“나는 누구인가”를 탐색하며 자아 정체감 형성하기', why: '청소년기의 핵심 과업은 자아 정체감 형성이에요.' },
+        { id: 'd2', text: '흥미와 적성을 탐색하며 진로 준비하기', why: '청소년기에는 나를 알아 가며 진로를 탐색하고 준비해요.' } ] },
+    { id: 'young', name: '청년기', from: 19, to: 39,
+      body: '신체 기능이 가장 왕성한 시기다.',
+      mind: '전문 지식과 기술을 쌓고, 스스로 판단하고 결정한다.',
+      social: '직업을 갖고 경제적으로 자립하며, 결혼 등으로 새 가족을 이루기도 한다.',
+      erikson: '친밀감 대 고립감',
+      tasks: [
+        { id: 'e1', text: '직업을 갖고 경제적으로 자립하기', why: '청년기(성인기 초기)에는 직업을 통해 경제적으로 자립해요.' },
+        { id: 'e2', text: '깊고 친밀한 인간관계 맺기, 가족 형성 준비하기', why: '청년기의 과제는 다른 사람과 친밀감을 이루는 것이에요.' } ] },
+    { id: 'middle', name: '중년기', from: 40, to: 64,
+      body: '신체 기능이 서서히 떨어지고 갱년기를 겪는다.',
+      mind: '쌓인 경험으로 문제 해결 능력과 판단력이 깊어진다.',
+      social: '직장과 가정에서 책임이 커지고, 자녀 양육과 부모 부양을 함께 하기도 한다.',
+      erikson: '생산성 대 침체감',
+      tasks: [
+        { id: 'f1', text: '자녀·후배 등 다음 세대를 돌보고 이끌기', why: '중년기에는 다음 세대를 길러 내는 생산성이 중요해요.' },
+        { id: 'f2', text: '몸의 변화에 적응하며 노후 준비하기', why: '중년기에는 신체 변화에 적응하고 노년을 미리 준비해요.' } ] },
+    { id: 'old', name: '노년기', from: 65, to: 100,
+      body: '감각·운동 기능이 떨어지고 만성 질환이 생기기 쉽다.',
+      mind: '새것을 익히는 속도는 느려질 수 있지만 경험에서 나온 지혜가 깊다.',
+      social: '은퇴로 생활이 바뀌고, 가까운 사람과의 이별을 겪기도 한다.',
+      erikson: '통합감 대 절망감',
+      tasks: [
+        { id: 'g1', text: '은퇴 후 생활과 줄어든 체력에 적응하기', why: '노년기에는 은퇴 뒤 달라진 생활에 적응해요.' },
+        { id: 'g2', text: '지나온 삶을 돌아보며 의미 있게 정리하기', why: '노년기의 과제는 삶을 받아들이고 정리하는 통합감이에요.' } ] }
+  ],
+  // 청소년기 자기 점검: 영역별 문항 (3점 자주 / 2점 가끔 / 1점 아직)
+  selfCheck: [
+    { area: '신체', items: ['키·목소리 등 내 몸의 변화를 자연스럽게 받아들인다', '정해진 시간에 자고 끼니를 챙겨 먹는 편이다', '꾸준히 하는 운동이나 몸 움직이기가 있다'],
+      grow: '잠·식사 시간을 일정하게 하는 것부터 시작해 보세요.' },
+    { area: '인지', items: ['궁금한 것이 생기면 스스로 찾아본다', '한 가지 문제를 여러 방향으로 생각해 본다', '계획을 세우고 지키려고 노력한다'],
+      grow: '궁금한 것 하나를 골라 일주일 동안 스스로 조사해 보세요.' },
+    { area: '정서', items: ['내 감정을 말로 표현할 수 있다', '속상할 때 마음을 가라앉히는 나만의 방법이 있다', '나의 좋은 점을 세 가지 이상 말할 수 있다'],
+      grow: '하루 끝에 오늘 느낀 감정 한 가지를 짧게 적어 보세요.' },
+    { area: '사회성', items: ['친구의 이야기를 끝까지 듣는다', '갈등이 생기면 대화로 풀려고 한다', '모둠 활동에서 맡은 역할을 끝까지 한다'],
+      grow: '모둠 활동에서 친구 의견을 먼저 한 번 정리해 말해 보세요.' }
+  ],
+  interests: ['요리·음식', '운동', '그림·디자인', '음악', '글쓰기', '만들기·기계', '컴퓨터·코딩', '자연·동물', '사람 돕기·돌봄', '패션·옷', '여행', '과학 실험'],
+  categories: ['학업', '진로', '가족', '건강', '관계', '경제'],
+  example: [
+    { age: 15, cat: '건강', text: '하루 7시간 이상 자는 습관 만들기', step: '오늘부터 밤 11시에 휴대폰을 거실에 두기' },
+    { age: 17, cat: '학업', text: '관심 분야 동아리에서 1년 활동하기', step: '학교 동아리 목록에서 두 곳 골라 알아보기' },
+    { age: 20, cat: '진로', text: '조리 관련 자격증 따기', step: '이번 주말 가족 저녁 한 끼 직접 만들기' },
+    { age: 25, cat: '경제', text: '첫 월급으로 비상금 통장 만들기', step: '이번 달 용돈 기입장 쓰기 시작하기' },
+    { age: 32, cat: '가족', text: '서로 존중하는 가정 꾸리기', step: '집안일 한 가지를 내 담당으로 정하기' },
+    { age: 50, cat: '관계', text: '후배에게 내 경험 나누기', step: '동생이나 후배 공부를 한 번 도와주기' },
+    { age: 70, cat: '건강', text: '걷기 모임에서 즐겁게 운동하기', step: '등굣길 한 정거장 걸어 보기' }
+  ]
+};
+/* ===== CONFIG 끝 ===== */
+
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const STAGE = Object.fromEntries(CONFIG.stages.map((s) => [s.id, s]));
+const TASKS = CONFIG.stages.flatMap((s) => s.tasks.map((t) => ({ ...t, stage: s.id })));
+const ageText = (s) => s.to >= 100 ? `${s.from}세~` : `${s.from}~${s.to}세`;
+const stageOf = (age) => CONFIG.stages.find((s) => age >= s.from && age <= s.to) || CONFIG.stages[CONFIG.stages.length - 1];
+
+/* ── 저장 ── */
+function blank() {
+  return { tab: 't-stages', stage: 'teen', match: { order: shuffle(TASKS.map((t) => t.id)), place: {}, graded: false },
+    self: { ans: {}, interests: [] }, plan: { age: CONFIG.defaultAge, goals: [] } };
+}
+let S;
+function load() {
+  try { const d = JSON.parse(localStorage.getItem(CONFIG.storageKey) || 'null'); if (d && d.plan && d.match) return { ...blank(), ...d }; } catch (e) {}
+  return blank();
+}
+function save() { try { localStorage.setItem(CONFIG.storageKey, JSON.stringify(S)); } catch (e) { say('브라우저 저장이 막혀 있어요. 파일로 저장을 이용하세요.'); } }
+let sayT;
+function say(msg) { const el = $('#status'); el.textContent = msg; el.classList.add('on'); clearTimeout(sayT); sayT = setTimeout(() => el.classList.remove('on'), 2600); }
+function shuffle(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+
+/* ── 탭 ── */
+function showTab(id, focus) {
+  $$('.tab').forEach((t) => { const on = t.id === id; t.setAttribute('aria-selected', on); t.tabIndex = on ? 0 : -1; $('#' + t.getAttribute('aria-controls')).classList.toggle('hidden', !on); if (on && focus) t.focus(); });
+  S.tab = id; save();
+}
+$('.tabs').addEventListener('click', (e) => { const t = e.target.closest('.tab'); if (t) showTab(t.id); });
+$('.tabs').addEventListener('keydown', (e) => {
+  if (!['ArrowLeft', 'ArrowRight'].includes(e.key)) return;
+  const tabs = $$('.tab'); const i = tabs.findIndex((t) => t.id === S.tab);
+  showTab(tabs[(i + (e.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length].id, true);
+});
+
+/* ── 1. 생애주기 ── */
+function renderBand() {
+  $('#band').innerHTML = CONFIG.stages.map((s) => `<button class="seg" data-id="${s.id}" aria-pressed="${s.id === S.stage}"><span class="nm">${s.name}</span><span class="ag num">${ageText(s)}</span></button>`).join('');
+  const s = STAGE[S.stage] || CONFIG.stages[0];
+  $('#stageDetail').innerHTML = `
+    <h3>${s.name} <span class="num">${ageText(s)}</span></h3>
+    <dl class="facts">
+      <div><dt>신체 발달</dt><dd>${esc(s.body)}</dd></div>
+      <div><dt>인지 발달</dt><dd>${esc(s.mind)}</dd></div>
+      <div><dt>정서·사회성</dt><dd>${esc(s.social)}</dd></div>
+      <div><dt>에릭슨의 과제</dt><dd>${esc(s.erikson)}</dd></div>
+    </dl>
+    <div><p class="muted" style="font-size:var(--fs-sm);margin-bottom:var(--sp-1)">이 시기의 발달과업</p>
+    <ol class="tasklist">${s.tasks.map((t) => `<li>${esc(t.text)}</li>`).join('')}</ol></div>`;
+}
+$('#band').addEventListener('click', (e) => { const b = e.target.closest('.seg'); if (!b) return; S.stage = b.dataset.id; save(); renderBand(); });
+
+/* ── 2. 매칭 연습: 끌어놓기 + 탭-선택 ── */
+let selCard = null;
+function cardHtml(t) {
+  const st = S.match.place[t.id];
+  let cls = 'card', why = '';
+  if (S.match.graded && st) {
+    const ok = st === t.stage; cls += ok ? ' ok' : ' no';
+    why = `<span class="why">${ok ? '' : `정답: ${STAGE[t.stage].name} — `}${esc(t.why)}</span>`;
+  }
+  if (selCard === t.id) cls += ' sel';
+  return `<button class="${cls}" data-card="${t.id}" aria-pressed="${selCard === t.id}">${esc(t.text)}${why}</button>`;
+}
+function renderMatch() {
+  const byId = Object.fromEntries(TASKS.map((t) => [t.id, t]));
+  const order = S.match.order.filter((id) => byId[id]);
+  const inPool = order.filter((id) => !S.match.place[id]);
+  $('#pool').innerHTML = inPool.length ? inPool.map((id) => cardHtml(byId[id])).join('') : '<p class="muted" style="font-size:var(--fs-sm)">모든 카드를 놓았어요. 채점해 보세요.</p>';
+  $('#poolCount').textContent = `${inPool.length} / ${TASKS.length}`;
+  $('#slots').innerHTML = CONFIG.stages.map((s) => {
+    const cards = order.filter((id) => S.match.place[id] === s.id).map((id) => cardHtml(byId[id])).join('');
+    return `<div class="slot${selCard ? ' target' : ''}" data-stage="${s.id}"><div class="slot-h"><b>${s.name}</b><span class="num">${ageText(s)}</span></div>${cards || '<span class="empty">여기에 놓기</span>'}</div>`;
+  }).join('');
+  if (S.match.graded) {
+    const placed = TASKS.filter((t) => S.match.place[t.id]);
+    const right = placed.filter((t) => S.match.place[t.id] === t.stage).length;
+    $('#scoreBox').innerHTML = `<div class="score"><span class="num">${right} / ${TASKS.length}</span><span>${right === TASKS.length ? '모두 맞았어요. 생애주기를 잘 이해하고 있어요.' : '✕ 표시 카드의 해설을 읽고, 옮겨 놓은 뒤 다시 채점해 보세요.'}</span></div>`;
+  } else $('#scoreBox').innerHTML = '';
+}
+function place(cardId, stageId) {
+  S.match.place[cardId] = stageId || undefined;
+  if (!stageId) delete S.match.place[cardId];
+  S.match.graded = false; selCard = null; save(); renderMatch();
+}
+$('#gradeBtn').addEventListener('click', () => {
+  const left = TASKS.length - Object.keys(S.match.place).length;
+  S.match.graded = true; selCard = null; save(); renderMatch();
+  if (left) say(`아직 놓지 않은 카드 ${left}장은 점수에서 빠졌어요.`);
+});
+$('#shuffleBtn').addEventListener('click', () => { S.match = { order: shuffle(TASKS.map((t) => t.id)), place: {}, graded: false }; selCard = null; save(); renderMatch(); });
+
+// 포인터 끌기 (마우스·터치 공통). 6px 넘게 움직이면 끌기, 아니면 탭-선택.
+let drag = null;
+$('#p-match').addEventListener('pointerdown', (e) => {
+  const c = e.target.closest('.card'); if (!c || e.button > 0) return;
+  drag = { id: c.dataset.card, el: c, x: e.clientX, y: e.clientY, ghost: null, over: null };
+  c.setPointerCapture(e.pointerId);
+});
+$('#p-match').addEventListener('pointermove', (e) => {
+  if (!drag) return;
+  if (!drag.ghost) {
+    if (Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 6) return;
+    drag.ghost = drag.el.cloneNode(true); drag.ghost.classList.add('ghost'); drag.ghost.classList.remove('sel');
+    document.body.appendChild(drag.ghost); drag.el.classList.add('dragging');
+  }
+  drag.ghost.style.left = (e.clientX + 8) + 'px'; drag.ghost.style.top = (e.clientY + 8) + 'px';
+  const under = document.elementFromPoint(e.clientX, e.clientY);
+  const zone = under && (under.closest('.slot') || under.closest('.pool'));
+  if (drag.over && drag.over !== zone) drag.over.classList.remove('over');
+  if (zone) zone.classList.add('over');
+  drag.over = zone;
+});
+let justDragged = false;   // 끌기 직후 바로 따라오는 click 한 번만 무시
+function endDrag(e, cancel) {
+  if (!drag) return;
+  const d = drag; drag = null;
+  if (!d.ghost) return;   // 움직이지 않았으면 click 처리로 넘김(탭-선택)
+  justDragged = true; setTimeout(() => { justDragged = false; }, 0);
+  d.ghost.remove(); d.el.classList.remove('dragging'); if (d.over) d.over.classList.remove('over');
+  if (!cancel && d.over) place(d.id, d.over.dataset.stage);
+}
+$('#p-match').addEventListener('pointerup', (e) => endDrag(e, false));
+$('#p-match').addEventListener('pointercancel', (e) => endDrag(e, true));
+// 탭-선택: 카드 누르기 → 칸(또는 남은 카드 영역) 누르기. 키보드 Enter도 같은 길.
+$('#p-match').addEventListener('click', (e) => {
+  if (justDragged) { justDragged = false; return; }
+  const c = e.target.closest('.card');
+  if (c) { const id = c.dataset.card; selCard = selCard === id ? null : id; renderMatch(); const a = $(`[data-card="${id}"]`); if (a) a.focus({ preventScroll: true }); return; }
+  if (!selCard) return;
+  const zone = e.target.closest('.slot, .pool'); if (zone) place(selCard, zone.dataset.stage);
+});
+// 키보드: 카드를 고른 뒤 숫자 1~7 키로 시기 칸에 놓기, 0은 되돌리기
+document.addEventListener('keydown', (e) => {
+  if (!selCard || S.tab !== 't-match') return;
+  if (e.key === 'Escape') { selCard = null; renderMatch(); return; }
+  const n = Number(e.key); if (!Number.isInteger(n) || e.key === ' ') return;
+  if (n === 0) place(selCard, ''); else if (CONFIG.stages[n - 1]) place(selCard, CONFIG.stages[n - 1].id);
+});
+
+/* ── 3. 자기 점검 ── */
+const LV = [['자주 그래요', 3], ['가끔 그래요', 2], ['아직이에요', 1]];
+function renderSelfForm() {
+  $('#checkBody').innerHTML = CONFIG.selfCheck.map((a, ai) =>
+    `<tr class="area"><td colspan="4">${a.area}</td></tr>` + a.items.map((q, qi) => {
+      const k = `${ai}-${qi}`;
+      return `<tr class="q"><td>${esc(q)}</td>${LV.map(([l, v]) => `<td class="opt"><label class="r" data-l="${l}"><input type="radio" name="q${k}" value="${v}" ${S.self.ans[k] == v ? 'checked' : ''} aria-label="${esc(q)} — ${l}"></label></td>`).join('')}</tr>`;
+    }).join('')).join('');
+  $('#interests').innerHTML = CONFIG.interests.map((it) => `<label class="chk"><input type="checkbox" value="${esc(it)}" ${S.self.interests.includes(it) ? 'checked' : ''}>${esc(it)}</label>`).join('');
+}
+function selfResult() {
+  const rows = CONFIG.selfCheck.map((a, ai) => {
+    const vals = a.items.map((_, qi) => Number(S.self.ans[`${ai}-${qi}`] || 0)).filter(Boolean);
+    return { area: a.area, grow: a.grow, n: vals.length, total: a.items.length, score: vals.reduce((x, y) => x + y, 0), max: a.items.length * 3 };
+  });
+  const done = rows.every((r) => r.n === r.total);
+  const pct = (r) => r.n ? r.score / (r.n * 3) : 0;
+  const sorted = rows.slice().sort((a, b) => pct(b) - pct(a));
+  return { rows, done, pct, best: sorted[0], low: sorted[sorted.length - 1], answered: rows.reduce((x, r) => x + r.n, 0), all: rows.reduce((x, r) => x + r.total, 0) };
+}
+function renderSelfSummary() {
+  const R = selfResult();
+  if (!R.answered) { $('#selfSummary').innerHTML = '<p class="muted">문항을 고르면 여기에 결과가 정리돼요.</p>'; return; }
+  const bestPct = R.pct(R.best);
+  const tops = R.rows.filter((r) => r.n && R.pct(r) === bestPct).map((r) => r.area);
+  $('#selfSummary').innerHTML = `
+    <div><h3 style="font-size:var(--fs-lg);margin-bottom:var(--sp-3)">영역별 점수 <span class="num muted" style="font-size:var(--fs-sm)">${R.answered}/${R.all}문항</span></h3>
+      <div class="bars">${R.rows.map((r) => `<div class="bar${tops.includes(r.area) ? ' top' : ''}"><span>${r.area}</span><div class="track" role="img" aria-label="${r.area} ${r.score}점 / ${r.max}점"><div class="fill" style="transform:scaleX(${R.pct(r)})"></div></div><span class="num">${r.score}/${r.max}</span></div>`).join('')}</div></div>
+    <div class="verdict">
+      <p><span class="k">나의 강점</span>${tops.join('·')} 영역 — 이 힘을 생애 설계 목표에 활용해 보세요.</p>
+      ${R.low && R.pct(R.low) < bestPct ? `<p><span class="k">키워 볼 영역</span>${R.low.area} — ${esc(R.low.grow)}</p>` : ''}
+      <p><span class="k">요즘 관심</span>${S.self.interests.length ? esc(S.self.interests.join(', ')) + ' — 진로·학업 목표에 넣어 볼까요?' : '아직 고르지 않았어요.'}</p>
+      ${R.done ? '' : '<p class="muted" style="font-size:var(--fs-sm)">남은 문항을 마저 고르면 결과가 더 정확해져요.</p>'}
+    </div>`;
+}
+$('#checkBody').addEventListener('change', (e) => { const r = e.target; if (r.type !== 'radio') return; S.self.ans[r.name.slice(1)] = Number(r.value); save(); renderSelfSummary(); });
+$('#interests').addEventListener('change', () => { S.self.interests = $$('#interests input:checked').map((i) => i.value); save(); renderSelfSummary(); });
+
+/* ── 4. 생애 설계 ── */
+function renderPlan() {
+  const age = S.plan.age; const now = stageOf(age);
+  $('#ageNow').value = age; $('#ageStage').textContent = `— ${now.name}`;
+  $('#gAge').min = age;
+  const goals = S.plan.goals.slice().sort((a, b) => a.age - b.age);
+  $('#goalList').innerHTML = goals.length ? goals.map((g) => `<li><span class="age num">${g.age}<small>세 · ${stageOf(g.age).name}</small></span><div><span class="cat">${esc(g.cat)}</span>${esc(g.text)}<span class="step">${esc(g.step)}</span></div><button class="x" data-del="${g.id}" aria-label="${esc(g.text)} 지우기">✕</button></li>`).join('')
+    : '<li class="empty-row" style="display:block">아직 목표가 없어요. 왼쪽에서 하나 더해 보세요.</li>';
+  $('#tlCount').textContent = goals.length ? `목표 ${goals.length}개` : '';
+  $('#timeline').innerHTML = timelineHtml(goals, age);
+  $('#stepList').innerHTML = goals.length ? goals.map((g) => `<li>${esc(g.step)}<span class="ref"><span class="num">${g.age}</span>세 · ${esc(g.text)}</span></li>`).join('') : '<li class="muted" style="list-style:none;margin-left:-1.6em">목표를 넣으면 여기에 모여요.</li>';
+}
+function timelineHtml(goals, age) {
+  const now = stageOf(age);
+  const stages = CONFIG.stages.filter((s) => s.to >= age);
+  const head = stages.map((s) => `<th scope="col" class="${s === now ? 'now' : ''}"><span class="nm">${s.name}</span><span class="num">${s === now ? `${age}세` : s.from + '세'}${s.to >= 100 ? '~' : '~' + s.to + '세'}</span></th>`).join('');
+  const rows = CONFIG.categories.map((c) => `<tr><th scope="row">${c}</th>${stages.map((s) => {
+    const gs = goals.filter((g) => g.cat === c && stageOf(g.age) === s);
+    return `<td>${gs.map((g) => `<span class="g"><span class="num">${g.age}</span>${esc(g.text)}</span>`).join('')}</td>`;
+  }).join('')}</tr>`).join('');
+  const table = `<table class="tl"><thead><tr><th scope="col"><span class="sr">영역</span></th>${head}</tr></thead><tbody>${rows}</tbody></table>`;
+  const vert = `<ol class="tlv">${stages.map((s) => {
+    const gs = goals.filter((g) => stageOf(g.age) === s);
+    return `<li class="${s === now ? 'now' : ''}"><div class="st"><b>${s.name}</b><span class="num">${ageText(s)}</span>${s === now ? `<em>지금 ${age}세</em>` : ''}</div>${gs.length ? gs.map((g) => `<div class="it"><span class="num">${g.age}세</span><span class="cat">${esc(g.cat)}</span>${esc(g.text)}</div>`).join('') : '<p class="none">—</p>'}</li>`;
+  }).join('')}</ol>`;
+  return table + vert;
+}
+$('#ageNow').addEventListener('change', (e) => {
+  const v = Math.round(Number(e.target.value));
+  if (!v || v < 10 || v > 19) { e.target.value = S.plan.age; say('나이는 10~19 사이로 적어 주세요.'); return; }
+  S.plan.age = v; save(); renderPlan();
+});
+$('#gCat').innerHTML = CONFIG.categories.map((c) => `<option>${c}</option>`).join('');
+$('#goalForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const age = Math.round(Number($('#gAge').value)), text = $('#gText').value.trim(), step = $('#gStep').value.trim();
+  let msg = '';
+  if (!age || age < S.plan.age || age > 100) msg = `나이를 ${S.plan.age}~100 사이로 적어 주세요.`;
+  else if (!text) msg = '목표를 적어 주세요.';
+  else if (!step) msg = '지금 할 수 있는 한 걸음도 꼭 적어 주세요. 목표를 오늘과 이어 주는 칸이에요.';
+  $('#gErr').textContent = msg;
+  if (msg) { (!age || age < S.plan.age || age > 100 ? $('#gAge') : !text ? $('#gText') : $('#gStep')).focus(); return; }
+  S.plan.goals.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 5), age, cat: $('#gCat').value, text, step });
+  save(); renderPlan(); $('#gText').value = ''; $('#gStep').value = ''; $('#gAge').value = ''; $('#gAge').focus();
+});
+let lastDeleted = null;
+$('#goalList').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-del]'); if (!b) return;
+  const i = S.plan.goals.findIndex((g) => g.id === b.dataset.del); if (i < 0) return;
+  lastDeleted = S.plan.goals.splice(i, 1)[0]; save(); renderPlan();
+  say('목표를 지웠어요. 되돌리려면 Ctrl+Z');
+});
+document.addEventListener('keydown', (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && lastDeleted && !/INPUT|TEXTAREA/.test(document.activeElement.tagName)) {
+    S.plan.goals.push(lastDeleted); lastDeleted = null; save(); renderPlan(); say('되돌렸어요.');
+  }
+});
+$('#exampleBtn').addEventListener('click', () => {
+  if (S.plan.goals.length && !confirm('지금 적은 목표 뒤에 예시를 덧붙일까요?')) return;
+  CONFIG.example.forEach((g, i) => { if (g.age >= S.plan.age) S.plan.goals.push({ ...g, id: 'ex' + Date.now().toString(36) + i }); });
+  save(); renderPlan();
+});
+
+/* ── 인쇄 ── */
+function buildPrint() {
+  const goals = S.plan.goals.slice().sort((a, b) => a.age - b.age);
+  const R = selfResult();
+  const bestPct = R.answered ? R.pct(R.best) : 0;
+  const tops = R.rows.filter((r) => r.n && R.pct(r) === bestPct).map((r) => r.area);
+  $('#printSheet').innerHTML = `
+    <div class="ps-head"><div><h1>나의 생애 설계 타임라인</h1><p>기술·가정 — 인간 발달과 가족</p></div>
+      <div class="idbox"><span><b>학년</b></span><span><b>반</b></span><span><b>번호</b></span></div></div>
+    <p>지금 나이 <span class="num">${S.plan.age}</span>세 · ${stageOf(S.plan.age).name}</p>
+    <h2>나의 생애 연표</h2>
+    ${timelineHtml(goals, S.plan.age).replace(/<ol class="tlv">[\s\S]*<\/ol>$/, '')}
+    <h2>지금 할 수 있는 한 걸음 — 해 보면 □에 표시</h2>
+    <ol class="ps-steps">${goals.length ? goals.map((g) => `<li><span class="box"></span>${esc(g.step)} <span class="muted">(${g.age}세 · ${esc(g.text)})</span></li>`).join('') : '<li><span class="box"></span></li><li><span class="box"></span></li><li><span class="box"></span></li>'}</ol>
+    <div class="ps-keep"><h2>청소년기 자기 점검</h2>
+    <div class="ps-self">${R.answered ? `${R.rows.map((r) => `${r.area} <span class="num">${r.score}/${r.max}</span>`).join(' · ')}<br>강점: ${tops.join('·')}${R.low && R.pct(R.low) < bestPct ? ` · 키워 볼 영역: ${R.low.area}` : ''}${S.self.interests.length ? `<br>관심: ${esc(S.self.interests.join(', '))}` : ''}` : '점검하지 않음'}</div>
+    <h2>생애 설계를 하며 느낀 점</h2>
+    <div class="ps-write"></div><div class="ps-write"></div></div>
+    <p class="ps-foot">발달 특징·나이 구간은 교과서에 따라 다를 수 있어요.</p>`;
+}
+$('#printBtn').addEventListener('click', () => { buildPrint(); window.print(); });
+window.addEventListener('beforeprint', buildPrint);
+
+/* ── 파일 저장·불러오기·초기화 ── */
+$('#exportBtn').addEventListener('click', () => {
+  const blob = new Blob([JSON.stringify(S, null, 1)], { type: 'application/json' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = '생애설계.json'; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+});
+$('#importBtn').addEventListener('click', () => $('#importFile').click());
+$('#importFile').addEventListener('change', async (e) => {
+  const f = e.target.files[0]; if (!f) return;
+  try { const d = JSON.parse(await f.text()); if (!d.plan || !Array.isArray(d.plan.goals)) throw 0; S = { ...blank(), ...d }; save(); renderAll(); say('불러왔어요.'); }
+  catch (err) { say('이 앱에서 저장한 파일이 아니에요.'); }
+  e.target.value = '';
+});
+$('#resetBtn').addEventListener('click', () => {
+  if (!confirm('매칭·자기 점검·생애 설계를 모두 지우고 처음부터 할까요? (되돌릴 수 없어요)')) return;
+  S = blank(); save(); renderAll();
+});
+
+function renderAll() { renderBand(); renderMatch(); renderSelfForm(); renderSelfSummary(); renderPlan(); showTab(S.tab); }
+S = load(); renderAll();
+</script>
+</body>
+</html>

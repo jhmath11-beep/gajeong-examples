@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>작품 제출함 & 온라인 전시회</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poor+Story&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+/* Hallmark · genre: editorial (quiet) · macrostructure: 전시실 벽(살롱 걸기) + 작품 캡션 라벨 / 소장품 목록 · theme: custom "gallery wall, oxblood signage"
+ * fonts: Poor Story (display) + Noto Sans KR (body)
+ * pre-emit critique: P4 H4 E4 S5 R4 V5 */
+:root {
+  --color-wall:      oklch(94.5% 0.012 85);   /* 전시실 벽 — 따뜻한 회백 */
+  --color-wall-2:    oklch(90.5% 0.014 85);   /* 걸레받이·음영 */
+  --color-label:     oklch(98.6% 0.004 85);   /* 작품 라벨 종이, 매트 */
+  --color-ink:       oklch(21% 0.012 60);     /* 글자, 액자 */
+  --color-on-ink:    oklch(97% 0.006 85);
+  --color-muted:     oklch(42% 0.012 60);
+  --color-rule:      oklch(30% 0.012 60);
+  --color-rule-soft: oklch(80% 0.012 85);
+  --color-accent:    oklch(45% 0.14 28);      /* 전시 안내판 적갈색 — 전시 중·현재 위치 */
+  --color-accent-bg: oklch(93.5% 0.03 28);
+  --color-wait:      oklch(46% 0.09 70);      /* 검토 대기 — 흙빛 노랑 */
+  --color-wait-bg:   oklch(93% 0.04 85);
+  --color-room:      oklch(16% 0.008 60);     /* 슬라이드쇼 — 불 끈 전시실 */
+  --color-room-2:    oklch(24% 0.01 60);
+  --color-on-room:   oklch(93% 0.006 85);
+  --color-on-room-2: oklch(76% 0.01 85);
+  --color-focus:     oklch(45% 0.14 28);
+  --color-scrim:     oklch(16% 0.008 60 / 0.6);
+
+  --font-display: "Poor Story", "Malgun Gothic", sans-serif;
+  --font-body:    "Noto Sans KR", "Malgun Gothic", sans-serif;
+
+  --text-xs: 0.8125rem; --text-sm: 0.9375rem; --text-md: 1.0625rem; --text-lg: 1.25rem;
+  --text-xl: 1.625rem;  --text-2xl: clamp(2rem, 4vw + 1rem, 3.5rem);
+  --space-3xs: 0.25rem; --space-2xs: 0.5rem; --space-xs: 0.75rem; --space-sm: 1rem;
+  --space-md: 1.5rem;   --space-lg: 2rem;    --space-xl: 3rem;   --space-2xl: 4.5rem;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-short: 140ms;
+  --wrap: 78rem;
+  --z-toast: 40;
+}
+* { box-sizing: border-box; }
+html, body { overflow-x: clip; }
+body { margin: 0; font-family: var(--font-body); color: var(--color-ink); background: var(--color-wall);
+  font-size: var(--text-md); line-height: 1.65; word-break: keep-all; overflow-wrap: break-word; -webkit-font-smoothing: antialiased; }
+h1, h2, h3 { margin: 0; font-family: var(--font-display); font-weight: 400; font-style: normal; line-height: 1.25; overflow-wrap: anywhere; min-width: 0; }
+h2 { font-size: var(--text-xl); }
+h3 { font-size: var(--text-lg); }
+p { margin: 0; }
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 2px; }
+[hidden] { display: none !important; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.spacer { flex: 1; }
+.hint { color: var(--color-muted); font-size: var(--text-sm); }
+.wrap { max-width: var(--wrap); margin: 0 auto; padding-inline: max(var(--space-sm), env(safe-area-inset-left)); }
+
+/* 머리 — 전시 벽에 붙은 전시명 글씨 */
+.mast { padding-top: var(--space-xl); }
+.mast h1 { font-size: var(--text-2xl); letter-spacing: -0.01em; }
+.mast__sub { margin-top: var(--space-2xs); color: var(--color-muted); }
+.mast__bar { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--space-sm) var(--space-md); margin-top: var(--space-md);
+  border-bottom: 1px solid var(--color-rule); }
+.tabs { display: flex; gap: var(--space-md); }
+.tab { min-height: 44px; padding: 0; border: 0; border-bottom: 3px solid transparent; margin-bottom: -1px; background: none; cursor: pointer;
+  font-weight: 700; white-space: nowrap; color: var(--color-muted); transition: color var(--dur-short) var(--ease-out); }
+.tab:hover { color: var(--color-ink); }
+.tab[aria-selected="true"] { color: var(--color-ink); border-bottom-color: var(--color-accent); }
+.who-am-i { padding-bottom: var(--space-2xs); font-size: var(--text-sm); color: var(--color-muted); }
+
+.demo { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2xs) var(--space-sm); padding-block: var(--space-xs); font-size: var(--text-sm); }
+.demo .badge { color: var(--color-accent); font-weight: 700; border: 1px solid var(--color-accent); padding: 0 var(--space-2xs); white-space: nowrap; }
+
+main.wrap { padding-top: var(--space-lg); padding-bottom: var(--space-2xl); }
+.stack > * + * { margin-top: var(--space-md); }
+.row { display: flex; flex-wrap: wrap; gap: var(--space-2xs); align-items: center; }
+
+/* 버튼 — 각진 안내판 */
+.btn { min-height: 44px; padding: 0 var(--space-md); border: 1px solid var(--color-ink); border-radius: 0; background: var(--color-ink); color: var(--color-on-ink);
+  font-weight: 700; cursor: pointer; white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; line-height: 1;
+  transition: background-color var(--dur-short) var(--ease-out), border-color var(--dur-short) var(--ease-out), color var(--dur-short) var(--ease-out); }
+.btn:hover { background: var(--color-accent); border-color: var(--color-accent); }
+.btn:active { transform: translateY(1px); }
+.btn:disabled { opacity: .55; cursor: not-allowed; transform: none; }
+.btn--ghost { background: transparent; color: var(--color-ink); border-color: var(--color-rule); }
+.btn--ghost:hover { background: var(--color-label); border-color: var(--color-ink); }
+.btn--ghost[aria-pressed="true"] { background: var(--color-accent-bg); border-color: var(--color-accent); color: var(--color-accent); }
+.btn--sm { min-height: 36px; padding: 0 var(--space-xs); font-size: var(--text-sm); }
+.btn--warn:hover { background: var(--color-accent); color: var(--color-on-ink); border-color: var(--color-accent); }
+label.btn:has(input:focus-visible) { outline: 3px solid var(--color-focus); outline-offset: 2px; }
+
+/* 입력 — 출품 카드(괘선 칸) */
+.field { display: block; min-width: 0; }
+.field > span { display: flex; justify-content: space-between; gap: var(--space-2xs); font-size: var(--text-sm); font-weight: 700; margin-bottom: var(--space-3xs); }
+.field small { font-weight: 400; color: var(--color-muted); font-variant-numeric: tabular-nums; }
+.input { width: 100%; min-height: 44px; padding: var(--space-2xs) var(--space-xs); background: var(--color-label); border: 1px solid var(--color-rule-soft); border-radius: 0;
+  transition: border-color var(--dur-short) var(--ease-out); }
+.input:hover { border-color: var(--color-muted); }
+.input:focus { outline: none; border-color: var(--color-ink); box-shadow: inset 0 -2px 0 var(--color-accent); }
+.input:disabled { background: var(--color-wall-2); }
+.input[aria-invalid="true"] { border-color: var(--color-accent); }
+textarea.input { resize: vertical; line-height: 1.6; }
+
+/* ===== 제출함 ===== */
+.split { display: grid; gap: var(--space-xl); grid-template-columns: minmax(0, 1fr); }
+.entry { background: var(--color-label); border: 1px solid var(--color-rule); padding: var(--space-md) var(--space-sm); }
+.entry h2 { padding-bottom: var(--space-xs); border-bottom: 1px solid var(--color-rule); margin-bottom: var(--space-md); }
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-sm); }
+.photos { border: 0; padding: 0; margin: 0; min-width: 0; }
+.photos legend { font-size: var(--text-sm); font-weight: 700; padding: 0; margin-bottom: var(--space-3xs); }
+.picked { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-2xs); margin-bottom: var(--space-xs); }
+.picked figure { margin: 0; position: relative; aspect-ratio: 1; background: var(--color-wall-2); border: 1px solid var(--color-rule-soft); }
+.picked img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.picked .slot { display: grid; place-items: center; height: 100%; color: var(--color-muted); font-size: var(--text-sm); }
+.picked .x { position: absolute; right: 0; bottom: 0; min-height: 32px; padding: 0 var(--space-2xs); border: 0; background: var(--color-ink); color: var(--color-on-ink);
+  font-size: var(--text-xs); cursor: pointer; }
+.picked .x:hover { background: var(--color-accent); }
+.mine-list { list-style: none; margin: 0; padding: 0; }
+.mine { display: grid; grid-template-columns: 5rem minmax(0, 1fr); gap: var(--space-xs); padding: var(--space-sm) 0; border-top: 1px solid var(--color-rule-soft); }
+.mine img { width: 5rem; height: 5rem; object-fit: cover; display: block; border: 4px solid var(--color-ink); }
+.mine h3 { font-size: var(--text-md); font-family: var(--font-body); font-weight: 700; }
+.mine .tc { margin-top: var(--space-2xs); padding: var(--space-2xs) var(--space-xs); background: var(--color-label); border: 1px solid var(--color-rule-soft); font-size: var(--text-sm); }
+.mine .tc b { color: var(--color-accent); margin-right: var(--space-2xs); }
+.mine .row { margin-top: var(--space-2xs); }
+.state { font-size: var(--text-sm); font-weight: 700; white-space: nowrap; }
+.state--wait { color: var(--color-wait); }
+.state--ok { color: var(--color-accent); }
+.state--hidden { color: var(--color-muted); text-decoration: line-through; }
+
+/* ===== 전시실 — 살롱 걸기 ===== */
+.filters { display: flex; flex-wrap: wrap; gap: var(--space-2xs) var(--space-sm); align-items: center; margin-bottom: var(--space-lg); }
+.seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--color-rule); }
+.seg button { min-height: 40px; padding: 0 var(--space-sm); border: 0; background: transparent; cursor: pointer; font-weight: 700; white-space: nowrap; font-size: var(--text-sm);
+  transition: background-color var(--dur-short) var(--ease-out); }
+.seg button + button { border-left: 1px solid var(--color-rule); }
+.seg button:hover { background: var(--color-label); }
+.seg button[aria-pressed="true"] { background: var(--color-ink); color: var(--color-on-ink); }
+.select-sm { min-height: 40px; width: auto; font-size: var(--text-sm); }
+.wall { columns: 17rem; column-gap: var(--space-xl); }
+.piece { break-inside: avoid; margin: 0 0 var(--space-xl); }
+.frame { display: block; width: 100%; padding: var(--space-sm); border: 10px solid var(--color-ink); background: var(--color-label); cursor: zoom-in;
+  transition: border-color var(--dur-short) var(--ease-out); }
+.frame:hover { border-color: var(--color-room-2); }
+.frame img { display: block; width: 100%; height: auto; }
+.tag { margin: var(--space-sm) 0 0 auto; width: min(100%, 15rem); padding: var(--space-xs) var(--space-sm); background: var(--color-label); border: 1px solid var(--color-rule-soft); }
+.tag h3 { font-size: var(--text-lg); }
+.tag__meta { font-size: var(--text-xs); color: var(--color-muted); margin-top: var(--space-3xs); }
+.tag__line { font-size: var(--text-sm); margin-top: var(--space-2xs); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.tag__like { font-size: var(--text-xs); margin-top: var(--space-2xs); color: var(--color-accent); font-weight: 700; font-variant-numeric: tabular-nums; }
+.empty { color: var(--color-muted); padding: var(--space-lg) 0; max-width: 40rem; }
+
+/* ===== 자료실 — 소장품 목록 ===== */
+.gate { max-width: 28rem; background: var(--color-label); border: 1px solid var(--color-rule); padding: var(--space-md) var(--space-sm); }
+.gate h2 { margin-bottom: var(--space-xs); }
+.gate .btn { margin-top: var(--space-md); width: 100%; }
+.counts { font-size: var(--text-sm); font-variant-numeric: tabular-nums; }
+.counts b { font-weight: 700; }
+.sheet { border-top: 2px solid var(--color-ink); padding-top: var(--space-sm); }
+.sheet > h2 { font-size: var(--text-lg); margin-bottom: var(--space-sm); }
+.roll { display: grid; gap: var(--space-xs); }
+.roll__row { display: grid; grid-template-columns: 3rem minmax(0, 1fr); gap: var(--space-xs); align-items: start; }
+.roll__row > b { font-weight: 700; padding-top: var(--space-3xs); }
+.nums { display: flex; flex-wrap: wrap; gap: 3px; }
+.nums span { width: 2rem; height: 2rem; display: grid; place-items: center; font-size: var(--text-xs); font-variant-numeric: tabular-nums; border: 1px solid var(--color-rule-soft); color: var(--color-muted); }
+.nums span.done { background: var(--color-ink); border-color: var(--color-ink); color: var(--color-on-ink); }
+.nums span.miss { border: 1.5px solid var(--color-accent); color: var(--color-accent); font-weight: 700; }
+.roll__miss { grid-column: 2; font-size: var(--text-sm); color: var(--color-accent); }
+.pend { list-style: none; margin: 0; padding: 0; }
+.pend li { display: flex; flex-wrap: wrap; gap: var(--space-2xs) var(--space-sm); align-items: center; padding: var(--space-xs) 0; border-bottom: 1px solid var(--color-rule-soft); }
+.pend q { flex: 1 1 16rem; quotes: "“" "”"; }
+.pend small { color: var(--color-muted); }
+.cat { list-style: none; margin: 0; padding: 0; }
+.item { display: grid; grid-template-columns: 6rem minmax(0, 1fr); gap: var(--space-sm); padding: var(--space-md) 0; border-bottom: 1px solid var(--color-rule-soft); }
+.item__thumb { padding: 0; border: 5px solid var(--color-ink); background: var(--color-label); cursor: zoom-in; width: 6rem; height: 6rem; }
+.item__thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.item__meta { font-size: var(--text-sm); color: var(--color-muted); font-variant-numeric: tabular-nums; }
+.item h3 { font-family: var(--font-body); font-size: var(--text-md); font-weight: 700; }
+.item__desc { font-size: var(--text-sm); margin-top: var(--space-3xs); white-space: pre-line; }
+.item__acts { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: var(--space-2xs); align-items: center; }
+.item__tc { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-2xs); }
+
+/* ===== 크게 보기(작품 앞) ===== */
+dialog { border: 0; padding: 0; max-width: none; max-height: none; }
+dialog::backdrop { background: var(--color-scrim); }
+.viewer { width: min(64rem, 100% - 2rem); max-height: calc(100dvh - 2rem); overflow: auto; background: var(--color-wall); color: var(--color-ink); }
+.viewer__in { display: grid; grid-template-columns: minmax(0, 1fr); }
+.viewer__art { background: var(--color-wall-2); padding: var(--space-md) var(--space-sm); display: grid; gap: var(--space-xs); justify-items: center; align-content: start; }
+.viewer__art > img { max-width: 100%; max-height: 65dvh; display: block; border: 10px solid var(--color-ink); background: var(--color-label); padding: var(--space-xs); }
+.thumbs { display: flex; gap: var(--space-2xs); }
+.thumbs button { padding: 0; width: 3.5rem; height: 3.5rem; border: 2px solid var(--color-rule-soft); background: none; cursor: pointer; }
+.thumbs button[aria-pressed="true"] { border-color: var(--color-accent); }
+.thumbs img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.viewer__side { padding: var(--space-md) var(--space-sm); }
+.viewer__side .tag { margin: 0; width: 100%; }
+.viewer__side .tag__line { -webkit-line-clamp: unset; white-space: pre-line; }
+.cmts { list-style: none; margin: 0; padding: 0; }
+.cmts li { padding: var(--space-2xs) 0; border-bottom: 1px dashed var(--color-rule-soft); font-size: var(--text-sm); }
+.cmts b { margin-right: var(--space-2xs); }
+.close { position: sticky; top: var(--space-2xs); z-index: 1; display: flex; width: max-content; margin: var(--space-2xs) var(--space-2xs) calc(-1 * var(--space-2xs) - 36px) auto; }
+
+/* ===== 슬라이드쇼(TV) — 불 끈 전시실 ===== */
+.slides { width: 100%; height: 100%; background: var(--color-room); color: var(--color-on-room); }
+.slides[open] { display: grid; grid-template-rows: minmax(0, 1fr) auto; }
+.slides__stage { display: grid; place-items: center; padding: var(--space-md); min-height: 0; }
+.slides__stage img { max-width: 100%; max-height: 100%; object-fit: contain; border: 14px solid var(--color-room-2); background: var(--color-label); padding: var(--space-sm); }
+.slides__bar { display: flex; flex-wrap: wrap; gap: var(--space-sm); align-items: center; padding: var(--space-sm) var(--space-md) max(var(--space-sm), env(safe-area-inset-bottom)); border-top: 1px solid var(--color-room-2); }
+.slides__cap { flex: 1 1 18rem; min-width: 0; }
+.slides__cap h2 { font-size: clamp(1.5rem, 2.5vw + 0.5rem, 2.75rem); }
+.slides__cap p { color: var(--color-on-room-2); }
+.slides__count { font-variant-numeric: tabular-nums; color: var(--color-on-room-2); white-space: nowrap; }
+.slides .btn--ghost { color: var(--color-on-room); border-color: var(--color-on-room-2); }
+.slides .btn--ghost:hover { background: var(--color-room-2); }
+.slides .btn--ghost[aria-pressed="true"] { background: var(--color-on-room); color: var(--color-room); border-color: var(--color-on-room); }
+.slides :focus-visible { outline-color: var(--color-on-room); }
+
+#toast { position: fixed; right: var(--space-sm); bottom: max(var(--space-sm), env(safe-area-inset-bottom)); max-width: min(28rem, calc(100% - 2rem)); z-index: var(--z-toast);
+  background: var(--color-ink); color: var(--color-on-ink); padding: var(--space-xs) var(--space-sm); opacity: 0; pointer-events: none; transition: opacity var(--dur-short) var(--ease-out); }
+#toast.slides { opacity: 1; }
+#toast.err { background: var(--color-accent); }
+
+@media (min-width: 40rem) {
+  .entry { padding: var(--space-lg); }
+  .viewer__in { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); }
+}
+@media (min-width: 64rem) {
+  .split { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); }
+  .item { grid-template-columns: 7rem minmax(0, 1fr) minmax(0, 22rem); }
+  .item__thumb { width: 7rem; height: 7rem; }
+  .item__acts { grid-column: 3; grid-row: 1; justify-content: flex-end; align-content: flex-start; }
+  .item__tc { grid-column: 2 / -1; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+<header class="wrap mast">
+  <h1 id="appTitle">작품전</h1>
+  <p class="mast__sub" id="appSub"></p>
+  <div class="mast__bar">
+    <nav class="tabs" role="tablist" aria-label="화면">
+      <button class="tab" role="tab" aria-selected="true" data-tab="submit">제출함</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="gallery">전시실</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="archive">자료실</button>
+    </nav>
+    <span class="spacer"></span>
+    <span class="who-am-i" id="whoAmI">연결하는 중…</span>
+  </div>
+  <div class="demo" id="demoBar" hidden>
+    <span class="badge">체험 모드</span>
+    <span class="hint">이 브라우저에만 저장돼요. 탭을 두 개 열면 서로 바로 반영돼요.</span>
+    <span class="spacer"></span>
+    <button class="btn btn--ghost btn--sm" id="demoFill">샘플 넣기</button>
+    <button class="btn btn--ghost btn--sm" id="demoClear">체험 데이터 지우기</button>
+  </div>
+</header>
+
+<main class="wrap">
+  <!-- 제출함 -->
+  <section id="v-submit" class="split" role="tabpanel">
+    <form id="workForm" class="entry" novalidate>
+      <h2 id="formTitle">작품 내기</h2>
+      <div class="stack">
+        <div class="grid2">
+          <label class="field"><span>반</span><select id="fCls" class="input"></select></label>
+          <label class="field"><span>번호</span><select id="fNum" class="input"></select></label>
+        </div>
+        <label class="field"><span>단원</span><select id="fUnit" class="input"></select></label>
+        <label class="field"><span>작품 제목 <small id="cTitle">0 / 40</small></span><input id="fTitle" class="input" maxlength="40" autocomplete="off" placeholder="예: 청바지로 만든 화분 덮개"></label>
+        <label class="field"><span>작품 설명 — 첫 줄이 전시 라벨에 실려요 <small id="cDesc">0 / 200</small></span>
+          <textarea id="fDesc" class="input" rows="4" maxlength="200" placeholder="첫 줄: 한 줄 소개&#10;다음 줄부터: 만든 과정, 재료, 아쉬운 점"></textarea></label>
+        <fieldset class="photos">
+          <legend>사진 1~3장</legend>
+          <div class="picked" id="picked"></div>
+          <div class="row">
+            <label class="btn btn--ghost">카메라로 찍기<input class="sr" type="file" accept="image/*" capture="environment" id="fCam"></label>
+            <label class="btn btn--ghost">사진 고르기<input class="sr" type="file" accept="image/*" multiple id="fPick"></label>
+          </div>
+          <p class="hint" id="photoHint">보낼 때 긴 변 1280px 이하로 줄여서 올려요.</p>
+        </fieldset>
+        <p class="hint">이름은 적지 않아요. 전시실에는 제목·반·한 줄 소개만 보여요.</p>
+        <div class="row">
+          <button class="btn" id="sendBtn" type="submit">제출하기</button>
+          <button class="btn btn--ghost" id="cancelEdit" type="button" hidden>수정 그만두기</button>
+        </div>
+      </div>
+    </form>
+    <aside aria-labelledby="mineTitle">
+      <h2 id="mineTitle">내가 낸 작품</h2>
+      <p class="hint">이 기기에서 낸 작품만 보여요. 고치면 선생님이 다시 확인해요.</p>
+      <ul class="mine-list" id="mine"></ul>
+    </aside>
+  </section>
+
+  <!-- 전시실 -->
+  <section id="v-gallery" role="tabpanel" hidden>
+    <div class="filters">
+      <div class="seg" id="gUnits" role="group" aria-label="단원"></div>
+      <select class="input select-sm" id="gCls" aria-label="반"></select>
+      <span class="spacer"></span>
+      <button class="btn" id="showBtn">슬라이드쇼</button>
+    </div>
+    <div class="wall" id="wall"></div>
+  </section>
+
+  <!-- 자료실 -->
+  <section id="v-archive" role="tabpanel" hidden>
+    <div class="gate" id="gate">
+      <h2>자료실은 선생님만</h2>
+      <p class="hint" id="gateHint">학교에서 정한 선생님 Google 계정으로 들어가요.</p>
+      <button class="btn" id="loginBtn">Google로 로그인</button>
+    </div>
+    <div id="dash" class="stack" hidden>
+      <div class="filters" style="margin-bottom:0">
+        <div class="seg" id="aCls" role="group" aria-label="반"></div>
+        <select class="input select-sm" id="aUnit" aria-label="단원"></select>
+        <div class="seg" id="aState" role="group" aria-label="상태"></div>
+        <span class="spacer"></span>
+        <button class="btn btn--ghost btn--sm" id="csvBtn">목록 CSV</button>
+        <button class="btn btn--ghost btn--sm" id="logoutBtn">나가기</button>
+      </div>
+      <p class="counts" id="counts"></p>
+      <div class="sheet"><h2>제출 현황</h2><div class="roll" id="roll"></div></div>
+      <div class="sheet"><h2>감상평 확인 <span class="hint" id="pendN"></span></h2><ul class="pend" id="pend"></ul></div>
+      <div class="sheet"><h2>작품 목록</h2><ul class="cat" id="cat"></ul></div>
+    </div>
+  </section>
+</main>
+
+<dialog class="viewer" id="viewer" aria-label="작품 크게 보기"></dialog>
+<dialog class="slides" id="show" aria-label="슬라이드쇼">
+  <div class="slides__stage" id="showStage"></div>
+  <div class="slides__bar">
+    <div class="slides__cap"><h2 id="showTitle"></h2><p id="showLine"></p></div>
+    <span class="slides__count" id="showCount"></span>
+    <button class="btn btn--ghost" id="showPrev">이전</button>
+    <button class="btn btn--ghost" id="showNext">다음</button>
+    <button class="btn btn--ghost" id="showAuto" aria-pressed="false">자동 넘김</button>
+    <button class="btn btn--ghost" id="showClose">닫기</button>
+  </div>
+</dialog>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+/* ======================= 1. 선생님이 바꾸는 곳 =======================
+   Firebase 콘솔 → 프로젝트 설정 → 내 앱 → SDK 설정의 firebaseConfig 값을 { } 안에 붙여넣으세요.
+   비워 두면 '체험 모드'(이 브라우저에만 저장)로 열립니다. 붙여넣는 방법은 설치방법.md */
+const FIREBASE_CONFIG = { /* 여기에 붙여넣기 */ };
+// 자료실에 들어갈 선생님 Google 계정. firestore.rules 맨 위 목록과 똑같이 맞추세요.
+const TEACHER_EMAILS = ['선생님@gmail.com'];
+
+const SETTINGS = {
+  title: '2학년 가정 작품전',
+  subtitle: '작품 제출함 · 온라인 전시회',
+  classes: { '1반': 28, '2반': 27, '3반': 28, '4반': 26 },     // 반 이름: 인원(미제출 번호 계산, 최대 40)
+  units: ['업사이클링', '식단 포스터', '공간 배치', '바느질 소품'],  // 단원(20자 이내)
+  slideSeconds: 8                                                // 슬라이드쇼 자동 넘김 간격
+};
+
+/* ======================= 2. 데이터 래퍼 =======================
+   FIREBASE_CONFIG가 차 있으면 Firebase(Firestore + 익명/Google 로그인),
+   비어 있으면 체험 모드(localStorage에 저장, 같은 브라우저의 다른 탭에는 storage 이벤트로 바로 반영). */
+const DEMO = !FIREBASE_CONFIG.apiKey;
+const SDK = 'https://www.gstatic.com/firebasejs/13.2.0/';
+const APP_KEY = 'fb-gallery';
+const MAX_SIDE = 1280;                        // 사진 긴 변
+const PHOTO_BUDGET = DEMO ? 160000 : 700000;  // 작품 한 점의 사진 합계(글자 수). Firestore 문서 1MiB 한도 안쪽. 체험 모드는 브라우저 저장 공간(약 5MB) 때문에 더 작게
+const NOW = { __now: true };                  // 서버 시각
+const inc = n => ({ __inc: n });              // 숫자 더하기
+let ME = { uid: '', email: '', teacher: false };
+
+const store = DEMO ? demoStore() : fireStore();
+
+function demoStore() {
+  const KEY = APP_KEY + '-demo', subs = new Set();
+  const load = () => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; } };
+  let data = load();
+  const emit = () => subs.forEach(run => run());
+  // 다른 탭이 저장하면 'storage' 이벤트가 옴(BroadcastChannel은 저장보다 먼저 도착할 수 있어 쓰지 않음)
+  window.addEventListener('storage', e => { if (e.key === KEY || e.key === null) { data = load(); emit(); } });
+  const save = () => {
+    try { localStorage.setItem(KEY, JSON.stringify(data)); }
+    catch (e) { data = load(); throw new Error('체험 모드 저장 공간이 가득 찼어요. ‘체험 데이터 지우기’를 누른 뒤 다시 해 보세요.'); }
+    setTimeout(emit);
+  };
+  const col = p => data[p] || (data[p] = {});
+  const apply = (old, patch) => { const o = { ...old }; for (const [k, v] of Object.entries(patch)) o[k] = v && v.__now ? Date.now() : v && v.__inc != null ? (old[k] || 0) + v.__inc : v; return o; };
+  let uid = localStorage.getItem(KEY + '-uid');
+  if (!uid) { uid = 'demo-' + Math.random().toString(36).slice(2, 10); localStorage.setItem(KEY + '-uid', uid); }
+  return {
+    async start(onUser) { ME = { uid, email: '', teacher: false }; onUser(); },
+    async teacherIn() { ME = { uid, email: '체험 교사', teacher: true }; },
+    async teacherOut() { ME = { uid, email: '', teacher: false }; },
+    watch(path, where, cb) {
+      const run = () => cb(Object.entries(col(path)).filter(([, d]) => !where || d[where[0]] === where[1]).map(([id, d]) => ({ id, ...d })));
+      subs.add(run); setTimeout(run); return () => subs.delete(run);
+    },
+    async get(path, id) { const d = col(path)[id]; return d ? { id, ...d } : null; },
+    async add(path, d) { const id = Math.random().toString(36).slice(2, 12); col(path)[id] = apply({}, d); save(); return id; },
+    async set(path, id, d) { col(path)[id] = apply({}, d); save(); },
+    async update(path, id, d) { if (!col(path)[id]) throw new Error('이미 지워진 항목이에요.'); col(path)[id] = apply(col(path)[id], d); save(); },
+    async del(path, id) { delete col(path)[id]; save(); },
+    async batch(ops) {   // ['create'|'update', 경로, id, 값] — create는 이미 있으면 거절(실제 모드에선 보안 규칙이 거절)
+      for (const [t, p, id] of ops) if (t === 'create' && col(p)[id]) throw new Error('이미 눌렀어요. 한 사람이 한 번만 누를 수 있어요.');
+      ops.forEach(([t, p, id, d]) => { col(p)[id] = apply(t === 'create' ? {} : col(p)[id] || {}, d); }); save();
+    }
+  };
+}
+
+function fireStore() {
+  let FB, db, auth;
+  const conv = d => { const o = {}; for (const [k, v] of Object.entries(d)) o[k] = v && v.__now ? FB.serverTimestamp() : v && v.__inc != null ? FB.increment(v.__inc) : v; return o; };
+  const read = s => { const d = s.data({ serverTimestamps: 'estimate' }); for (const k in d) if (d[k] && typeof d[k].toMillis === 'function') d[k] = d[k].toMillis(); return { id: s.id, ...d }; };
+  const ref = (p, id) => FB.doc(db, p, id);
+  return {
+    async start(onUser) {
+      const mods = await Promise.all(['app', 'auth', 'firestore'].map(m => import(SDK + 'firebase-' + m + '.js')));
+      FB = Object.assign({}, ...mods);
+      db = FB.getFirestore(FB.initializeApp(FIREBASE_CONFIG)); auth = FB.getAuth();
+      FB.onAuthStateChanged(auth, u => {
+        if (!u) { FB.signInAnonymously(auth).catch(e => toast(errMsg(e), true)); return; }   // 학생 = 익명 로그인
+        const email = u.isAnonymous ? '' : (u.email || '');
+        ME = { uid: u.uid, email, teacher: !!email && u.emailVerified && TEACHER_EMAILS.includes(email) };
+        onUser();
+      });
+    },
+    async teacherIn() {   // 교사 = Google 로그인 → 명단에 있을 때만 교사 화면. 실제로 막는 건 firestore.rules
+      const r = await FB.signInWithPopup(auth, new FB.GoogleAuthProvider());
+      if (!TEACHER_EMAILS.includes(r.user.email)) { await FB.signOut(auth); throw new Error(r.user.email + ' 계정은 교사 명단(TEACHER_EMAILS)에 없어요.'); }
+    },
+    async teacherOut() { await FB.signOut(auth); },
+    watch(path, where, cb) {
+      const q = where ? FB.query(FB.collection(db, path), FB.where(where[0], '==', where[1])) : FB.collection(db, path);
+      return FB.onSnapshot(q, snap => cb(snap.docs.map(read)), e => toast(errMsg(e), true));
+    },
+    async get(path, id) { const s = await FB.getDoc(ref(path, id)); return s.exists() ? read(s) : null; },
+    async add(path, d) { return (await FB.addDoc(FB.collection(db, path), conv(d))).id; },
+    async set(path, id, d) { await FB.setDoc(ref(path, id), conv(d)); },
+    async update(path, id, d) { await FB.updateDoc(ref(path, id), conv(d)); },
+    async del(path, id) { await FB.deleteDoc(ref(path, id)); },
+    async batch(ops) { const b = FB.writeBatch(db); ops.forEach(([t, p, id, d]) => t === 'create' ? b.set(ref(p, id), conv(d)) : b.update(ref(p, id), conv(d))); await b.commit(); }
+  };
+}
+function errMsg(e) {
+  const c = String(e && e.code || '');
+  if (c.includes('permission-denied')) return '권한이 없어요. 보안 규칙(firestore.rules)에서 막혔어요.';
+  if (c.includes('operation-not-allowed')) return 'Firebase 콘솔 Authentication에서 익명·Google 로그인을 켜 주세요.';
+  if (c.includes('unauthorized-domain')) return '이 주소가 Authentication → 승인된 도메인에 없어요.';
+  if (c.includes('popup-closed') || c.includes('cancelled-popup')) return '로그인 창이 닫혔어요.';
+  if (c.includes('popup-blocked')) return '팝업이 막혔어요. 주소창 오른쪽에서 팝업을 허용해 주세요.';
+  if (c.includes('unavailable')) return '인터넷 연결을 확인해 주세요.';
+  return (e && e.message) || '잠시 뒤 다시 해 보세요.';
+}
+
+/* ======================= 3. 공통 도우미 ======================= */
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const pad2 = n => String(n).padStart(2, '0');
+const when = t => { const d = new Date(t || 0); return `${d.getMonth() + 1}/${d.getDate()} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`; };
+const firstLine = s => String(s || '').split('\n')[0].trim();
+const kb = n => Math.round(n * 3 / 4 / 1024) + 'KB';   // base64 글자 수 → 대략 바이트
+const CLASSES = Object.keys(SETTINGS.classes);
+const STATE = { wait: '검토 대기', ok: '전시 중', hidden: '숨김' };
+let toastTimer;
+function toast(msg, isErr) {
+  const t = $('#toast'); t.textContent = msg; t.className = 'show' + (isErr ? ' err' : '');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.className = '', isErr ? 5000 : 2600);
+}
+async function busy(btn, label, fn) {
+  const old = btn.textContent; btn.disabled = true; btn.textContent = label;
+  try { return await fn(); } catch (e) { toast(errMsg(e), true); } finally { btn.disabled = false; btn.textContent = old; }
+}
+function downloadCsv(filename, rows) {
+  const csv = '﻿' + rows.map(r => r.map(v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"').join(',')).join('\r\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' })); a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+}
+const safeName = s => String(s).replace(/[\\/:*?"<>|\s]+/g, '_').slice(0, 30);
+
+/** 사진을 긴 변 MAX_SIDE 이하 JPEG로 줄이고, budget(글자 수)을 넘으면 화질→크기 순으로 다시 줄인다 */
+async function shrink(blob, budget) {
+  let bmp;
+  try { bmp = await createImageBitmap(blob, { imageOrientation: 'from-image' }); }
+  catch (e) { throw new Error('이 사진은 열 수 없어요. JPG나 PNG 사진으로 다시 골라 주세요.'); }
+  const c = document.createElement('canvas'), x = c.getContext('2d');
+  let side = Math.min(MAX_SIDE, Math.max(bmp.width, bmp.height)), q = 0.86;
+  for (let i = 0; i < 14; i++) {
+    const k = side / Math.max(bmp.width, bmp.height);
+    c.width = Math.max(1, Math.round(bmp.width * k)); c.height = Math.max(1, Math.round(bmp.height * k));
+    x.fillStyle = 'white'; x.fillRect(0, 0, c.width, c.height);   // 투명 PNG 바탕
+    x.drawImage(bmp, 0, 0, c.width, c.height);
+    const url = c.toDataURL('image/jpeg', q);
+    if (url.length <= budget) return url;
+    if (q > 0.62) q -= 0.08; else side = Math.round(side * 0.82);
+  }
+  throw new Error('사진을 충분히 줄이지 못했어요. 다른 사진으로 해 주세요.');
+}
+
+/* ======================= 4. 상태와 구독 ======================= */
+const S = { mine: [], myFb: {}, myLikes: new Set(), gallery: [], pubCmts: [], all: [], allCmts: [], allFb: {} };
+let unsubs = [];
+function subscribe() {
+  unsubs.forEach(u => u()); unsubs = [];
+  const on = (path, where, fn) => unsubs.push(store.watch(path, where, rows => { fn(rows); render(); }));
+  on('works', ['status', 'ok'], r => S.gallery = r);
+  on('comments', ['status', 'ok'], r => S.pubCmts = r);
+  on('works', ['uid', ME.uid], r => S.mine = r);
+  on('feedback', ['uid', ME.uid], r => S.myFb = Object.fromEntries(r.map(f => [f.id, f])));
+  on('likes', ['uid', ME.uid], r => S.myLikes = new Set(r.map(l => l.workId)));
+  if (ME.teacher) {
+    on('works', null, r => S.all = r);
+    on('comments', null, r => S.allCmts = r);
+    on('feedback', null, r => S.allFb = Object.fromEntries(r.map(f => [f.id, f])));
+  } else { S.all = []; S.allCmts = []; S.allFb = {}; }
+}
+function onUser() {
+  $('#whoAmI').textContent = ME.teacher ? '선생님: ' + ME.email : DEMO ? '체험 학생으로 보는 중' : '학생(익명)으로 접속함';
+  $('#gate').hidden = ME.teacher; $('#dash').hidden = !ME.teacher;
+  subscribe(); render();
+}
+let tab = 'submit';
+function render() {
+  if (tab === 'submit') renderMine();
+  if (tab === 'gallery') renderGallery();
+  if (tab === 'archive' && ME.teacher) keepInputs('#cat', renderArchive);
+  if ($('#viewer').open) keepInputs('#viewer', renderViewer);
+}
+/** 실시간으로 다시 그릴 때 쓰고 있던 글(코멘트·감상평)과 커서 위치를 지킨다 */
+function keepInputs(sel, fn) {
+  const box = $(sel), vals = {}, f = document.activeElement;
+  box.querySelectorAll('input[id], textarea[id]').forEach(i => vals[i.id] = i.value);
+  const fid = f && box.contains(f) && f.id;
+  fn();
+  for (const id in vals) { const el = document.getElementById(id); if (el) el.value = vals[id]; }
+  if (fid && document.getElementById(fid)) document.getElementById(fid).focus({ preventScroll: true });
+}
+document.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => {
+  tab = b.dataset.tab;
+  document.querySelectorAll('.tab').forEach(x => x.setAttribute('aria-selected', x === b));
+  ['submit', 'gallery', 'archive'].forEach(t => $('#v-' + t).hidden = t !== tab);
+  render();
+}));
+
+/* ======================= 5. 제출함 ======================= */
+let picked = [];      // { src, blob, data } — blob: 새로 고른 사진, data: 이미 올린 사진(수정할 때)
+let editingId = null;
+const opt = (v, t) => `<option value="${esc(v)}">${esc(t == null ? v : t)}</option>`;
+function fillNums() {
+  const n = SETTINGS.classes[$('#fCls').value] || 0, cur = $('#fNum').value;
+  $('#fNum').innerHTML = opt('', '번호') + Array.from({ length: n }, (_, i) => opt(i + 1, (i + 1) + '번')).join('');
+  if (cur && cur <= n) $('#fNum').value = cur;
+}
+function renderPicked() {
+  $('#picked').innerHTML = [0, 1, 2].map(i => picked[i]
+    ? `<figure><img src="${picked[i].src}" alt="고른 사진 ${i + 1}"><button type="button" class="x" data-rm="${i}">빼기</button></figure>`
+    : `<figure><span class="slot">${i === 0 ? '사진 1 (필수)' : '사진 ' + (i + 1)}</span></figure>`).join('');
+}
+function addFiles(files) {
+  const imgs = [...files].filter(f => f.type.startsWith('image/') || /\.(heic|heif)$/i.test(f.name));
+  if (!imgs.length) return;
+  const room = 3 - picked.length;
+  if (room <= 0) return toast('사진은 3장까지예요. 하나를 뺀 뒤 넣어 주세요.', true);
+  imgs.slice(0, room).forEach(f => picked.push({ src: URL.createObjectURL(f), blob: f }));
+  if (imgs.length > room) toast('사진은 3장까지라 앞의 ' + room + '장만 넣었어요.', true);
+  renderPicked();
+}
+['#fCam', '#fPick'].forEach(s => $(s).addEventListener('change', e => { addFiles(e.target.files); e.target.value = ''; }));
+$('#picked').addEventListener('click', e => { const b = e.target.closest('[data-rm]'); if (b) { picked.splice(+b.dataset.rm, 1); renderPicked(); } });
+$('#fCls').addEventListener('change', fillNums);
+[['#fTitle', '#cTitle', 40], ['#fDesc', '#cDesc', 200]].forEach(([i, c, m]) => $(i).addEventListener('input', () => $(c).textContent = $(i).value.length + ' / ' + m));
+
+function resetForm() {
+  editingId = null; picked = []; renderPicked();
+  $('#fTitle').value = ''; $('#fDesc').value = ''; $('#cTitle').textContent = '0 / 40'; $('#cDesc').textContent = '0 / 200';
+  $('#formTitle').textContent = '작품 내기'; $('#sendBtn').textContent = '제출하기'; $('#cancelEdit').hidden = true;
+  document.querySelectorAll('#workForm [aria-invalid]').forEach(x => x.removeAttribute('aria-invalid'));
+}
+$('#cancelEdit').addEventListener('click', resetForm);
+function invalid(sel, msg) { const el = $(sel); el.setAttribute('aria-invalid', 'true'); el.focus(); toast(msg, true); }
+
+$('#workForm').addEventListener('submit', e => {
+  e.preventDefault();
+  document.querySelectorAll('#workForm [aria-invalid]').forEach(x => x.removeAttribute('aria-invalid'));
+  const w = { cls: $('#fCls').value, num: Number($('#fNum').value), unit: $('#fUnit').value, title: $('#fTitle').value.trim(), desc: $('#fDesc').value.trim() };
+  if (!w.cls) return invalid('#fCls', '반을 골라 주세요.');
+  if (!w.num) return invalid('#fNum', '번호를 골라 주세요.');
+  if (!w.unit) return invalid('#fUnit', '단원을 골라 주세요.');
+  if (!w.title) return invalid('#fTitle', '작품 제목을 적어 주세요.');
+  if (!picked.length) return toast('사진을 1장 이상 넣어 주세요.', true);
+  busy($('#sendBtn'), '사진 줄이는 중…', async () => {
+    const each = Math.floor(PHOTO_BUDGET / picked.length);
+    w.photos = [];
+    for (const p of picked) w.photos.push(p.data && p.data.length <= each ? p.data : await shrink(p.blob || await (await fetch(p.data)).blob(), each));
+    $('#sendBtn').textContent = '보내는 중…';
+    const total = w.photos.reduce((s, x) => s + x.length, 0);
+    if (editingId) await store.update('works', editingId, { ...w, status: 'wait', updatedAt: NOW });
+    else await store.add('works', { ...w, uid: ME.uid, status: 'wait', likes: 0, createdAt: NOW, updatedAt: NOW });
+    toast(`${editingId ? '고쳐서 다시 냈어요' : '냈어요'}. 사진 ${w.photos.length}장을 합계 ${kb(total)}로 줄여 보냈어요.`);
+    const keep = { cls: w.cls, num: w.num, unit: w.unit };
+    resetForm(); $('#fCls').value = keep.cls; fillNums(); $('#fNum').value = keep.num; $('#fUnit').value = keep.unit;
+  });
+});
+
+function renderMine() {
+  const list = S.mine.slice().sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  $('#mine').innerHTML = list.length ? list.map(w => {
+    const fb = S.myFb[w.id];
+    return `<li class="mine">
+      <img src="${w.photos[0]}" alt="${esc(w.title)} 사진" width="80" height="80">
+      <div>
+        <h3>${esc(w.title)}</h3>
+        <p class="hint">${esc(w.cls)} ${w.num}번 · ${esc(w.unit)} · ${when(w.updatedAt)}</p>
+        <p><span class="state state--${w.status}">${STATE[w.status]}</span>${w.status === 'ok' ? ` <span class="hint">· 마음에 들어요 ${w.likes || 0}</span>` : ''}</p>
+        ${fb && fb.text ? `<p class="tc"><b>선생님</b>${esc(fb.text)}</p>` : ''}
+        <div class="row"><button class="btn btn--ghost btn--sm" data-edit="${w.id}">고치기</button></div>
+      </div></li>`;
+  }).join('') : '<li class="empty">아직 낸 작품이 없어요. 왼쪽에서 사진과 함께 내 보세요.</li>';
+}
+$('#mine').addEventListener('click', e => {
+  const b = e.target.closest('[data-edit]'); if (!b) return;
+  const w = S.mine.find(x => x.id === b.dataset.edit); if (!w) return;
+  editingId = w.id;
+  $('#fCls').value = w.cls; fillNums(); $('#fNum').value = w.num; $('#fUnit').value = w.unit;
+  $('#fTitle').value = w.title; $('#fDesc').value = w.desc || '';
+  $('#cTitle').textContent = w.title.length + ' / 40'; $('#cDesc').textContent = (w.desc || '').length + ' / 200';
+  picked = w.photos.map(p => ({ src: p, data: p })); renderPicked();
+  $('#formTitle').textContent = '작품 고치기'; $('#sendBtn').textContent = '고쳐서 다시 내기'; $('#cancelEdit').hidden = false;
+  $('#workForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
+
+/* ======================= 6. 전시실 ======================= */
+const gview = { unit: '전체', cls: '' };
+const byOrder = (a, b) => SETTINGS.units.indexOf(a.unit) - SETTINGS.units.indexOf(b.unit) || CLASSES.indexOf(a.cls) - CLASSES.indexOf(b.cls) || a.num - b.num;
+const shown = () => S.gallery.filter(w => (gview.unit === '전체' || w.unit === gview.unit) && (!gview.cls || w.cls === gview.cls)).sort(byOrder);
+function renderGallery() {
+  $('#gUnits').innerHTML = ['전체', ...SETTINGS.units].map(u => `<button aria-pressed="${gview.unit === u}" data-u="${esc(u)}">${esc(u)}</button>`).join('');
+  const list = shown();
+  $('#showBtn').disabled = !list.length;
+  $('#wall').innerHTML = list.length ? list.map(w => `
+    <article class="piece">
+      <button class="frame" data-open="${w.id}" aria-label="${esc(w.title)} 크게 보기"><img src="${w.photos[0]}" alt="${esc(w.title)} — 작품 사진" loading="lazy"></button>
+      <div class="tag">
+        <h3>${esc(w.title)}</h3>
+        <p class="tag__meta">${esc(w.cls)} · ${esc(w.unit)}${w.photos.length > 1 ? ` · 사진 ${w.photos.length}장` : ''}</p>
+        ${firstLine(w.desc) ? `<p class="tag__line">${esc(firstLine(w.desc))}</p>` : ''}
+        <p class="tag__like">마음에 들어요 ${w.likes || 0}</p>
+      </div>
+    </article>`).join('')
+    : `<p class="empty">${S.gallery.length ? '이 조건에 맞는 전시 작품이 없어요.' : '아직 전시된 작품이 없어요. 선생님이 자료실에서 ‘전시’를 누르면 여기에 걸려요.'}</p>`;
+}
+$('#gUnits').addEventListener('click', e => { const b = e.target.closest('[data-u]'); if (b) { gview.unit = b.dataset.u; renderGallery(); } });
+$('#gCls').addEventListener('change', e => { gview.cls = e.target.value; renderGallery(); });
+$('#wall').addEventListener('click', e => { const b = e.target.closest('[data-open]'); if (b) openViewer(b.dataset.open); });
+
+/* 크게 보기 — 전시 작품이면 마음에 들어요·감상평, 자료실에서 열면 사진만 */
+let vId = null, vPhoto = 0;
+function openViewer(id) { vId = id; vPhoto = 0; renderViewer(); if (!$('#viewer').open) $('#viewer').showModal(); }
+function renderViewer() {
+  const w = S.gallery.find(x => x.id === vId) || S.all.find(x => x.id === vId);
+  if (!w) { $('#viewer').close(); return; }
+  const pub = w.status === 'ok', liked = S.myLikes.has(w.id);
+  const cmts = (ME.teacher ? S.allCmts.filter(c => c.status === 'ok') : S.pubCmts).filter(c => c.workId === w.id).sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+  $('#viewer').innerHTML = `
+    <button class="btn btn--sm close" id="vClose">닫기</button>
+    <div class="viewer__in">
+      <div class="viewer__art">
+        <img src="${w.photos[vPhoto] || w.photos[0]}" alt="${esc(w.title)} 사진 ${vPhoto + 1}">
+        ${w.photos.length > 1 ? `<div class="thumbs">${w.photos.map((p, i) => `<button data-ph="${i}" aria-pressed="${i === vPhoto}" aria-label="사진 ${i + 1}"><img src="${p}" alt=""></button>`).join('')}</div>` : ''}
+      </div>
+      <div class="viewer__side stack">
+        <div class="tag">
+          <h3>${esc(w.title)}</h3>
+          <p class="tag__meta">${esc(w.cls)}${ME.teacher ? ' ' + w.num + '번' : ''} · ${esc(w.unit)}</p>
+          ${w.desc ? `<p class="tag__line">${esc(w.desc)}</p>` : ''}
+        </div>
+        ${pub ? `
+        <button class="btn ${liked ? 'btn--ghost' : ''}" id="likeBtn" aria-pressed="${liked}" ${liked ? 'disabled' : ''}>${liked ? '마음에 들어요 눌렀음' : '마음에 들어요'} · ${w.likes || 0}</button>
+        <div>
+          <h3>감상평</h3>
+          <ul class="cmts">${cmts.length ? cmts.map(c => `<li><b>${esc(c.alias)}</b>${esc(c.text)}</li>`).join('') : '<li class="hint">아직 공개된 감상평이 없어요.</li>'}</ul>
+        </div>
+        <form class="stack" id="cmtForm" novalidate>
+          <label class="field"><span>별칭 <small>실명 말고</small></span><input class="input" id="cAlias" maxlength="12" autocomplete="off" placeholder="예: 바느질왕"></label>
+          <label class="field"><span>감상평 <small id="cLen">0 / 100</small></span><textarea class="input" id="cText" rows="2" maxlength="100" placeholder="좋았던 점을 구체적으로"></textarea></label>
+          <button class="btn" id="cmtBtn">감상평 남기기</button>
+          <p class="hint">선생님이 확인한 뒤에 보여요.</p>
+        </form>` : `<p class="hint">${STATE[w.status]} 작품이라 전시실에는 보이지 않아요.</p>`}
+      </div>
+    </div>`;
+}
+$('#viewer').addEventListener('click', e => {
+  if (e.target === $('#viewer') || e.target.id === 'vClose') return $('#viewer').close();
+  const ph = e.target.closest('[data-ph]'); if (ph) { vPhoto = +ph.dataset.ph; renderViewer(); return; }
+  if (e.target.id === 'likeBtn') busy(e.target, '보내는 중…', () => store.batch([
+    ['create', 'likes', vId + '_' + ME.uid, { workId: vId, uid: ME.uid, createdAt: NOW }],
+    ['update', 'works', vId, { likes: inc(1) }]
+  ]));
+});
+$('#viewer').addEventListener('input', e => { if (e.target.id === 'cText') $('#cLen').textContent = e.target.value.length + ' / 100'; });
+$('#viewer').addEventListener('submit', e => {
+  e.preventDefault();
+  const alias = $('#cAlias').value.trim(), text = $('#cText').value.trim();
+  if (!alias) return invalid('#cAlias', '별칭을 적어 주세요.');
+  if (text.length < 2) return invalid('#cText', '감상평을 두 글자 이상 적어 주세요.');
+  busy($('#cmtBtn'), '보내는 중…', async () => {
+    await store.add('comments', { workId: vId, uid: ME.uid, alias, text, status: 'wait', createdAt: NOW });
+    $('#cText').value = ''; $('#cLen').textContent = '0 / 100';
+    toast('감상평을 보냈어요. 선생님이 확인하면 보여요.');
+  });
+});
+
+/* 슬라이드쇼(TV) — 자동 넘김은 기본 꺼짐, 켜도 버튼으로 멈춤 */
+let sIdx = 0, sList = [], sTimer = null;
+function paintSlide() {
+  const w = sList[sIdx]; if (!w) return;
+  $('#showStage').innerHTML = `<img src="${w.photos[0]}" alt="${esc(w.title)} — 작품 사진">`;
+  $('#showTitle').textContent = w.title;
+  $('#showLine').textContent = [w.cls, w.unit, firstLine(w.desc)].filter(Boolean).join(' · ');
+  $('#showCount').textContent = (sIdx + 1) + ' / ' + sList.length;
+}
+const step = d => { sIdx = (sIdx + d + sList.length) % sList.length; paintSlide(); };
+function setAuto(on) {
+  clearInterval(sTimer); sTimer = on ? setInterval(() => step(1), SETTINGS.slideSeconds * 1000) : null;
+  $('#showAuto').setAttribute('aria-pressed', on);
+}
+$('#showBtn').addEventListener('click', () => {
+  sList = shown(); if (!sList.length) return; sIdx = 0; paintSlide(); $('#show').showModal();
+  if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {});
+});
+$('#showPrev').addEventListener('click', () => step(-1));
+$('#showNext').addEventListener('click', () => step(1));
+$('#showAuto').addEventListener('click', () => setAuto(!sTimer));
+$('#showClose').addEventListener('click', () => $('#show').close());
+$('#show').addEventListener('close', () => { setAuto(false); if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); });
+$('#show').addEventListener('keydown', e => { if (e.key === 'ArrowRight') step(1); if (e.key === 'ArrowLeft') step(-1); });
+
+/* ======================= 7. 자료실(교사) ======================= */
+const aview = { cls: CLASSES[0], unit: '', state: 'all' };
+$('#loginBtn').addEventListener('click', e => busy(e.currentTarget, '로그인 중…', async () => { await store.teacherIn(); if (DEMO) onUser(); }));
+$('#logoutBtn').addEventListener('click', e => busy(e.currentTarget, '나가는 중…', async () => { await store.teacherOut(); if (DEMO) onUser(); }));
+function renderArchive() {
+  const C = aview.cls;
+  $('#aCls').innerHTML = ['전체', ...CLASSES].map(c => `<button aria-pressed="${C === c}" data-c="${esc(c)}">${esc(c)}</button>`).join('');
+  $('#aState').innerHTML = [['all', '전체'], ['wait', '검토 대기'], ['ok', '전시 중'], ['hidden', '숨김']].map(([v, t]) => `<button aria-pressed="${aview.state === v}" data-s="${v}">${t}</button>`).join('');
+  const inScope = w => (C === '전체' || w.cls === C) && (!aview.unit || w.unit === aview.unit);
+  const scoped = S.all.filter(inScope);
+  const n = s => scoped.filter(w => w.status === s).length;
+  $('#counts').innerHTML = `${C}${aview.unit ? ' · ' + esc(aview.unit) : ' · 모든 단원'} — 작품 <b>${scoped.length}</b>점 · 검토 대기 <b>${n('wait')}</b> · 전시 중 <b>${n('ok')}</b> · 숨김 <b>${n('hidden')}</b>`;
+
+  // 제출 현황: 반별 번호 칸(출석부처럼). 단원을 고르면 그 단원 기준
+  $('#roll').innerHTML = (C === '전체' ? CLASSES : [C]).map(c => {
+    const done = new Set(scoped.filter(w => w.cls === c).map(w => w.num));
+    const nums = Array.from({ length: SETTINGS.classes[c] }, (_, i) => i + 1), miss = nums.filter(x => !done.has(x));
+    return `<div class="roll__row"><b>${esc(c)}</b>
+      <div class="nums" aria-label="${esc(c)} 번호별 제출">${nums.map(x => `<span class="${done.has(x) ? 'done' : 'miss'}" title="${x}번 ${done.has(x) ? '제출' : '미제출'}">${x}</span>`).join('')}</div>
+      <p class="roll__miss">${miss.length ? `미제출 ${miss.length}명: ${miss.join(', ')}번` : '모두 냈어요.'}</p></div>`;
+  }).join('') + `<p class="hint">${aview.unit ? '‘' + esc(aview.unit) + '’ 단원' : '단원 상관없이 한 점이라도 낸 번호'}를 채워서 보여 줘요.</p>`;
+
+  // 감상평 확인
+  const titleOf = id => (S.all.find(w => w.id === id) || {}).title || '(지워진 작품)';
+  const pend = S.allCmts.filter(c => c.status === 'wait').sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+  $('#pendN').textContent = pend.length ? pend.length + '개 기다리는 중' : '';
+  $('#pend').innerHTML = pend.length ? pend.map(c => `<li><small>${esc(titleOf(c.workId))} · ${esc(c.alias)}</small><q>${esc(c.text)}</q>
+      <button class="btn btn--sm" data-cok="${c.id}">공개</button><button class="btn btn--ghost btn--sm btn--warn" data-cdel="${c.id}">지우기</button></li>`).join('')
+    : '<li class="hint">확인할 감상평이 없어요.</li>';
+
+  // 작품 목록
+  const list = scoped.filter(w => aview.state === 'all' || w.status === aview.state).sort(byOrder);
+  $('#cat').innerHTML = list.length ? list.map(w => {
+    const fb = S.allFb[w.id], cN = S.allCmts.filter(c => c.workId === w.id && c.status === 'ok').length;
+    return `<li class="item">
+      <button class="item__thumb" data-open="${w.id}" aria-label="${esc(w.title)} 크게 보기"><img src="${w.photos[0]}" alt=""></button>
+      <div>
+        <p class="item__meta">${esc(w.cls)} ${pad2(w.num)}번 · ${esc(w.unit)} · ${when(w.updatedAt)} · <span class="state state--${w.status}">${STATE[w.status]}</span></p>
+        <h3>${esc(w.title)}</h3>
+        ${w.desc ? `<p class="item__desc">${esc(w.desc)}</p>` : ''}
+        <p class="item__meta">마음에 들어요 ${w.likes || 0} · 공개 감상평 ${cN}</p>
+      </div>
+      <div class="item__acts">
+        ${w.status !== 'ok' ? `<button class="btn btn--sm" data-st="ok" data-id="${w.id}">전시</button>` : ''}
+        ${w.status !== 'hidden' ? `<button class="btn btn--ghost btn--sm" data-st="hidden" data-id="${w.id}">숨김</button>` : ''}
+        ${w.photos.map((p, i) => `<a class="btn btn--ghost btn--sm" href="${p}" download="${safeName(w.cls + '_' + pad2(w.num) + '번_' + w.title)}_${i + 1}.jpg">사진 ${i + 1}</a>`).join('')}
+        <button class="btn btn--ghost btn--sm btn--warn" data-del="${w.id}">삭제</button>
+      </div>
+      <form class="item__tc" data-tc="${w.id}">
+        <label class="sr" for="tc-${w.id}">선생님 코멘트</label>
+        <input class="input" id="tc-${w.id}" maxlength="200" placeholder="학생에게만 보이는 코멘트" value="${esc(fb ? fb.text : '')}">
+        <button class="btn btn--ghost btn--sm">코멘트 저장</button>
+      </form>
+    </li>`;
+  }).join('') : '<li class="empty">이 조건에 맞는 작품이 없어요.</li>';
+}
+$('#aCls').addEventListener('click', e => { const b = e.target.closest('[data-c]'); if (b) { aview.cls = b.dataset.c; renderArchive(); } });
+$('#aState').addEventListener('click', e => { const b = e.target.closest('[data-s]'); if (b) { aview.state = b.dataset.s; renderArchive(); } });
+$('#aUnit').addEventListener('change', e => { aview.unit = e.target.value; renderArchive(); });
+$('#v-archive').addEventListener('click', e => {
+  const t = e.target.closest('button'); if (!t) return;
+  const d = t.dataset;
+  if (d.open) return openViewer(d.open);
+  if (d.st) return busy(t, '…', () => store.update('works', d.id, { status: d.st }));
+  if (d.cok) return busy(t, '…', () => store.update('comments', d.cok, { status: 'ok' }));
+  if (d.cdel) return busy(t, '…', () => store.del('comments', d.cdel));
+  if (d.del) {
+    const w = S.all.find(x => x.id === d.del);
+    if (!w || !confirm(`‘${w.title}’(${w.cls} ${w.num}번)을 지울까요? 사진·감상평·코멘트도 함께 지워지고 되돌릴 수 없어요.`)) return;
+    busy(t, '지우는 중…', async () => {
+      for (const c of S.allCmts.filter(c => c.workId === w.id)) await store.del('comments', c.id);
+      if (S.allFb[w.id]) await store.del('feedback', w.id);
+      await store.del('works', w.id);
+    });
+  }
+});
+$('#v-archive').addEventListener('submit', e => {
+  const f = e.target.closest('[data-tc]'); if (!f) return; e.preventDefault();
+  const w = S.all.find(x => x.id === f.dataset.tc), text = f.querySelector('input').value.trim();
+  busy(f.querySelector('button'), '저장 중…', async () => {
+    await store.set('feedback', w.id, { uid: w.uid, text, at: NOW });
+    toast(`${w.cls} ${w.num}번에게 코멘트를 저장했어요.`);
+  });
+});
+$('#csvBtn').addEventListener('click', () => {
+  const C = aview.cls, cls = C === '전체' ? CLASSES : [C];
+  const rows = [['반', '번호', '단원', '작품 제목', '설명', '상태', '사진 수', '마음에 들어요', '공개 감상평', '선생님 코멘트', '마지막 제출']];
+  cls.forEach(c => {
+    for (let n = 1; n <= SETTINGS.classes[c]; n++) {
+      const ws = S.all.filter(w => w.cls === c && w.num === n && (!aview.unit || w.unit === aview.unit)).sort(byOrder);
+      if (!ws.length) rows.push([c, n, aview.unit, '(미제출)', '', '', 0, '', '', '', '']);
+      ws.forEach(w => rows.push([c, n, w.unit, w.title, w.desc, STATE[w.status], w.photos.length, w.likes || 0,
+        S.allCmts.filter(x => x.workId === w.id && x.status === 'ok').map(x => x.alias + ': ' + x.text).join(' / '),
+        (S.allFb[w.id] || {}).text || '', when(w.updatedAt)]));
+    }
+  });
+  downloadCsv(`작품목록_${C}${aview.unit ? '_' + aview.unit : ''}_${new Date().toISOString().slice(0, 10)}.csv`, rows);
+});
+
+/* ======================= 8. 체험 모드: 샘플 ======================= */
+function sampleImage(seed, label) {   // 체험용 그림: 실제 사진 대신 캔버스로 그린 작은 이미지
+  const c = document.createElement('canvas'); c.width = 480; c.height = seed % 3 === 0 ? 600 : seed % 3 === 1 ? 360 : 480;
+  const x = c.getContext('2d'), hues = ['#c96f4a', '#5f7f5b', '#4d6b8a', '#b9974a', '#8a5a7a', '#6b7b4a'];
+  x.fillStyle = '#efe9df'; x.fillRect(0, 0, c.width, c.height);
+  for (let i = 0; i < 7; i++) {
+    x.fillStyle = hues[(seed + i) % hues.length]; x.globalAlpha = 0.85;
+    const s = 60 + ((seed * 37 + i * 53) % 140);
+    if ((seed + i) % 2) x.fillRect((seed * 71 + i * 97) % (c.width - s), (seed * 43 + i * 61) % (c.height - s), s, s * 0.7);
+    else { x.beginPath(); x.arc((seed * 59 + i * 83) % c.width, (seed * 31 + i * 77) % c.height, s / 2, 0, 7); x.fill(); }
+  }
+  x.globalAlpha = 1; x.fillStyle = '#2b2622'; x.font = 'bold 28px sans-serif'; x.fillText(label, 24, c.height - 28);
+  return c.toDataURL('image/jpeg', 0.75);
+}
+async function demoFill() {
+  const works = [
+    ['1반', 3, '업사이클링', '청바지 화분 덮개', '안 입는 청바지 밑단으로 화분을 감쌌어요.\n주머니는 그대로 살려 이름표를 꽂을 수 있게 했어요.', 'ok', 7],
+    ['1반', 8, '업사이클링', '우유갑 연필꽂이', '우유갑 네 개를 이어 칸을 나눈 연필꽂이예요.', 'ok', 4],
+    ['1반', 12, '식단 포스터', '아침 거르지 않기', '5분 만에 차리는 균형 아침상 세 가지를 그렸어요.', 'ok', 11],
+    ['1반', 15, '공간 배치', '좁은 방 넓게 쓰기', '침대를 창가로 옮기고 책상 옆에 수납장을 붙였어요.', 'wait', 0],
+    ['2반', 1, '식단 포스터', '나트륨 줄이기 한 주', '국물 대신 나물 반찬을 늘린 일주일 식단표예요.', 'ok', 5],
+    ['2반', 6, '바느질 소품', '홈질 동전 지갑', '홈질과 박음질을 섞어 만든 작은 지갑이에요.', 'ok', 9],
+    ['2반', 9, '공간 배치', '동생과 함께 쓰는 방', '가운데 책장을 세워 두 공간으로 나눴어요.', 'hidden', 0],
+    ['2반', 14, '업사이클링', '페트병 물뿌리개', '뚜껑에 구멍을 뚫어 화분용 물뿌리개로 바꿨어요.', 'wait', 0]
+  ];
+  for (let i = 0; i < works.length; i++) {
+    const [cls, num, unit, title, desc, status, likes] = works[i];
+    const photos = [sampleImage(i + 1, title)].concat(i % 3 === 0 ? [sampleImage(i + 11, '뒷면')] : []);
+    await store.add('works', { uid: 'demo-sample-' + i, cls, num, unit, title, desc, photos, status, likes, createdAt: Date.now() - (works.length - i) * 600000, updatedAt: Date.now() - (works.length - i) * 600000 });
+  }
+  const all = await new Promise(r => { const u = store.watch('works', ['status', 'ok'], rows => { setTimeout(() => u()); r(rows); }); });
+  const id = t => (all.find(w => w.title === t) || {}).id;
+  const cm = [['청바지 화분 덮개', '푸른하늘', '주머니를 살린 게 진짜 아이디어 같아요', 'ok'], ['청바지 화분 덮개', '잎새', '바느질 땀이 고르게 보여요', 'wait'],
+    ['아침 거르지 않기', '토마토', '우리 집에서도 따라 해 볼게요', 'ok'], ['홈질 동전 지갑', '실과바늘', '색 조합이 예뻐요', 'wait']];
+  for (const [t, alias, text, status] of cm) if (id(t)) await store.add('comments', { workId: id(t), uid: 'demo-sample-c', alias, text, status, createdAt: Date.now() });
+}
+$('#demoFill').addEventListener('click', e => busy(e.currentTarget, '넣는 중…', async () => { await demoFill(); toast('1반·2반 샘플 작품 8점을 넣었어요. 자료실은 ‘체험 교사로 보기’로 열어요.'); }));
+$('#demoClear').addEventListener('click', () => {
+  if (!confirm('체험 데이터를 모두 지울까요?')) return;
+  localStorage.removeItem(APP_KEY + '-demo'); location.reload();
+});
+
+/* ======================= 9. 시작 ======================= */
+(async function init() {
+  $('#appTitle').textContent = SETTINGS.title; document.title = SETTINGS.title + ' — ' + SETTINGS.subtitle;
+  $('#appSub').textContent = SETTINGS.subtitle;
+  $('#fCls').innerHTML = opt('', '반') + CLASSES.map(c => opt(c)).join(''); fillNums();
+  $('#fUnit').innerHTML = opt('', '단원 고르기') + SETTINGS.units.map(u => opt(u)).join('');
+  $('#gCls').innerHTML = opt('', '모든 반') + CLASSES.map(c => opt(c)).join('');
+  $('#aUnit').innerHTML = opt('', '모든 단원') + SETTINGS.units.map(u => opt(u)).join('');
+  renderPicked();
+  if (DEMO) {
+    $('#demoBar').hidden = false; $('#loginBtn').textContent = '체험 교사로 보기';
+    $('#gateHint').textContent = '체험 모드라 로그인 없이 볼 수 있어요. 실제 모드에선 선생님 Google 계정만 들어가요.';
+    $('#photoHint').textContent = '보낼 때 긴 변 1280px 이하로 줄여요. 체험 모드는 브라우저 저장 공간이 작아서 더 많이 줄여요.';
+  }
+  try { await store.start(onUser); }
+  catch (e) { $('#whoAmI').textContent = 'Firebase에 연결하지 못했어요'; toast('Firebase 연결 실패: ' + errMsg(e), true); }
+})();
+</script>
+</body>
+</html>
