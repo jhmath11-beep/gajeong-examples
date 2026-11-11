@@ -1,0 +1,1166 @@
+<!--
+  무엇을 하는 앱: 집을 공간별(현관·거실·주방·욕실·내 방·베란다/다용도실)로 돌며 화재·전기·가스·넘어짐·환기/습기·에너지 항목을 점검하고, 취약 분야를 찾아 위험도×고치기 쉬움으로 고칠 일 순서를 정한 뒤 가족 약속서를 만들고 1~2주 뒤 재점검해 비교하는 점검표
+  수업 장면: 주생활(안전하고 쾌적한 주거) — 과제로 1차 점검 → 수업에서 결과 요약·취약 분야 발표 → 고칠 일 우선순위·담당·기한 정해 가족 약속서 인쇄 → 1~2주 뒤 2차 점검 → 개선된 항목 비교. 휴대폰 없는 학생은 빈 점검표 인쇄본으로
+  설정 바꾸는 곳: 아래 <script> 맨 위 CONFIG (공간·분야·점검 항목 문장·근거·기본 위험도/고치기 쉬움·고치는 방법). 화면 안 [항목 설정]에서도 고칠 수 있고, [파일로 저장]으로 학생에게 나눠 줄 수 있음
+-->
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>우리 집 안전·에너지 점검표</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Do+Hyeon&family=IBM+Plex+Sans+KR:wght@400;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Hallmark · pre-emit critique: P4 H4 E4 S5 R4 V5
+ * Hallmark · genre: editorial(utilitarian) · theme: custom (inspection checklist on a clipboard — 소방·관리사무소 점검 체크시트, 검정 인쇄 + 파란 볼펜 기입 + 빨간 확인 도장) · macrostructure: workbench / ruled form with title block
+ * contrast: ink on sheet ≈ 15:1, muted ≈ 7:1, red ≈ 5.6:1, pen ≈ 8:1, on-board text ≈ 8:1 (AA)
+ */
+:root {
+  --color-board:       oklch(40% 0.045 62);    /* 클립보드 판 */
+  --color-board-2:     oklch(34% 0.040 62);
+  --color-on-board:    oklch(96% 0.010 80);
+  --color-clip:        oklch(70% 0.010 250);
+  --color-clip-edge:   oklch(48% 0.012 250);
+  --color-sheet:       oklch(98.3% 0.004 230);  /* 점검표 용지 */
+  --color-sheet-2:     oklch(94.8% 0.006 230);
+  --color-rule:        oklch(80% 0.010 240);
+  --color-rule-strong: oklch(28% 0.015 250);
+  --color-ink:         oklch(21% 0.015 250);
+  --color-muted:       oklch(45% 0.015 250);
+  --color-on-ink:      oklch(97.5% 0.005 230);
+  --color-red:         oklch(50% 0.190 27);     /* 소방 적색 · 부적합 · 확인 도장 */
+  --color-red-soft:    oklch(95% 0.025 27);
+  --color-pen:         oklch(43% 0.160 262);    /* 파란 볼펜 기입 */
+  --color-pen-soft:    oklch(94% 0.030 262);
+  --color-na:          oklch(62% 0.010 250);
+  --color-focus:       oklch(50% 0.170 262);
+  --color-shadow:      oklch(18% 0.030 60 / 0.45);
+  --color-scrim:       oklch(18% 0.020 250 / 0.55);
+
+  --font-display: "Do Hyeon", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+  --font-body:    "IBM Plex Sans KR", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+  --font-mono:    "IBM Plex Mono", "Consolas", monospace;
+
+  --fs-xs: 0.8125rem; --fs-sm: 0.9375rem; --fs-base: 1.0625rem; --fs-lg: 1.3rem; --fs-xl: 1.75rem;
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-6: 24px; --sp-8: 32px; --sp-12: 48px;
+  --sheet-max: 72rem;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur: 140ms;
+}
+* { box-sizing: border-box; }
+html, body { overflow-x: clip; }
+body { margin: 0; font-family: var(--font-body); font-size: var(--fs-base); line-height: 1.6; color: var(--color-ink); background: var(--color-board); -webkit-font-smoothing: antialiased; word-break: keep-all; overflow-wrap: anywhere; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 400; font-style: normal; line-height: 1.2; margin: 0; overflow-wrap: anywhere; min-width: 0; }
+p { margin: 0; }
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 2px; }
+.hidden { display: none !important; }
+.code { white-space: nowrap; }
+.num, .code { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.muted { color: var(--color-muted); }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* 판 위 도구줄 */
+.bar { max-width: var(--sheet-max); margin: 0 auto; padding: var(--sp-4) clamp(0.5rem, 2vw, 1rem) 0; display: flex; flex-wrap: wrap; gap: var(--sp-2); justify-content: flex-end; }
+.btn { min-height: 44px; padding: 0 var(--sp-4); border: 1.5px solid var(--color-rule-strong); border-radius: 2px; background: var(--color-sheet); color: var(--color-ink); cursor: pointer; white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-2); font-weight: 600; font-size: var(--fs-sm);
+  transition: background-color var(--dur) var(--ease-out), color var(--dur) var(--ease-out); }
+.btn:hover { background: var(--color-sheet-2); }
+.btn:active { transform: translateY(1px); }
+.btn.primary { background: var(--color-ink); border-color: var(--color-ink); color: var(--color-on-ink); }
+.btn.primary:hover { background: var(--color-rule-strong); }
+.btn.danger { color: var(--color-red); border-color: var(--color-red); }
+.btn.small { min-height: 44px; padding: 0 var(--sp-3); font-size: var(--fs-xs); }
+.btn[disabled] { opacity: .5; cursor: not-allowed; }
+.bar .btn { border-color: var(--color-board-2); }
+.linkbtn { min-height: 44px; border: 0; background: none; color: var(--color-pen); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; padding: 0 var(--sp-1); font-weight: 600; }
+
+/* 점검표 용지 */
+.sheet { position: relative; max-width: var(--sheet-max); margin: var(--sp-6) auto var(--sp-12); background: var(--color-sheet); box-shadow: 0 2px 0 var(--color-board-2), 0 18px 40px -18px var(--color-shadow); padding: clamp(1rem, 3vw, 2.25rem); padding-top: clamp(1.75rem, 4vw, 3rem); }
+.clip { position: absolute; top: -22px; left: 50%; transform: translateX(-50%); width: 168px; height: 40px; background: var(--color-clip); border: 2px solid var(--color-clip-edge); border-radius: 6px 6px 3px 3px; }
+.clip::after { content: ""; position: absolute; left: 50%; top: 9px; transform: translateX(-50%); width: 46px; height: 9px; border-radius: 6px; background: var(--color-board); border: 1.5px solid var(--color-clip-edge); }
+@media (max-width: 640px) { .sheet { margin-inline: 6px; } .clip { width: 120px; } }
+
+/* 머리: 서식 제목 + 확인란 */
+.head { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--sp-4) var(--sp-6); align-items: end; border-bottom: 3px double var(--color-rule-strong); padding-bottom: var(--sp-4); }
+.form-no { font-size: var(--fs-xs); color: var(--color-muted); letter-spacing: 0.02em; }
+.head h1 { font-size: clamp(1.75rem, 2.6vw + 1rem, 2.75rem); letter-spacing: -0.01em; margin-top: 2px; }
+.head h1 .red { color: var(--color-red); }
+.head .lede { margin-top: var(--sp-2); color: var(--color-muted); font-size: var(--fs-sm); max-width: 46em; }
+.approve { border-collapse: collapse; font-size: var(--fs-xs); text-align: center; }
+.approve th { background: var(--color-sheet-2); font-weight: 600; padding: 2px var(--sp-2); border: 1px solid var(--color-rule-strong); white-space: nowrap; }
+.approve td { border: 1px solid var(--color-rule-strong); height: 3.6rem; min-width: 5.4rem; padding: 2px var(--sp-1); vertical-align: middle; font-family: var(--font-body); }
+.approve td.pen { color: var(--color-pen); font-weight: 600; }
+.stamp { display: inline-grid; place-items: center; width: 3rem; height: 3rem; border: 2.5px solid var(--color-red); border-radius: 50%; color: var(--color-red); font-family: var(--font-display); font-size: 1rem; line-height: 1; rotate: -10deg; }
+@media (max-width: 760px) { .head { grid-template-columns: minmax(0, 1fr); } .approve { width: 100%; } .approve td { min-width: 0; } }
+
+/* 회차 + 탭 */
+.round { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2) var(--sp-4); padding: var(--sp-3) 0; border-bottom: 1px solid var(--color-rule); }
+.round b { font-weight: 600; font-size: var(--fs-sm); }
+.seg { display: inline-flex; border: 1.5px solid var(--color-rule-strong); border-radius: 2px; }
+.seg button { min-height: 44px; min-width: 4.5rem; padding: 0 var(--sp-3); border: 0; background: var(--color-sheet); cursor: pointer; white-space: nowrap; font-weight: 600; font-size: var(--fs-sm); }
+.seg button + button { border-left: 1.5px solid var(--color-rule-strong); }
+.seg button[aria-pressed="true"] { background: var(--color-ink); color: var(--color-on-ink); }
+.round .muted { font-size: var(--fs-xs); }
+
+.tabs { display: flex; overflow-x: auto; border-bottom: 1.5px solid var(--color-rule-strong); margin-top: var(--sp-4); scrollbar-width: thin; }
+.tab { flex: 1 0 auto; min-height: 48px; padding: 0 var(--sp-4); border: 1.5px solid transparent; border-bottom: 0; margin-bottom: -1.5px; background: transparent; cursor: pointer; white-space: nowrap; font-family: var(--font-display); font-size: 1.1rem; color: var(--color-muted); display: inline-flex; align-items: center; gap: var(--sp-2); }
+.tab .n { font-family: var(--font-mono); font-size: var(--fs-xs); border: 1px solid currentColor; width: 1.5rem; height: 1.5rem; display: inline-grid; place-items: center; border-radius: 50%; }
+.tab[aria-selected="true"] { color: var(--color-ink); background: var(--color-sheet); border-color: var(--color-rule-strong); border-bottom: 1.5px solid var(--color-sheet); }
+.pane { padding-top: var(--sp-6); }
+.pane h2 { font-size: var(--fs-xl); }
+.pane h2 + p, .sub { color: var(--color-muted); font-size: var(--fs-sm); margin-top: var(--sp-1); }
+
+/* 1. 점검 정보 */
+.info-grid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: var(--sp-8); margin-top: var(--sp-6); }
+@media (max-width: 860px) { .info-grid { grid-template-columns: minmax(0, 1fr); gap: var(--sp-6); } }
+.field { display: grid; gap: var(--sp-1); margin-bottom: var(--sp-4); }
+.field label, .field .lab { font-weight: 600; font-size: var(--fs-sm); }
+.field small { color: var(--color-muted); font-size: var(--fs-xs); }
+.input { min-height: 44px; padding: var(--sp-2) var(--sp-3); border: 1.5px solid var(--color-rule-strong); border-radius: 2px; background: var(--color-sheet); width: 100%; min-width: 0; }
+.input:focus-visible { outline-offset: 0; }
+select.input { padding-right: var(--sp-2); }
+.row { display: flex; gap: var(--sp-2); flex-wrap: wrap; align-items: center; }
+.row .input { flex: 1 1 10rem; width: auto; }
+.chips { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-top: var(--sp-2); padding: 0; list-style: none; }
+.chips li { display: inline-flex; align-items: center; border: 1.5px solid var(--color-pen); color: var(--color-pen); border-radius: 2px; padding-left: var(--sp-3); font-weight: 600; }
+.chips li button { min-width: 44px; min-height: 40px; border: 0; background: none; cursor: pointer; color: var(--color-pen); font-size: 1.1rem; }
+.note { border: 1px dashed var(--color-rule-strong); padding: var(--sp-3) var(--sp-4); font-size: var(--fs-sm); background: var(--color-sheet-2); }
+.howto { counter-reset: s; padding: 0; margin: var(--sp-3) 0 0; list-style: none; border-top: 1px solid var(--color-rule-strong); }
+.howto li { counter-increment: s; display: grid; grid-template-columns: 2.25rem minmax(0, 1fr); gap: var(--sp-2); padding: var(--sp-3) 0; border-bottom: 1px solid var(--color-rule); font-size: var(--fs-sm); }
+.howto li::before { content: counter(s); font-family: var(--font-display); font-size: 1.6rem; line-height: 1; color: var(--color-red); }
+.howto b { display: block; font-size: var(--fs-base); }
+.legend-marks { display: flex; flex-wrap: wrap; gap: var(--sp-2) var(--sp-4); margin-top: var(--sp-3); font-size: var(--fs-sm); }
+.legend-marks span { display: inline-flex; align-items: center; gap: var(--sp-1); }
+
+/* 표시 기호: ○ × ／ */
+.mk { display: inline-block; width: 1.15em; height: 1.15em; vertical-align: -0.2em; flex: none; }
+.mk svg { width: 100%; height: 100%; display: block; }
+
+/* 2. 공간별 점검 */
+.spacenav { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-top: var(--sp-4); }
+.spacenav a { min-height: 44px; display: inline-flex; align-items: center; gap: var(--sp-2); padding: 0 var(--sp-3); border: 1px solid var(--color-rule-strong); border-radius: 2px; text-decoration: none; color: var(--color-ink); font-weight: 600; font-size: var(--fs-sm); white-space: nowrap; background: var(--color-sheet); }
+.spacenav a .num { color: var(--color-muted); font-weight: 500; }
+.spacenav a.done .num { color: var(--color-pen); }
+.space { margin-top: var(--sp-8); scroll-margin-top: var(--sp-4); }
+.space-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: var(--sp-2); border-bottom: 2px solid var(--color-rule-strong); padding-bottom: var(--sp-2); }
+.space-head h3 { font-size: 1.5rem; }
+.space-head h3 .code { font-size: var(--fs-sm); color: var(--color-muted); margin-right: var(--sp-2); }
+.space-head .prog { font-size: var(--fs-sm); color: var(--color-muted); }
+.item { display: grid; grid-template-columns: 3rem minmax(0, 1fr) auto; gap: var(--sp-2) var(--sp-4); padding: var(--sp-3) 0; border-bottom: 1px solid var(--color-rule); align-items: start; }
+.item .code { font-size: var(--fs-sm); padding-top: 3px; color: var(--color-muted); }
+.item .q { font-weight: 600; }
+.item .why { font-size: var(--fs-sm); color: var(--color-muted); margin-top: 2px; }
+.item .why b { font-weight: 600; color: var(--color-ink); margin-right: var(--sp-1); }
+.ftag { display: inline-block; font-size: var(--fs-xs); font-weight: 600; border: 1px solid var(--color-rule-strong); padding: 0 6px; margin-left: var(--sp-1); white-space: nowrap; vertical-align: 1px; }
+.ans { display: flex; flex-wrap: nowrap; }
+.ans button { min-height: 44px; min-width: 4.4rem; padding: 0 var(--sp-2); border: 1.5px solid var(--color-rule-strong); background: var(--color-sheet); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: var(--fs-sm); white-space: nowrap; color: var(--color-muted); }
+.ans button + button { margin-left: -1.5px; }
+.ans button .mk { opacity: .35; }
+.ans button[aria-pressed="true"] { position: relative; z-index: 1; font-weight: 600; }
+.ans button[aria-pressed="true"] .mk { opacity: 1; }
+.ans button[data-v="y"][aria-pressed="true"] { color: var(--color-pen); background: var(--color-pen-soft); border-color: var(--color-pen); }
+.ans button[data-v="n"][aria-pressed="true"] { color: var(--color-red); background: var(--color-red-soft); border-color: var(--color-red); }
+.ans button[data-v="na"][aria-pressed="true"] { color: var(--color-ink); background: var(--color-sheet-2); border-color: var(--color-ink); }
+.memo { grid-column: 2 / -1; }
+.memo .input { min-height: 44px; font-size: var(--fs-sm); border-width: 0 0 1px 0; border-style: dashed; border-color: var(--color-rule-strong); background: transparent; padding-left: 0; color: var(--color-pen); }
+@media (max-width: 760px) {
+  .item { grid-template-columns: 2.4rem minmax(0, 1fr); }
+  .ans { grid-column: 1 / -1; }
+  .ans button { flex: 1 1 0; min-width: 0; }
+  .memo { grid-column: 1 / -1; }
+}
+.foot-nav { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--sp-3); margin-top: var(--sp-8); padding-top: var(--sp-4); border-top: 1.5px solid var(--color-rule-strong); align-items: center; }
+
+/* 3. 결과 요약 */
+.tally { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: 1.5px solid var(--color-rule-strong); margin-top: var(--sp-6); }
+.tally div { padding: var(--sp-3) var(--sp-4); border-left: 1px solid var(--color-rule); }
+.tally div:first-child { border-left: 0; }
+.tally .lab { font-size: var(--fs-xs); color: var(--color-muted); font-weight: 600; display: flex; align-items: center; gap: var(--sp-1); }
+.tally .v { font-family: var(--font-display); font-size: 2rem; line-height: 1.1; }
+.tally .v small { font-family: var(--font-body); font-size: var(--fs-sm); color: var(--color-muted); margin-left: 2px; }
+@media (max-width: 560px) { .tally { grid-template-columns: repeat(2, minmax(0, 1fr)); } .tally div:nth-child(3) { border-left: 0; } .tally div:nth-child(n+3) { border-top: 1px solid var(--color-rule); } }
+.sum-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--sp-8); margin-top: var(--sp-8); }
+@media (max-width: 960px) { .sum-grid { grid-template-columns: minmax(0, 1fr); } }
+.sum-grid h3 { font-size: var(--fs-lg); border-bottom: 2px solid var(--color-rule-strong); padding-bottom: var(--sp-1); }
+.bars { list-style: none; margin: 0; padding: 0; }
+.bars li { display: grid; grid-template-columns: 7.5rem minmax(0, 1fr); gap: var(--sp-1) var(--sp-3); padding: var(--sp-3) 0; border-bottom: 1px solid var(--color-rule); align-items: center; }
+.bars .name { font-weight: 600; font-size: var(--fs-sm); }
+.bars .cnt { grid-column: 2; font-size: var(--fs-xs); color: var(--color-muted); }
+.cells { display: flex; height: 26px; border: 1.5px solid var(--color-rule-strong); }
+.cells span { flex: 1 1 0; border-left: 1px solid var(--color-rule); background: var(--color-sheet); }
+.cells span:first-child { border-left: 0; }
+.cells .y { background: var(--color-pen); border-left-color: var(--color-sheet); }
+.cells .n { background: repeating-linear-gradient(-45deg, var(--color-red) 0 3px, var(--color-red-soft) 3px 7px); }
+.cells .na { background: repeating-linear-gradient(90deg, var(--color-sheet-2) 0 4px, var(--color-sheet) 4px 8px); }
+.bar-key { display: flex; flex-wrap: wrap; gap: var(--sp-1) var(--sp-4); font-size: var(--fs-xs); color: var(--color-muted); margin-top: var(--sp-2); }
+.bar-key i { display: inline-block; width: 14px; height: 14px; border: 1px solid var(--color-rule-strong); vertical-align: -2px; margin-right: 4px; }
+.bar-key i.y { background: var(--color-pen); } .bar-key i.n { background: repeating-linear-gradient(-45deg, var(--color-red) 0 3px, var(--color-red-soft) 3px 7px); } .bar-key i.na { background: repeating-linear-gradient(90deg, var(--color-sheet-2) 0 4px, var(--color-sheet) 4px 8px); } .bar-key i.e { background: var(--color-sheet); }
+.weak { margin-top: var(--sp-8); border: 2px solid var(--color-red); padding: var(--sp-4) var(--sp-6); }
+.weak h3 { font-size: var(--fs-lg); color: var(--color-red); }
+.weak ol { margin: var(--sp-3) 0 0; padding: 0; list-style: none; counter-reset: w; }
+.weak > ol > li { counter-increment: w; display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: var(--sp-2); padding: var(--sp-3) 0; border-top: 1px solid var(--color-rule); }
+.weak > ol > li::before { content: counter(w); font-family: var(--font-display); font-size: 2rem; line-height: 1; color: var(--color-red); }
+.weak > ol > li b { font-size: var(--fs-lg); font-family: var(--font-display); font-weight: 400; }
+.weak > ol > li .muted { font-size: var(--fs-sm); }
+.weak li ul { margin: var(--sp-1) 0 0; padding-left: 1.1em; font-size: var(--fs-sm); }
+.weak li ul .code { color: var(--color-muted); margin-right: var(--sp-1); }
+.empty { border: 1.5px dashed var(--color-rule-strong); padding: var(--sp-6); margin-top: var(--sp-6); text-align: left; }
+.empty b { display: block; font-family: var(--font-display); font-weight: 400; font-size: var(--fs-lg); margin-bottom: var(--sp-1); }
+.empty .btn { margin-top: var(--sp-3); }
+
+/* 4. 고칠 일 */
+.matrix-wrap { margin-top: var(--sp-6); display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sp-2); }
+.matrix { display: grid; grid-template-columns: 4.2rem repeat(3, minmax(0, 1fr)); border: 1.5px solid var(--color-rule-strong); }
+.matrix > div { border-left: 1px solid var(--color-rule); border-top: 1px solid var(--color-rule); padding: var(--sp-2); min-height: 4.5rem; }
+.matrix .mh { background: var(--color-sheet-2); font-weight: 600; font-size: var(--fs-xs); min-height: 0; display: flex; align-items: center; justify-content: center; text-align: center; line-height: 1.3; }
+.matrix .mh.side { justify-content: flex-start; }
+.matrix .corner { font-size: var(--fs-xs); color: var(--color-muted); }
+.matrix .cell { display: flex; flex-wrap: wrap; align-content: flex-start; gap: 6px; position: relative; padding-top: 1.6rem; }
+.matrix .cell .q-lab { position: absolute; top: 4px; left: var(--sp-2); font-size: var(--fs-xs); color: var(--color-muted); font-weight: 600; }
+.matrix .cell.hot { background: var(--color-red-soft); }
+.matrix .cell.hot .q-lab { color: var(--color-red); }
+.chip { min-height: 32px; padding: 0 8px; border: 1.5px solid var(--color-ink); background: var(--color-sheet); font-family: var(--font-mono); font-size: var(--fs-xs); cursor: pointer; border-radius: 2px; white-space: nowrap; }
+.chip.r3 { border-color: var(--color-red); color: var(--color-red); }
+.chip.done { text-decoration: line-through; opacity: .6; }
+.matrix-axis { font-size: var(--fs-xs); color: var(--color-muted); }
+@media (max-width: 560px) { .matrix { grid-template-columns: 3rem repeat(3, minmax(0, 1fr)); } .matrix .cell .q-lab { display: none; } .matrix .cell { padding-top: var(--sp-2); } }
+
+.fixes { list-style: none; margin: var(--sp-8) 0 0; padding: 0; border-top: 2px solid var(--color-rule-strong); counter-reset: f; }
+.fix { counter-increment: f; display: grid; grid-template-columns: 2.75rem minmax(0, 1fr); gap: var(--sp-2) var(--sp-3); padding: var(--sp-4) 0; border-bottom: 1px solid var(--color-rule); scroll-margin-top: var(--sp-4); }
+.fix::before { content: counter(f); font-family: var(--font-display); font-size: 1.9rem; line-height: 1; color: var(--color-ink); }
+.fix.flash { background: var(--color-pen-soft); }
+.fix .t { font-weight: 600; }
+.fix .t .code { color: var(--color-muted); font-weight: 500; margin-right: var(--sp-2); font-size: var(--fs-sm); }
+.fix .memo-line { font-size: var(--fs-sm); color: var(--color-pen); }
+.fix-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--sp-2) var(--sp-3); margin-top: var(--sp-2); }
+.fix-grid .wide { grid-column: 1 / -1; }
+.fix-grid label { font-size: var(--fs-xs); font-weight: 600; color: var(--color-muted); display: grid; gap: 2px; }
+.donechk { display: inline-flex !important; grid-template-columns: none; align-items: center; gap: var(--sp-2) !important; min-height: 44px; font-size: var(--fs-sm) !important; color: var(--color-ink) !important; cursor: pointer; }
+.donechk input, .agree input { width: 22px; height: 22px; accent-color: var(--color-pen); }
+@media (max-width: 760px) { .fix-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.agree { display: flex; align-items: center; gap: var(--sp-3); margin-top: var(--sp-6); padding: var(--sp-4); border: 1.5px solid var(--color-rule-strong); flex-wrap: wrap; }
+.agree label { display: inline-flex; align-items: center; gap: var(--sp-2); min-height: 44px; font-weight: 600; cursor: pointer; }
+
+/* 5. 재점검 비교 */
+.cmp { width: 100%; border-collapse: collapse; margin-top: var(--sp-6); font-size: var(--fs-sm); }
+.cmp th, .cmp td { border-bottom: 1px solid var(--color-rule); padding: var(--sp-2) var(--sp-2); text-align: left; vertical-align: middle; }
+.cmp thead th { border-bottom: 2px solid var(--color-rule-strong); font-size: var(--fs-xs); color: var(--color-muted); white-space: nowrap; }
+.cmp td.c { text-align: center; white-space: nowrap; }
+.cmp .code { color: var(--color-muted); }
+.st { display: inline-block; padding: 1px 8px; border: 1.5px solid currentColor; font-weight: 600; font-size: var(--fs-xs); white-space: nowrap; }
+.st.up { color: var(--color-pen); }
+.st.still { color: var(--color-red); }
+.st.down { color: var(--color-red); background: var(--color-red-soft); }
+.st.same { color: var(--color-muted); border-color: transparent; }
+.cmp tr.grp th { background: var(--color-sheet-2); font-size: var(--fs-sm); color: var(--color-ink); border-bottom: 1px solid var(--color-rule-strong); }
+@media (max-width: 640px) { .cmp .hide-sm { display: none; } }
+
+/* 대화상자 */
+dialog { border: 2px solid var(--color-rule-strong); border-radius: 2px; padding: 0; background: var(--color-sheet); color: var(--color-ink); width: min(46rem, calc(100% - 16px)); max-height: calc(100dvh - 32px); }
+dialog::backdrop { background: var(--color-scrim); }
+.dlg-head { display: flex; justify-content: space-between; align-items: center; gap: var(--sp-3); padding: var(--sp-3) var(--sp-4); border-bottom: 2px solid var(--color-rule-strong); position: sticky; top: 0; background: var(--color-sheet); z-index: 2; }
+.dlg-head h2 { font-size: var(--fs-lg); }
+.dlg-body { padding: var(--sp-4); }
+.dlg-foot { display: flex; flex-wrap: wrap; gap: var(--sp-2); justify-content: flex-end; padding: var(--sp-3) var(--sp-4); border-top: 1px solid var(--color-rule); position: sticky; bottom: 0; background: var(--color-sheet); }
+.pchoice { display: grid; gap: var(--sp-2); }
+.pchoice button { text-align: left; min-height: 64px; padding: var(--sp-3) var(--sp-4); border: 1.5px solid var(--color-rule-strong); background: var(--color-sheet); cursor: pointer; border-radius: 2px; }
+.pchoice button:hover { background: var(--color-sheet-2); }
+.pchoice b { display: block; font-family: var(--font-display); font-weight: 400; font-size: var(--fs-lg); }
+.pchoice span { font-size: var(--fs-sm); color: var(--color-muted); }
+.ed-space { margin-bottom: var(--sp-6); }
+.ed-space h3 { font-size: var(--fs-lg); border-bottom: 2px solid var(--color-rule-strong); padding-bottom: var(--sp-1); }
+.ed-row { border-bottom: 1px solid var(--color-rule); padding: var(--sp-3) 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; gap: var(--sp-2); }
+.ed-row .wide { grid-column: 1 / -1; }
+.ed-row label { font-size: var(--fs-xs); color: var(--color-muted); font-weight: 600; display: grid; gap: 2px; }
+.ed-row .del { align-self: end; }
+@media (max-width: 560px) { .ed-row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); background: var(--color-ink); color: var(--color-on-ink); padding: var(--sp-3) var(--sp-4); border-radius: 2px; font-size: var(--fs-sm); z-index: 50; max-width: calc(100% - 24px); }
+
+/* ── 모션 (motion-effects kit에서 필요한 것만) ── */
+:root {
+  --mk-accent: var(--color-pen);
+  --mk-ease-out: cubic-bezier(.22,1,.36,1); --mk-ease-in-out: cubic-bezier(.65,0,.35,1);
+  --mk-fast: 160ms; --mk-base: 280ms; --mk-slow: 520ms; --mk-stagger: 45ms;
+}
+@keyframes mk-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes mk-fade-out { from { opacity: 1; } to { opacity: 0; } }
+@keyframes mk-slide-up { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes mk-scale-in { from { opacity: 0; transform: scale(.92); } to { opacity: 1; transform: none; } }
+@keyframes mk-wipe-in { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes mk-stamp { from { opacity: 0; transform: scale(1.7); } to { opacity: 1; transform: none; } }
+@keyframes mk-seal { 0% { opacity: 0; transform: scale(1.9); } 40% { opacity: 1; transform: scale(1.14, .84); } 65% { transform: scale(.95, 1.06); } 85% { transform: scale(1.02, .98); } 100% { transform: none; } }
+@keyframes mk-squash { 0% { transform: none; } 30% { transform: scale(1.12, .86); } 55% { transform: scale(.94, 1.08); } 75% { transform: scale(1.03, .98); } 100% { transform: none; } }
+@keyframes mk-wiggle { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-6px); } 40% { transform: translateX(5px); } 60% { transform: translateX(-3px); } 80% { transform: translateX(2px); } }
+@keyframes mk-glitch { 0%, 100% { transform: none; text-shadow: none; } 20% { transform: translate(-2px, 1px); text-shadow: 2px 0 rgba(255,0,60,.6), -2px 0 rgba(0,200,255,.6); } 40% { transform: translate(2px, -1px); } 60% { transform: translate(-1px, 0); text-shadow: -2px 0 rgba(255,0,60,.6), 2px 0 rgba(0,200,255,.6); } 80% { transform: translate(1px, 1px); } }
+@keyframes mk-particle { to { transform: translate(var(--dx), var(--dy)) rotate(var(--rot)); opacity: 0; } }
+@keyframes mk-ripple { to { transform: scale(1); opacity: 0; } }
+.mk-fade-in { animation: mk-fade-in var(--mk-slow) var(--mk-ease-in-out) both; }
+.mk-slide-up { animation: mk-slide-up var(--mk-base) var(--mk-ease-out) both; }
+.mk-scale-in { animation: mk-scale-in var(--mk-base) var(--mk-ease-out) both; }
+.mk-wipe-in { animation: mk-wipe-in var(--mk-slow) var(--mk-ease-in-out) both; }   /* 결과 막대가 자라남 */
+.mk-stagger > * { animation: mk-slide-up var(--mk-base) var(--mk-ease-out) both; animation-delay: calc(var(--i, 0) * var(--mk-stagger)); }
+.mk-stamp { animation: mk-stamp var(--mk-fast) var(--mk-ease-out); }   /* ○×／ 표시가 찍힘 */
+.mk-seal { animation: mk-seal 560ms var(--mk-ease-out); }               /* '약속' 도장 */
+.mk-squash { animation: mk-squash 520ms var(--mk-ease-out); transform-origin: 50% 100%; }
+.mk-wiggle { animation: mk-wiggle 380ms var(--mk-ease-out); }
+.mk-glitch { animation: mk-glitch 360ms steps(2, end) 1; }
+.mk-particle { position: fixed; width: 7px; height: 7px; border-radius: 2px; pointer-events: none; z-index: 9999; background: var(--mk-accent); animation: mk-particle 800ms var(--mk-ease-out) forwards; }
+.mk-ghost { position: absolute; pointer-events: none; animation: mk-fade-out var(--mk-slow) var(--mk-ease-in-out) both; }   /* 14 디졸브: 이전 회차 화면 */
+.btn { position: relative; overflow: hidden; isolation: isolate; }
+.mk-ripple { position: absolute; border-radius: 50%; pointer-events: none; background: currentColor; opacity: .18; transform: scale(0); animation: mk-ripple var(--mk-slow) var(--mk-ease-out) forwards; z-index: -1; }
+dialog[open] { animation: mk-scale-in var(--mk-base) var(--mk-ease-out); }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important; }
+}
+
+/* 인쇄 */
+#print { display: none; }
+@media print {
+  @page { size: A4; margin: 12mm; }
+  body { background: none; font-size: 9.5pt; line-height: 1.4; }
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  body > *:not(#print) { display: none !important; }
+  #print { display: block; color: black; }
+  .p-page + .p-page { break-before: page; }
+  .p-head { display: grid; grid-template-columns: 1fr auto; gap: 6mm; align-items: end; border-bottom: 2.5pt double black; padding-bottom: 3mm; margin-bottom: 4mm; }
+  .p-head .no { font-size: 8pt; }
+  .p-head h1 { font-size: 20pt; }
+  .p-head .meta { font-size: 9pt; margin-top: 1mm; }
+  .p-approve { border-collapse: collapse; font-size: 8pt; text-align: center; }
+  .p-approve th, .p-approve td { border: 0.8pt solid black; padding: 1pt 4pt; }
+  .p-approve td { height: 14mm; min-width: 20mm; }
+  .p-approve .stamp { width: 11mm; height: 11mm; font-size: 9pt; }
+  #print h2 { font-size: 12pt; margin: 4mm 0 2mm; }
+  .p-tbl { width: 100%; border-collapse: collapse; font-size: 8.5pt; }
+  .p-tbl th, .p-tbl td { border: 0.6pt solid black; padding: 1.2mm 1.5mm; vertical-align: top; text-align: left; }
+  .p-tbl thead th { background: var(--color-sheet-2); font-weight: 600; text-align: center; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .p-tbl tr { break-inside: avoid; }
+  .p-tbl thead th { white-space: nowrap; }
+  .p-tbl .grp { break-after: avoid; }
+  .p-tbl .c { text-align: center; white-space: nowrap; width: 11mm; }
+  .p-tbl .code { width: 9mm; text-align: center; }
+  .p-tbl .grp td { background: var(--color-sheet-2); font-weight: 600; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .p-tbl .why { display: block; font-size: 7.5pt; color: var(--color-muted); }
+  .p-tbl .box { display: inline-block; width: 4mm; height: 4mm; border: 0.8pt solid black; }
+  .p-tbl .wline { min-width: 30mm; }
+  .p-note { font-size: 8pt; margin-top: 2mm; }
+  .p-sign { display: flex; flex-wrap: wrap; gap: 4mm 8mm; margin-top: 5mm; font-size: 10pt; }
+  .p-sign span { display: inline-flex; align-items: flex-end; gap: 2mm; }
+  .p-sign i { display: inline-block; width: 32mm; border-bottom: 0.8pt solid black; height: 8mm; }
+  .p-two { display: grid; grid-template-columns: 1fr 1fr; gap: 6mm; }
+  .p-bars td.b { width: 55%; }
+  .p-bars td:first-child { white-space: nowrap; }
+  .p-bars .cells { height: 4mm; border-width: 0.8pt; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .p-mk .mk { width: 3.6mm; height: 3.6mm; }
+  .p-promise { font-size: 10.5pt; }
+  .p-promise .p-tbl { font-size: 9.5pt; }
+  .p-promise .p-tbl td { padding: 2.2mm 2mm; }
+}
+</style>
+</head>
+<body>
+
+<div class="bar" role="toolbar" aria-label="점검표 도구">
+  <button class="btn primary" id="btnPrint" type="button">인쇄</button>
+  <button class="btn" id="btnExport" type="button">파일로 저장</button>
+  <button class="btn" id="btnImport" type="button">파일 불러오기</button>
+  <input type="file" id="fileIn" accept=".json,application/json" class="hidden">
+  <button class="btn" id="btnItems" type="button">항목 설정</button>
+  <button class="btn" id="btnSample" type="button">예시로 채워 보기</button>
+  <button class="btn danger" id="btnReset" type="button">새로 시작</button>
+</div>
+
+<main class="sheet" id="sheet">
+  <div class="clip" aria-hidden="true"></div>
+  <header class="head">
+    <div>
+      <p class="form-no">가정 안전 자체 점검 · 서식 HC-1</p>
+      <h1>우리 집 <span class="red">안전</span>·에너지 점검표</h1>
+      <p class="lede">공간마다 돌아보며 ○(예)·×(아니오)·／(해당 없음)으로 표시하고, 고칠 일을 가족과 약속한 뒤 1~2주 지나 다시 점검합니다.</p>
+    </div>
+    <table class="approve" aria-label="점검 확인란">
+      <tr><th>점검자</th><th>1차 점검</th><th>2차 점검</th><th>가족 확인</th></tr>
+      <tr><td class="pen" id="apWho">—</td><td class="pen num" id="apD1">—</td><td class="pen num" id="apD2">—</td><td id="apStamp"></td></tr>
+    </table>
+  </header>
+
+  <div class="round">
+    <b id="roundLab">지금 기록하는 회차</b>
+    <div class="seg" role="group" aria-labelledby="roundLab">
+      <button type="button" data-round="1" aria-pressed="true">1차 점검</button>
+      <button type="button" data-round="2" aria-pressed="false">2차 점검</button>
+    </div>
+    <span class="muted" id="roundHint"></span>
+  </div>
+
+  <nav class="tabs" role="tablist" aria-label="점검표 단계">
+    <button class="tab" role="tab" data-tab="info"><span class="n">1</span>점검 정보</button>
+    <button class="tab" role="tab" data-tab="check"><span class="n">2</span>공간별 점검</button>
+    <button class="tab" role="tab" data-tab="sum"><span class="n">3</span>결과 요약</button>
+    <button class="tab" role="tab" data-tab="fix"><span class="n">4</span>고칠 일·약속</button>
+    <button class="tab" role="tab" data-tab="cmp"><span class="n">5</span>재점검 비교</button>
+  </nav>
+
+  <section class="pane" id="pane" role="tabpanel" aria-live="polite"></section>
+</main>
+
+<dialog id="dlgPrint" aria-labelledby="dlgPrintT">
+  <div class="dlg-head"><h2 id="dlgPrintT">무엇을 인쇄할까요?</h2><button class="btn small" type="button" data-close>닫기</button></div>
+  <div class="dlg-body pchoice">
+    <button type="button" data-print="result"><b>점검 결과지</b><span>공간·분야별 결과, 항목별 1차·2차 표시, 고칠 일 목록 (A4)</span></button>
+    <button type="button" data-print="promise"><b>가족 약속서</b><span>우선순위 순서의 고칠 일 · 담당 · 기한, 가족 서명란 (A4 1장)</span></button>
+    <button type="button" data-print="blank"><b>빈 점검표</b><span>휴대폰 없이 종이로 점검할 때 — 항목과 빈 칸만 (A4)</span></button>
+  </div>
+</dialog>
+
+<dialog id="dlgItems" aria-labelledby="dlgItemsT">
+  <div class="dlg-head"><h2 id="dlgItemsT">점검 항목 설정</h2><button class="btn small" type="button" data-close>닫기</button></div>
+  <div class="dlg-body" id="edBody"></div>
+  <div class="dlg-foot">
+    <button class="btn danger small" type="button" id="edDefault">처음 항목으로</button>
+    <button class="btn small" type="button" id="edExport">항목만 파일로</button>
+    <button class="btn primary small" type="button" id="edSave">저장</button>
+  </div>
+</dialog>
+
+<div id="print" aria-hidden="true"></div>
+
+<script>
+/* ===================== CONFIG — 교사가 고치는 곳 =====================
+ * spaces : 점검할 공간 (code = 항목 번호 앞 글자)
+ * fields : 분야
+ * items  : 점검 항목 — 문장은 "그렇다면 안전한" 쪽으로 씁니다(예 = 양호, 아니오 = 고칠 일).
+ *          why = 왜 위험한지 한 줄(상식 수준), risk 3높음/2보통/1낮음, ease 1쉬움/2보통/3어려움, fix = 고치는 방법 예시
+ * 항목 문장·근거는 교과서와 소방청·한국가스안전공사 등 공식 안내로 한 번 더 확인해 쓰세요.
+ */
+const CONFIG = {
+  spaces: [
+    { id: "entry", name: "현관", code: "현" },
+    { id: "living", name: "거실", code: "거" },
+    { id: "kitchen", name: "주방", code: "주" },
+    { id: "bath", name: "욕실", code: "욕" },
+    { id: "room", name: "내 방", code: "방" },
+    { id: "utility", name: "베란다·다용도실", code: "베" }
+  ],
+  fields: [
+    { id: "fire", name: "화재·대피" },
+    { id: "elec", name: "전기" },
+    { id: "gas", name: "가스" },
+    { id: "fall", name: "미끄럼·떨어짐" },
+    { id: "air", name: "환기·습기" },
+    { id: "energy", name: "에너지 절약" }
+  ],
+  risk: { 3: "높음", 2: "보통", 1: "낮음" },
+  ease: { 1: "쉬움", 2: "보통", 3: "어려움" },
+  easeHelp: { 1: "오늘 바로 · 돈이 거의 안 듦", 2: "물건을 사거나 가족 도움 필요", 3: "수리·전문가·비용이 큼" },
+  items: [
+    { id: "e1", space: "entry", field: "fire", risk: 3, ease: 1, text: "현관과 복도에 신발·짐이 쌓여 있지 않아 바로 나갈 수 있다.", why: "불이 났을 때 대피 통로가 막히면 빠져나가기 어렵다.", fix: "신발은 신발장에 넣고, 통로에 물건을 두지 않는다." },
+    { id: "e2", space: "entry", field: "fire", risk: 3, ease: 1, text: "집에 소화기가 있고, 어디 있는지 가족 모두 안다.", why: "불이 작을 때 바로 꺼야 크게 번지지 않는다.", fix: "소화기 위치를 가족과 함께 확인하고 사용법을 읽어 본다." },
+    { id: "e3", space: "entry", field: "fire", risk: 2, ease: 2, text: "현관문은 안에서 열쇠 없이 바로 열 수 있다.", why: "위급할 때 문을 여는 데 시간이 걸리면 대피가 늦어진다.", fix: "안에서 여는 방법을 가족 모두 익혀 둔다." },
+    { id: "e4", space: "entry", field: "fall", risk: 2, ease: 1, text: "현관 바닥에 물기나 밀리는 깔개가 없다.", why: "젖은 타일과 밀리는 깔개는 미끄러짐의 원인이 된다.", fix: "물기는 바로 닦고, 깔개 밑에 미끄럼 방지 패드를 댄다." },
+    { id: "e5", space: "entry", field: "fall", risk: 1, ease: 1, text: "현관이 밝아 신발 벗는 곳의 턱이 잘 보인다.", why: "어두우면 턱에 걸려 넘어지기 쉽다.", fix: "현관등이 고장 났으면 갈고, 센서등 작동을 확인한다." },
+
+    { id: "l1", space: "living", field: "elec", risk: 3, ease: 1, text: "멀티탭에 멀티탭을 겹쳐 꽂거나, 한 곳에 전기제품을 몰아 꽂지 않았다.", why: "한곳에 전기를 많이 쓰면 전선과 플러그가 뜨거워져 불이 날 수 있다.", fix: "많이 쓰는 제품은 벽 콘센트에 나눠 꽂는다." },
+    { id: "l2", space: "living", field: "elec", risk: 3, ease: 1, text: "전선이 가구·문에 눌리거나 꺾여 있지 않다.", why: "피복이 상하면 합선이나 감전 위험이 생긴다.", fix: "전선을 가구 밑에서 빼내고, 상한 전선은 쓰지 않는다." },
+    { id: "l3", space: "living", field: "elec", risk: 2, ease: 1, text: "콘센트와 플러그 주변에 먼지가 쌓여 있지 않다.", why: "쌓인 먼지에 습기가 더해지면 불꽃이 생겨 불이 날 수 있다.", fix: "플러그를 뽑고 마른 천으로 먼지를 닦는다." },
+    { id: "l4", space: "living", field: "fall", risk: 2, ease: 1, text: "바닥에 걸려 넘어질 전선이나 물건이 없다.", why: "다니는 길의 물건은 넘어짐 사고로 이어진다.", fix: "전선은 벽을 따라 정리하고, 바닥 물건은 제자리에 둔다." },
+    { id: "l5", space: "living", field: "air", risk: 2, ease: 1, text: "하루 한 번 이상 창문을 열어 환기한다.", why: "닫힌 실내에는 습기와 오염된 공기가 쌓인다.", fix: "아침·저녁 등 정해진 때에 짧게라도 맞바람 환기를 한다." },
+    { id: "l6", space: "living", field: "energy", risk: 1, ease: 1, text: "쓰지 않는 전기제품은 플러그를 뽑거나 멀티탭 스위치를 끈다.", why: "꽂아 두기만 해도 대기전력이 쓰인다.", fix: "스위치 달린 멀티탭을 쓰고, 외출 전에 끈다." },
+    { id: "l7", space: "living", field: "energy", risk: 1, ease: 1, text: "냉난방을 켤 때는 창문과 문을 닫는다.", why: "열린 틈으로 데우거나 식힌 공기가 빠져나가 에너지를 더 쓴다.", fix: "냉난방 전 창문 확인을 습관으로 만든다." },
+
+    { id: "k1", space: "kitchen", field: "fire", risk: 3, ease: 1, text: "가스레인지·인덕션을 켜 둔 채 자리를 비우지 않는다.", why: "음식이 타거나 기름에 불이 붙어도 바로 알아차리지 못한다.", fix: "자리를 뜰 때는 불을 끄고 간다." },
+    { id: "k2", space: "kitchen", field: "fire", risk: 3, ease: 1, text: "불 가까이에 행주·키친타월·종이 같은 타기 쉬운 물건이 없다.", why: "불꽃이나 열이 옮겨붙을 수 있다.", fix: "타기 쉬운 물건은 불에서 떨어진 곳에 둔다." },
+    { id: "k3", space: "kitchen", field: "gas", risk: 3, ease: 1, text: "가스레인지를 다 쓰면 중간 밸브까지 잠근다.", why: "밸브가 열려 있으면 가스가 샐 때 막을 수 없다.", fix: "조리가 끝나면 레인지 불 → 중간 밸브 순서로 잠근다." },
+    { id: "k4", space: "kitchen", field: "gas", risk: 3, ease: 1, text: "가스 냄새가 날 때 할 일을 가족 모두 안다.", why: "전기 스위치나 불꽃이 새어 나온 가스에 불을 붙일 수 있다.", fix: "불·전기 스위치 만지지 않기 → 밸브 잠그기 → 창문 열기 → 관리사무소·가스회사에 알리기를 붙여 둔다." },
+    { id: "k5", space: "kitchen", field: "air", risk: 2, ease: 1, text: "조리할 때 레인지 후드를 켜거나 창문을 연다.", why: "조리 중 생기는 연기와 수증기가 집 안에 남는다.", fix: "불을 켜면 후드도 같이 켜는 습관을 들인다." },
+    { id: "k6", space: "kitchen", field: "elec", risk: 2, ease: 1, text: "전기밥솥·전자레인지 주변에 물기가 없고, 물건으로 막혀 있지 않다.", why: "물기는 감전·고장의 원인이 되고, 막힌 통풍은 과열로 이어진다.", fix: "주변을 비우고 물기는 바로 닦는다." },
+    { id: "k7", space: "kitchen", field: "energy", risk: 1, ease: 1, text: "냉장고 문을 오래 열어 두지 않는다.", why: "찬 공기가 빠져나가 다시 식히는 데 전기를 더 쓴다.", fix: "꺼낼 것을 미리 정하고 문을 연다." },
+
+    { id: "b1", space: "bath", field: "fall", risk: 3, ease: 2, text: "욕실 바닥에 미끄럼 방지 매트나 미끄럼 방지 처리가 되어 있다.", why: "젖은 욕실 바닥은 미끄러지기 쉽고, 넘어지면 크게 다칠 수 있다.", fix: "미끄럼 방지 매트나 스티커를 깐다." },
+    { id: "b2", space: "bath", field: "elec", risk: 3, ease: 1, text: "헤어드라이어 같은 전기제품을 물 가까이에서 쓰지 않고, 젖은 손으로 만지지 않는다.", why: "물은 전기를 잘 통하게 해 감전 위험이 커진다.", fix: "손을 닦고, 물이 닿지 않는 곳에서 쓴다." },
+    { id: "b3", space: "bath", field: "air", risk: 2, ease: 1, text: "샤워 뒤 환풍기를 켜거나 문을 열어 습기를 뺀다.", why: "습기가 남으면 곰팡이가 생기기 쉽다.", fix: "샤워 뒤 환풍기를 켜 두고, 물기를 닦아 낸다." },
+    { id: "b4", space: "bath", field: "air", risk: 2, ease: 2, text: "타일 줄눈·천장·실리콘에 곰팡이가 없다.", why: "곰팡이는 호흡기와 알레르기에 좋지 않다.", fix: "환기를 늘리고, 곰팡이는 전용 세제로 환기하며 닦는다." },
+    { id: "b5", space: "bath", field: "energy", risk: 1, ease: 1, text: "물을 쓰지 않을 때는 수도꼭지를 잠그고, 온수를 틀어 놓지 않는다.", why: "물을 데우는 데에도 에너지가 든다.", fix: "양치·비누칠 동안 물을 잠근다." },
+
+    { id: "r1", space: "room", field: "elec", risk: 3, ease: 1, text: "전기장판·전기난로를 켠 채 외출하지 않고, 그 위에 무거운 이불을 겹쳐 두지 않는다.", why: "열이 갇히면 과열되어 불이 날 수 있다.", fix: "외출 전·일어난 뒤 전원을 끄고 플러그를 뽑는다." },
+    { id: "r2", space: "room", field: "elec", risk: 2, ease: 1, text: "휴대폰 충전기를 이불·베개 밑에 두지 않고, 다 충전되면 뽑는다.", why: "열이 빠지지 못하면 충전기와 기기가 뜨거워진다.", fix: "충전은 책상처럼 단단하고 트인 곳에서 한다." },
+    { id: "r3", space: "room", field: "fall", risk: 2, ease: 2, text: "책장·옷장처럼 키 큰 가구가 흔들리거나 넘어질 염려가 없다.", why: "넘어지거나 위의 물건이 떨어지면 다칠 수 있다.", fix: "무거운 것은 아래 칸에 두고, 필요하면 가구를 벽에 고정한다." },
+    { id: "r4", space: "room", field: "fall", risk: 3, ease: 2, text: "창문 아래에 딛고 올라설 수 있는 가구가 없다.", why: "어린 아이가 딛고 올라가 창밖으로 떨어질 수 있다.", fix: "창문 아래 가구를 옮기고, 창문 잠금장치를 확인한다." },
+    { id: "r5", space: "room", field: "air", risk: 2, ease: 2, text: "벽이나 창틀에 물방울(결로)이나 곰팡이가 없다.", why: "실내외 온도 차로 맺힌 물기가 곰팡이로 이어진다.", fix: "가구를 벽에서 조금 띄우고, 자주 환기하며 물기를 닦는다." },
+    { id: "r6", space: "room", field: "energy", risk: 1, ease: 1, text: "방을 나갈 때 불과 전자기기를 끈다.", why: "쓰지 않는 조명과 기기도 전기를 쓴다.", fix: "방문 옆에 '불 끄기' 메모를 붙인다." },
+
+    { id: "u1", space: "utility", field: "fire", risk: 3, ease: 1, text: "베란다의 대피 공간·옆집과의 얇은 칸막이 벽 앞에 짐을 쌓지 않았다.", why: "불이 났을 때 이웃집이나 아래층으로 피하는 길이 될 수 있다.", fix: "짐을 치우고, 우리 집에 있는지 모르면 관리사무소에 물어본다." },
+    { id: "u2", space: "utility", field: "gas", risk: 3, ease: 3, text: "가스보일러 배기통이 빠지거나 이음부가 벌어져 있지 않다.", why: "배기가스(일산화탄소)가 집 안으로 새면 중독될 수 있다.", fix: "보호자와 함께 보고, 이상하면 전문가 점검을 받는다." },
+    { id: "u3", space: "utility", field: "elec", risk: 2, ease: 1, text: "세탁기 주변에 물이 새거나 전선·콘센트가 젖어 있지 않다.", why: "물에 젖은 전기 부분은 감전과 누전의 원인이 된다.", fix: "물기를 닦고, 물이 새는 곳은 보호자에게 알린다." },
+    { id: "u4", space: "utility", field: "air", risk: 2, ease: 1, text: "빨래를 집 안에서 말릴 때 환기를 한다.", why: "습도가 올라가 결로와 곰팡이가 생기기 쉽다.", fix: "창문을 조금 열거나 환풍기를 켜고 말린다." },
+    { id: "u5", space: "utility", field: "fall", risk: 2, ease: 1, text: "난간이나 창틀에 떨어질 수 있는 화분·물건을 올려 두지 않았다.", why: "아래로 떨어지면 지나가는 사람이 다칠 수 있다.", fix: "화분과 물건은 바닥이나 안쪽 선반으로 옮긴다." },
+    { id: "u6", space: "utility", field: "energy", risk: 1, ease: 2, text: "창틀 틈으로 바람이 새지 않는다.", why: "틈새로 난방한 공기가 빠져나간다.", fix: "문풍지나 단열 시트를 붙인다." }
+  ]
+};
+
+const KEY = "homecheck.v1";
+const KEY_ITEMS = "homecheck.items.v1";
+const $ = (s, el = document) => el.querySelector(s);
+const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const clampStr = (s, n) => (typeof s === "string" ? s.slice(0, n) : "");
+const SPACE = Object.fromEntries(CONFIG.spaces.map((s) => [s.id, s]));
+const FIELD = Object.fromEntries(CONFIG.fields.map((f) => [f.id, f]));
+const MK = {
+  y: '<span class="mk" aria-hidden="true"><svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="7" fill="none" stroke="currentColor" stroke-width="2.4"/></svg></span>',
+  n: '<span class="mk" aria-hidden="true"><svg viewBox="0 0 20 20"><path d="M4 4L16 16M16 4L4 16" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg></span>',
+  na: '<span class="mk" aria-hidden="true"><svg viewBox="0 0 20 20"><path d="M15 3L5 17" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></span>'
+};
+/* ---------- 모션 도우미 (motion-effects kit 일부 · 위의 MK는 ○×／ 그림이라 이름을 MO로) — 동작 줄이기면 움직이지 않음 ---------- */
+const MO = (() => {
+  const reduced = () => window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function play(el, cls) { if (!el || reduced()) return; el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); el.addEventListener("animationend", () => el.classList.remove(cls), { once: true }); }
+  function stagger(parent, { max = 20 } = {}) { if (!parent || reduced()) return; [...parent.children].forEach((c, i) => c.style.setProperty("--i", Math.min(i, max))); parent.classList.remove("mk-stagger"); void parent.offsetWidth; parent.classList.add("mk-stagger"); }
+  function burstAt(el, { count = 18 } = {}) {
+    if (!el || reduced()) return; const r = el.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2;
+    for (let i = 0; i < count; i++) {
+      const p = document.createElement("i"); p.className = "mk-particle";
+      const a = (Math.PI * 2 * i) / count + Math.random() * .4, d = 50 + Math.random() * 60;
+      p.style.left = x + "px"; p.style.top = y + "px";
+      p.style.setProperty("--dx", Math.cos(a) * d + "px"); p.style.setProperty("--dy", Math.sin(a) * d + "px"); p.style.setProperty("--rot", Math.random() * 360 + "deg");
+      document.body.appendChild(p); p.addEventListener("animationend", () => p.remove(), { once: true });
+    }
+  }
+  function countUp(el, to, { duration = 700 } = {}) {
+    if (!el) return; if (reduced()) { el.textContent = to; return; }
+    const start = performance.now(), ease = (t) => (t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+    (function f(now) { const p = Math.min(1, (now - start) / duration); el.textContent = Math.round(to * ease(p)); if (p < 1) requestAnimationFrame(f); })(start);
+  }
+  function ripple(root = document, selector = ".btn") {
+    root.addEventListener("pointerdown", (e) => {
+      const host = e.target.closest(selector); if (!host || reduced()) return;
+      const r = host.getBoundingClientRect(), d = Math.max(r.width, r.height) * 2, s = document.createElement("span"); s.className = "mk-ripple";
+      Object.assign(s.style, { width: d + "px", height: d + "px", left: (e.clientX - r.left - d / 2) + "px", top: (e.clientY - r.top - d / 2) + "px" });
+      host.appendChild(s); s.addEventListener("animationend", () => s.remove(), { once: true });
+    });
+  }
+  return { reduced, play, stagger, burstAt, countUp, ripple };
+})();
+// 탭에 들어올 때: 결과 요약 = 숫자 올라가기 + 막대 자라기(+취약 분야 글리치 1회), 고칠 일·비교 = 순차, 나머지 = 슬라이드
+function enterMotion(pane, tab) {
+  if (MO.reduced()) return;
+  pane.querySelectorAll("[data-cu]").forEach((n) => MO.countUp(n, Number(n.dataset.cu)));
+  if (tab === "sum") {
+    pane.querySelectorAll(".bars").forEach((ul) => [...ul.querySelectorAll(".cells")].forEach((c, i) => { c.style.animationDelay = i * 70 + "ms"; MO.play(c, "mk-wipe-in"); }));
+    const w = $(".weak ol", pane) && $(".weak h3", pane); if (w) setTimeout(() => MO.play(w, "mk-glitch"), 900);
+  } else if (tab === "fix") MO.stagger($(".fixes", pane));
+  else if (tab === "cmp") MO.stagger($(".cmp tbody", pane));
+  else MO.play(pane, "mk-slide-up");
+}
+// 회차(1차↔2차) 바꿀 때: 이전 화면을 겹쳐 두고 서서히 바뀜(디졸브)
+function dissolvePane() {
+  const pane = $("#pane"); if (MO.reduced()) return;
+  const g = pane.cloneNode(true); g.removeAttribute("id"); g.removeAttribute("role"); g.removeAttribute("aria-live"); g.setAttribute("aria-hidden", "true"); g.inert = true;
+  g.querySelectorAll("[id]").forEach((x) => x.removeAttribute("id"));
+  Object.assign(g.style, { top: pane.offsetTop + "px", left: pane.offsetLeft + "px", width: pane.offsetWidth + "px" }); g.classList.add("mk-ghost");
+  pane.parentElement.appendChild(g); g.addEventListener("animationend", () => g.remove(), { once: true });
+  return pane;
+}
+const ANS_LABEL = { y: "예", n: "아니오", na: "해당 없음" };
+
+/* ---------- 저장 ---------- */
+function blankState() {
+  return { who: "", members: ["나"], round: "1", tab: "info", rounds: { 1: { date: "", ans: {} }, 2: { date: "", ans: {} } }, fixes: {}, agreed: false };
+}
+function normalize(raw) {
+  const s = blankState();
+  if (!raw || typeof raw !== "object") return s;
+  s.who = clampStr(raw.who, 20);
+  if (Array.isArray(raw.members)) s.members = [...new Set(raw.members.filter((m) => typeof m === "string" && m.trim()).map((m) => m.trim().slice(0, 10)))].slice(0, 12);
+  if (!s.members.length) s.members = ["나"];
+  s.round = raw.round === "2" ? "2" : "1";
+  s.tab = ["info", "check", "sum", "fix", "cmp"].includes(raw.tab) ? raw.tab : "info";
+  for (const r of ["1", "2"]) {
+    const src = raw.rounds && raw.rounds[r];
+    if (!src || typeof src !== "object") continue;
+    s.rounds[r].date = /^\d{4}-\d{2}-\d{2}$/.test(src.date) ? src.date : "";
+    if (src.ans && typeof src.ans === "object") {
+      for (const [id, a] of Object.entries(src.ans)) {
+        if (!a || typeof a !== "object") continue;
+        const v = ["y", "n", "na"].includes(a.v) ? a.v : "";
+        const memo = clampStr(a.memo, 80);
+        if (v || memo) s.rounds[r].ans[String(id).slice(0, 40)] = { v, memo };
+      }
+    }
+  }
+  if (raw.fixes && typeof raw.fixes === "object") {
+    for (const [id, f] of Object.entries(raw.fixes)) {
+      if (!f || typeof f !== "object") continue;
+      s.fixes[String(id).slice(0, 40)] = {
+        risk: [1, 2, 3].includes(+f.risk) ? +f.risk : 0,
+        ease: [1, 2, 3].includes(+f.ease) ? +f.ease : 0,
+        who: clampStr(f.who, 10),
+        due: /^\d{4}-\d{2}-\d{2}$/.test(f.due) ? f.due : "",
+        plan: clampStr(f.plan, 100),
+        done: f.done === true
+      };
+    }
+  }
+  s.agreed = raw.agreed === true;
+  return s;
+}
+function normalizeItems(raw) {
+  if (!Array.isArray(raw)) return null;
+  const seen = new Set();
+  const out = raw.filter((it) => it && typeof it === "object" && typeof it.id === "string" && SPACE[it.space] && FIELD[it.field] && typeof it.text === "string" && it.text.trim())
+    .filter((it) => !seen.has(it.id) && seen.add(it.id))
+    .map((it) => ({ id: it.id.slice(0, 40), space: it.space, field: it.field, risk: [1, 2, 3].includes(+it.risk) ? +it.risk : 2, ease: [1, 2, 3].includes(+it.ease) ? +it.ease : 1,
+      text: it.text.trim().slice(0, 120), why: clampStr(it.why, 120).trim(), fix: clampStr(it.fix, 120).trim() }));
+  return out.length ? out : null;
+}
+function load(key) { try { return JSON.parse(localStorage.getItem(key)); } catch (e) { return null; } }
+let state = normalize(load(KEY));
+let ITEMS = normalizeItems(load(KEY_ITEMS)) || CONFIG.items.map((i) => ({ ...i }));
+let saveWarned = false;
+function save() {
+  try { localStorage.setItem(KEY, JSON.stringify(state)); }
+  catch (e) { if (!saveWarned) { saveWarned = true; toast("이 브라우저에는 저장이 안 돼요. [파일로 저장]으로 보관하세요."); } }
+}
+function saveItems(custom) {
+  try { custom ? localStorage.setItem(KEY_ITEMS, JSON.stringify(ITEMS)) : localStorage.removeItem(KEY_ITEMS); } catch (e) { /* 저장 불가 — 화면에는 반영됨 */ }
+}
+
+/* ---------- 계산 ---------- */
+function codeOf(item) {
+  const list = ITEMS.filter((i) => i.space === item.space);
+  return SPACE[item.space].code + (list.indexOf(item) + 1);
+}
+const ansOf = (r, id) => (state.rounds[r].ans[id] || {}).v || "";
+function tally(r, list = ITEMS) {
+  const t = { y: 0, n: 0, na: 0, e: 0 };
+  list.forEach((i) => { t[ansOf(r, i.id) || "e"]++; });
+  return t;
+}
+function fixOf(item) {
+  const f = state.fixes[item.id] || {};
+  return { risk: f.risk || item.risk, ease: f.ease || item.ease, who: f.who || "", due: f.due || "", plan: f.plan ?? item.fix, done: !!f.done };
+}
+function setFix(id, patch) {
+  const item = ITEMS.find((i) => i.id === id);
+  state.fixes[id] = { ...fixOf(item), ...patch };
+  save();
+}
+function fixList() {
+  return ITEMS.filter((i) => ansOf("1", i.id) === "n")
+    .map((i) => ({ item: i, f: fixOf(i), order: ITEMS.indexOf(i) }))
+    .sort((a, b) => b.f.risk - a.f.risk || a.f.ease - b.f.ease || a.order - b.order);
+}
+function weakFields(r) {
+  return CONFIG.fields.map((f) => {
+    const list = ITEMS.filter((i) => i.field === f.id);
+    const t = tally(r, list);
+    const checked = t.y + t.n;
+    return { f, t, rate: checked ? t.n / checked : 0, bad: list.filter((i) => ansOf(r, i.id) === "n") };
+  }).filter((w) => w.t.n > 0).sort((a, b) => b.rate - a.rate || b.t.n - a.t.n).slice(0, 3);
+}
+const fmtDate = (d) => (d ? d.slice(5).replace("-", ".") : "—");
+
+/* ---------- 머리 · 회차 · 탭 ---------- */
+function renderHead() {
+  $("#apWho").textContent = state.who || "—";
+  $("#apD1").textContent = state.rounds[1].date ? state.rounds[1].date.slice(2).replace(/-/g, ".") : "—";
+  $("#apD2").textContent = state.rounds[2].date ? state.rounds[2].date.slice(2).replace(/-/g, ".") : "—";
+  $("#apStamp").innerHTML = state.agreed ? '<span class="stamp" title="가족과 약속함">약속</span>' : "";
+  $$(".seg [data-round]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.round === state.round)));
+  const t = tally(state.round);
+  $("#roundHint").textContent = `${ITEMS.length}개 중 ${ITEMS.length - t.e}개 표시함` + (state.round === "2" ? " · 고칠 일은 1차 결과로 정해요" : "");
+}
+function setTab(tab) {
+  state.tab = tab; save();
+  $$(".tab").forEach((b) => { const on = b.dataset.tab === tab; b.setAttribute("aria-selected", String(on)); b.tabIndex = on ? 0 : -1; if (on) b.scrollIntoView({ block: "nearest", inline: "nearest" }); });
+  render(); enterMotion($("#pane"), tab);
+}
+function render() {
+  renderHead();
+  const pane = $("#pane");
+  ({ info: renderInfo, check: renderCheck, sum: renderSum, fix: renderFix, cmp: renderCmp })[state.tab](pane);
+}
+
+/* ---------- 1. 점검 정보 ---------- */
+function renderInfo(pane) {
+  pane.innerHTML = `
+  <h2>점검 정보</h2>
+  <p>실명·주소·집 사진은 적지 않아요. 번호나 별칭이면 충분합니다.</p>
+  <div class="info-grid">
+    <div>
+      <div class="field"><label for="who">점검자 (번호·별칭)</label><input class="input" id="who" maxlength="20" placeholder="예: 3번, 해달" value="${esc(state.who)}"></div>
+      <div class="field">
+        <span class="lab" id="memLab">함께 사는 사람 — 부르는 말로</span>
+        <small>집마다 함께 사는 사람은 달라요. 엄마·아빠·할머니·이모·형·보호자처럼 부르는 말로 적어요. 혼자 점검해도, 함께 사는 사람이 나 하나여도 괜찮아요. 고칠 일의 담당을 정할 때 쓰여요.</small>
+        <form class="row" id="memForm" autocomplete="off"><input class="input" id="memIn" maxlength="10" aria-labelledby="memLab" placeholder="예: 할머니"><button class="btn" type="submit">추가</button></form>
+        <ul class="chips" id="chips">${state.members.map((m, i) => `<li>${esc(m)}<button type="button" data-del="${i}" aria-label="${esc(m)} 빼기">×</button></li>`).join("")}</ul>
+      </div>
+      <div class="row" style="gap:var(--sp-4)">
+        <div class="field" style="flex:1 1 12rem"><label for="d1">1차 점검일</label><input class="input" type="date" id="d1" value="${state.rounds[1].date}"></div>
+        <div class="field" style="flex:1 1 12rem"><label for="d2">2차 점검일 (다시 볼 날)</label><input class="input" type="date" id="d2" value="${state.rounds[2].date}"></div>
+      </div>
+      <p class="note">휴대폰이 없거나 화면으로 하기 어려우면 위의 <b>인쇄 → 빈 점검표</b>를 종이로 들고 다니며 표시한 뒤, 나중에 옮겨 적어도 됩니다.</p>
+    </div>
+    <div>
+      <h3 style="font-size:var(--fs-lg)">점검 순서</h3>
+      <ol class="howto">
+        <li><div><b>공간마다 돌아보기</b>현관부터 베란다까지, 항목을 읽고 실제로 보며 표시해요. 모르면 가족에게 물어봐요.</div></li>
+        <li><div><b>결과 보기</b>어느 공간·분야에 × 가 많은지, 우리 집 취약 분야를 확인해요.</div></li>
+        <li><div><b>고칠 일 정하기</b>위험도와 고치기 쉬움으로 순서를 정하고, 담당과 기한을 가족과 약속해요.</div></li>
+        <li><div><b>1~2주 뒤 다시 점검</b>2차 점검으로 바꿔 다시 표시하고, 나아진 항목을 비교해요.</div></li>
+      </ol>
+      <div class="legend-marks" aria-label="표시 방법">
+        <span style="color:var(--color-pen)">${MK.y} 예 — 잘 되어 있음</span>
+        <span style="color:var(--color-red)">${MK.n} 아니오 — 고칠 일</span>
+        <span>${MK.na} 해당 없음</span>
+      </div>
+      <div class="row" style="margin-top:var(--sp-6)"><button class="btn primary" type="button" data-go="check">점검 시작하기</button></div>
+    </div>
+  </div>`;
+  $("#who").addEventListener("input", (e) => { state.who = e.target.value.trim().slice(0, 20); save(); renderHead(); });
+  $("#d1").addEventListener("change", (e) => { state.rounds[1].date = e.target.value; save(); renderHead(); });
+  $("#d2").addEventListener("change", (e) => { state.rounds[2].date = e.target.value; save(); renderHead(); });
+  $("#memForm").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const v = $("#memIn").value.trim().slice(0, 10);
+    if (!v) { MO.play($("#memIn"), "mk-wiggle"); return; }
+    if (state.members.includes(v)) { MO.play($("#memIn"), "mk-wiggle"); toast("이미 있는 이름이에요."); return; }
+    if (state.members.length >= 12) { toast("12명까지 적을 수 있어요."); return; }
+    state.members.push(v); save(); renderInfo(pane); $("#memIn").focus(); MO.play($("#chips li:last-child"), "mk-scale-in");
+  });
+  $("#chips").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-del]"); if (!b) return;
+    if (state.members.length === 1) { toast("한 사람은 남겨 두세요."); return; }
+    state.members.splice(+b.dataset.del, 1); save(); renderInfo(pane);
+  });
+}
+
+/* ---------- 2. 공간별 점검 ---------- */
+function ansButtons(id) {
+  const cur = ansOf(state.round, id);
+  return `<div class="ans" role="group" aria-label="답">${["y", "n", "na"].map((v) =>
+    `<button type="button" data-v="${v}" data-id="${esc(id)}" aria-pressed="${cur === v}">${MK[v]}${ANS_LABEL[v]}</button>`).join("")}</div>`;
+}
+function renderCheck(pane) {
+  const r = state.round;
+  pane.innerHTML = `
+  <h2>${r}차 점검 · 공간별</h2>
+  <p>항목은 “그렇다”면 안전한 쪽으로 쓰여 있어요. 그렇다면 ○ 예, 아니면 × 아니오, 우리 집에 없는 것은 ／ 해당 없음. 같은 칸을 다시 누르면 지워져요.</p>
+  <div class="spacenav" id="spacenav"></div>
+  ${CONFIG.spaces.map((sp) => {
+    const list = ITEMS.filter((i) => i.space === sp.id);
+    if (!list.length) return "";
+    return `<section class="space" id="sp-${sp.id}" aria-labelledby="sph-${sp.id}">
+      <div class="space-head"><h3 id="sph-${sp.id}"><span class="code">${esc(sp.code)}</span>${esc(sp.name)}</h3><span class="prog" data-prog="${sp.id}"></span></div>
+      ${list.map((it) => {
+        const a = state.rounds[r].ans[it.id] || {};
+        const code = codeOf(it);
+        return `<div class="item" data-item="${esc(it.id)}">
+          <span class="code">${esc(code)}</span>
+          <div><p class="q">${esc(it.text)}<span class="ftag">${esc(FIELD[it.field].name)}</span></p>${it.why ? `<p class="why"><b>왜?</b>${esc(it.why)}</p>` : ""}</div>
+          ${ansButtons(it.id)}
+          <div class="memo"><input class="input" maxlength="80" data-memo="${esc(it.id)}" aria-label="${esc(code)} 메모" placeholder="메모" value="${esc(a.memo || "")}"></div>
+        </div>`;
+      }).join("")}
+    </section>`;
+  }).join("")}
+  <div class="foot-nav"><span class="muted" id="checkLeft"></span><button class="btn primary" type="button" data-go="sum">결과 요약 보기</button></div>`;
+  updateProgress();
+  pane.querySelectorAll(".ans").forEach((g) => g.addEventListener("click", onAnswer));
+  pane.querySelectorAll("[data-memo]").forEach((inp) => inp.addEventListener("input", (e) => {
+    const id = e.target.dataset.memo;
+    const a = state.rounds[r].ans[id] || { v: "", memo: "" };
+    a.memo = e.target.value.slice(0, 80);
+    if (a.v || a.memo) state.rounds[r].ans[id] = a; else delete state.rounds[r].ans[id];
+    save();
+  }));
+}
+function onAnswer(e) {
+  const b = e.target.closest("button[data-v]"); if (!b) return;
+  const r = state.round, id = b.dataset.id;
+  const sp = (ITEMS.find((i) => i.id === id) || {}).space, spList = ITEMS.filter((i) => i.space === sp);
+  const spWasDone = !tally(r, spList).e, allWasDone = !tally(r).e;
+  const a = state.rounds[r].ans[id] || { v: "", memo: "" };
+  a.v = a.v === b.dataset.v ? "" : b.dataset.v;
+  if (a.v || a.memo) state.rounds[r].ans[id] = a; else delete state.rounds[r].ans[id];
+  if (!state.rounds[r].date && a.v) state.rounds[r].date = today();
+  save();
+  b.parentElement.querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", String(x.dataset.v === a.v)));
+  updateProgress(); renderHead();
+  if (!a.v) return;
+  MO.play(b.querySelector(".mk"), "mk-stamp");   // 표시가 꾹 찍힘
+  // 큰 완료는 찍힘이 끝난 뒤에: 전체 다 표시 = 파티클 1회, 한 공간 다 표시 = 그 공간 버튼 스쿼시
+  if (!allWasDone && !tally(r).e) setTimeout(() => MO.burstAt($("#checkLeft")), 170);
+  else if (!spWasDone && !tally(r, spList).e) setTimeout(() => MO.play($(`#spacenav a[href="#sp-${sp}"]`), "mk-squash"), 170);
+}
+function updateProgress() {
+  const r = state.round;
+  const nav = $("#spacenav");
+  if (!nav) return;
+  nav.innerHTML = CONFIG.spaces.map((sp) => {
+    const list = ITEMS.filter((i) => i.space === sp.id);
+    if (!list.length) return "";
+    const t = tally(r, list), done = list.length - t.e;
+    const el = $(`[data-prog="${sp.id}"]`);
+    if (el) el.textContent = `${list.length}개 중 ${done}개 표시` + (t.n ? ` · × ${t.n}` : "");
+    return `<a href="#sp-${sp.id}" class="${done === list.length ? "done" : ""}">${esc(sp.name)} <span class="num">${done}/${list.length}</span></a>`;
+  }).join("");
+  const left = tally(r).e;
+  $("#checkLeft").textContent = left ? `아직 표시하지 않은 항목 ${left}개` : "모든 항목을 표시했어요.";
+}
+function today() { const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); }
+
+/* ---------- 3. 결과 요약 ---------- */
+function cellsHtml(r, list) {
+  return `<div class="cells" aria-hidden="true">${list.map((i) => `<span class="${ansOf(r, i.id) || "e"}"></span>`).join("")}</div>`;
+}
+function cntText(t) { return `○ ${t.y} · × ${t.n} · ／ ${t.na}` + (t.e ? ` · 빈칸 ${t.e}` : ""); }
+function renderSum(pane) {
+  const r = state.round, t = tally(r);
+  if (t.e === ITEMS.length) {
+    pane.innerHTML = `<h2>${r}차 결과 요약</h2><div class="empty"><b>${r}차 점검 표시가 아직 없어요.</b>공간별 점검에서 항목을 표시하면 공간별·분야별 결과와 우리 집 취약 분야가 여기에 나와요.<br><button class="btn primary" type="button" data-go="check">점검하러 가기</button></div>`;
+    return;
+  }
+  const weak = weakFields(r);
+  pane.innerHTML = `
+  <h2>${r}차 결과 요약</h2>
+  <p>${state.rounds[r].date ? `점검일 ${esc(state.rounds[r].date.replace(/-/g, "."))} · ` : ""}칸 하나가 항목 하나예요. 회차를 바꾸면 그 회차 결과가 나와요.</p>
+  <div class="tally">
+    <div><span class="lab" style="color:var(--color-pen)">${MK.y}예</span><span class="v"><span data-cu="${t.y}">${t.y}</span><small>개</small></span></div>
+    <div><span class="lab" style="color:var(--color-red)">${MK.n}아니오</span><span class="v" style="color:var(--color-red)"><span data-cu="${t.n}">${t.n}</span><small>개</small></span></div>
+    <div><span class="lab">${MK.na}해당 없음</span><span class="v"><span data-cu="${t.na}">${t.na}</span><small>개</small></span></div>
+    <div><span class="lab">빈칸</span><span class="v"><span data-cu="${t.e}">${t.e}</span><small>/ ${ITEMS.length}</small></span></div>
+  </div>
+  <div class="weak">
+    <h3>우리 집 취약 분야</h3>
+    ${weak.length ? `<ol>${weak.map((w) => `<li><div><b>${esc(w.f.name)}</b> <span class="muted">— 표시한 ${w.t.y + w.t.n}개 중 × ${w.t.n}개</span>
+      <ul>${w.bad.map((i) => `<li><span class="code">${esc(codeOf(i))}</span> ${esc(i.text)}</li>`).join("")}</ul></div></li>`).join("")}</ol>`
+      : `<p style="margin-top:var(--sp-2)">× 로 표시한 항목이 없어요. 빈칸이 남았다면 마저 점검해 보세요.</p>`}
+  </div>
+  <div class="sum-grid">
+    <div><h3>공간별</h3><ul class="bars">${CONFIG.spaces.map((sp) => {
+      const list = ITEMS.filter((i) => i.space === sp.id); if (!list.length) return "";
+      const tt = tally(r, list);
+      return `<li><span class="name">${esc(sp.name)}</span>${cellsHtml(r, list)}<span class="cnt">${cntText(tt)}</span></li>`;
+    }).join("")}</ul></div>
+    <div><h3>분야별</h3><ul class="bars">${CONFIG.fields.map((f) => {
+      const list = ITEMS.filter((i) => i.field === f.id); if (!list.length) return "";
+      const tt = tally(r, list);
+      return `<li><span class="name">${esc(f.name)}</span>${cellsHtml(r, list)}<span class="cnt">${cntText(tt)}</span></li>`;
+    }).join("")}</ul></div>
+  </div>
+  <div class="bar-key"><span><i class="y"></i>예</span><span><i class="n"></i>아니오</span><span><i class="na"></i>해당 없음</span><span><i class="e"></i>빈칸</span></div>
+  <div class="foot-nav"><span class="muted">${r === "1" ? `× ${t.n}개가 고칠 일 목록으로 넘어가요.` : "2차 결과는 재점검 비교에서 1차와 견줘 볼 수 있어요."}</span>
+    <button class="btn primary" type="button" data-go="${r === "1" ? "fix" : "cmp"}">${r === "1" ? "고칠 일 정하기" : "재점검 비교 보기"}</button></div>`;
+}
+
+/* ---------- 4. 고칠 일 · 약속 ---------- */
+function renderFix(pane) {
+  const list = fixList();
+  if (!list.length) {
+    pane.innerHTML = `<h2>고칠 일 · 가족 약속</h2><div class="empty"><b>1차 점검에서 × 아니오로 표시한 항목이 여기에 모여요.</b>${tally("1").e === ITEMS.length ? "아직 1차 점검을 하지 않았어요." : "1차 점검에서 × 가 하나도 없어요. 빈칸이 있다면 마저 점검해 보세요."}<br><button class="btn primary" type="button" data-go="check" data-round="1">1차 점검으로</button></div>`;
+    return;
+  }
+  const opt = (obj, cur) => Object.entries(obj).map(([k, v]) => `<option value="${k}" ${+k === cur ? "selected" : ""}>${v}</option>`).join("");
+  const whoOpts = (cur) => `<option value="">정하지 않음</option>` + [...state.members, "가족 모두"].map((m) => `<option ${m === cur ? "selected" : ""}>${esc(m)}</option>`).join("") +
+    (cur && !state.members.includes(cur) && cur !== "가족 모두" ? `<option selected>${esc(cur)}</option>` : "");
+  pane.innerHTML = `
+  <h2>고칠 일 · 가족 약속</h2>
+  <p>1차 점검의 × ${list.length}개예요. 위험도와 고치기 쉬움을 우리 집 사정에 맞게 고치면 순서가 바뀌어요. 위험한데 쉬운 일부터 하세요.</p>
+  <div class="matrix-wrap">
+    <div class="matrix" id="matrix"></div>
+    <p class="matrix-axis">가로: 고치기 쉬움 (${Object.entries(CONFIG.easeHelp).map(([k, v]) => `${CONFIG.ease[k]} = ${v}`).join(" / ")}) · 칸의 번호를 누르면 아래 항목으로 가요.</p>
+  </div>
+  <ol class="fixes">${list.map(({ item, f }) => `
+    <li class="fix" id="fx-${esc(item.id)}">
+      <div>
+        <p class="t"><span class="code">${esc(codeOf(item))}</span>${esc(item.text)}</p>
+        ${(state.rounds[1].ans[item.id] || {}).memo ? `<p class="memo-line">메모: ${esc(state.rounds[1].ans[item.id].memo)}</p>` : ""}
+        <div class="fix-grid">
+          <label>위험도<select class="input" data-f="risk" data-id="${esc(item.id)}">${opt(CONFIG.risk, f.risk)}</select></label>
+          <label>고치기<select class="input" data-f="ease" data-id="${esc(item.id)}">${opt(CONFIG.ease, f.ease)}</select></label>
+          <label>담당<select class="input" data-f="who" data-id="${esc(item.id)}">${whoOpts(f.who)}</select></label>
+          <label>기한<input class="input" type="date" data-f="due" data-id="${esc(item.id)}" value="${f.due}"></label>
+          <label class="wide">우리 집 약속<input class="input" maxlength="100" data-f="plan" data-id="${esc(item.id)}" value="${esc(f.plan)}"></label>
+          <label class="donechk"><input type="checkbox" data-f="done" data-id="${esc(item.id)}" ${f.done ? "checked" : ""}> 고쳤어요</label>
+        </div>
+      </div>
+    </li>`).join("")}</ol>
+  <div class="agree">
+    <label><input type="checkbox" id="agree" ${state.agreed ? "checked" : ""}> 가족과 함께 읽고 약속했어요</label>
+    <span class="muted" style="font-size:var(--fs-sm)">체크하면 점검표 확인란에 도장이 찍혀요. 종이 약속서는 인쇄 → 가족 약속서.</span>
+    <button class="btn" type="button" data-print-now="promise">가족 약속서 인쇄</button>
+  </div>`;
+  renderMatrix(list);
+  pane.querySelectorAll("[data-f]").forEach((el) => el.addEventListener(el.tagName === "INPUT" && el.type === "text" ? "input" : "change", (e) => {
+    const k = e.target.dataset.f, id = e.target.dataset.id;
+    let v = e.target.type === "checkbox" ? e.target.checked : e.target.value;
+    if (k === "risk" || k === "ease") v = +v;
+    if (k === "plan") v = String(v).slice(0, 100);
+    setFix(id, { [k]: v });
+    if (k === "risk" || k === "ease" || k === "done") {
+      renderMatrix(fixList());
+      const chip = $(`#matrix [data-jump="${CSS.escape(id)}"]`);
+      if (k === "done") { if (v) MO.play(chip, "mk-squash"); } else MO.play(chip, "mk-scale-in");   // 칸을 옮겨 온 번호
+    }
+  }));
+  $("#agree").addEventListener("change", (e) => { state.agreed = e.target.checked; save(); renderHead(); if (state.agreed) { const st = $("#apStamp .stamp"); MO.play(st, "mk-seal"); const r = st && st.getBoundingClientRect(); if (r && (r.bottom < 0 || r.top > innerHeight)) toast("점검표 맨 위 확인란에 '약속' 도장이 찍혔어요."); } });
+}
+function renderMatrix(list) {
+  const m = $("#matrix"); if (!m) return;
+  const label = (r, e) => (r === 3 && e === 1 ? "먼저 하기" : r === 3 ? "보호자와 계획" : r === 1 && e === 1 ? "습관으로" : "");
+  let h = `<div class="mh corner">위험도 ↓<br>고치기 →</div>` + [1, 2, 3].map((e) => `<div class="mh">${CONFIG.ease[e]}</div>`).join("");
+  for (const r of [3, 2, 1]) {
+    h += `<div class="mh side">${CONFIG.risk[r]}</div>`;
+    for (const e of [1, 2, 3]) {
+      const here = list.filter((x) => x.f.risk === r && x.f.ease === e);
+      h += `<div class="cell ${r === 3 && e === 1 ? "hot" : ""}">${label(r, e) ? `<span class="q-lab">${label(r, e)}</span>` : ""}${here.map((x) =>
+        `<button type="button" class="chip r${r} ${x.f.done ? "done" : ""}" data-jump="${esc(x.item.id)}" title="${esc(x.item.text)}">${esc(codeOf(x.item))}</button>`).join("")}</div>`;
+    }
+  }
+  m.innerHTML = h;
+}
+
+/* ---------- 5. 재점검 비교 ---------- */
+function statusOf(a, b) {
+  if (a === "n" && b === "y") return ["up", "나아짐"];
+  if (a === "n" && b === "n") return ["still", "아직"];
+  if (a !== "n" && b === "n") return ["down", "새로 생김"];
+  if (a === "n" && !b) return ["same", "2차 빈칸"];
+  return ["same", ""];
+}
+function renderCmp(pane) {
+  const t1 = tally("1"), t2 = tally("2");
+  if (t1.e === ITEMS.length || t2.e === ITEMS.length) {
+    const need = t1.e === ITEMS.length ? "1" : "2";
+    pane.innerHTML = `<h2>재점검 비교</h2><div class="empty"><b>${need === "1" ? "1차 점검부터 해 주세요." : "2차 점검을 하면 1차와 비교해 보여 줘요."}</b>${need === "2" ? `고칠 일을 실천하고 1~2주 지나 같은 항목을 다시 점검해요.${state.rounds[2].date ? ` 다시 볼 날: ${esc(state.rounds[2].date.replace(/-/g, "."))}` : ""}` : ""}<br><button class="btn primary" type="button" data-go="check" data-round="${need}">${need}차 점검 시작</button></div>`;
+    return;
+  }
+  const rows = ITEMS.map((i) => { const a = ansOf("1", i.id), b = ansOf("2", i.id); return { i, a, b, st: statusOf(a, b) }; });
+  const up = rows.filter((x) => x.st[0] === "up").length, still = rows.filter((x) => x.st[0] === "still").length, down = rows.filter((x) => x.st[0] === "down").length;
+  const groups = [["up", "나아진 항목"], ["still", "아직 그대로인 항목"], ["down", "새로 생긴 문제"]];
+  const mark = (v) => (v ? `<span style="color:${v === "y" ? "var(--color-pen)" : v === "n" ? "var(--color-red)" : "var(--color-muted)"}">${MK[v]}<span class="sr">${ANS_LABEL[v]}</span></span>` : '<span class="muted">·</span>');
+  pane.innerHTML = `
+  <h2>재점검 비교</h2>
+  <p>1차 ${esc(fmtDate(state.rounds[1].date))} → 2차 ${esc(fmtDate(state.rounds[2].date))}</p>
+  <div class="tally">
+    <div><span class="lab">1차 ×</span><span class="v"><span data-cu="${t1.n}">${t1.n}</span><small>개</small></span></div>
+    <div><span class="lab">2차 ×</span><span class="v"><span data-cu="${t2.n}">${t2.n}</span><small>개</small></span></div>
+    <div><span class="lab" style="color:var(--color-pen)">나아짐</span><span class="v" style="color:var(--color-pen)"><span data-cu="${up}">${up}</span><small>개</small></span></div>
+    <div><span class="lab" style="color:var(--color-red)">아직 · 새로 생김</span><span class="v" style="color:var(--color-red)">${still}<small>·</small>${down}</span></div>
+  </div>
+  <table class="cmp">
+    <thead><tr><th>번호</th><th>항목</th><th class="c">1차</th><th class="c">2차</th><th class="hide-sm">결과</th></tr></thead>
+    <tbody>${groups.map(([k, name]) => {
+      const g = rows.filter((x) => x.st[0] === k); if (!g.length) return "";
+      return `<tr class="grp"><th colspan="5">${name} ${g.length}개</th></tr>` + g.map((x) =>
+        `<tr><td class="code num">${esc(codeOf(x.i))}</td><td>${esc(x.i.text)}</td><td class="c">${mark(x.a)}</td><td class="c">${mark(x.b)}</td><td class="hide-sm"><span class="st ${x.st[0]}">${x.st[1]}</span></td></tr>`).join("");
+    }).join("") || `<tr><td colspan="5">1차와 2차 모두 × 가 없어요.</td></tr>`}</tbody>
+  </table>
+  ${rows.some((x) => x.st[1] === "2차 빈칸") ? `<p class="sub" style="margin-top:var(--sp-3)">1차에 × 였는데 2차에 아직 표시하지 않은 항목이 ${rows.filter((x) => x.st[1] === "2차 빈칸").length}개 있어요.</p>` : ""}`;
+}
+
+/* ---------- 인쇄 ---------- */
+function printHead(title, sub) {
+  return `<div class="p-head"><div><p class="no">가정 안전 자체 점검 · 서식 HC-1</p><h1>${title}</h1><p class="meta">${sub}</p></div>
+    <table class="p-approve"><tr><th>점검자</th><th>1차</th><th>2차</th><th>가족 확인</th></tr>
+    <tr><td>${esc(state.who)}</td><td>${esc(fmtDate(state.rounds[1].date))}</td><td>${esc(fmtDate(state.rounds[2].date))}</td><td>${state.agreed ? '<span class="stamp">약속</span>' : ""}</td></tr></table></div>`;
+}
+function buildPrint(mode) {
+  const P = $("#print");
+  const pm = (v) => (v ? `<span class="p-mk">${MK[v]}</span>` : "");
+  if (mode === "blank") {
+    P.innerHTML = `<section class="p-page">
+      <div class="p-head"><div><p class="no">가정 안전 자체 점검 · 서식 HC-1</p><h1>우리 집 안전·에너지 점검표</h1>
+        <p class="meta">점검자(번호·별칭) ____________ &nbsp; 1차 ____월 ____일 &nbsp; 2차 ____월 ____일</p>
+        <p class="meta">표시: ○ 예(잘 되어 있음) &nbsp; × 아니오(고칠 일) &nbsp; ／ 해당 없음</p></div>
+        <table class="p-approve"><tr><th>점검자</th><th>가족 확인</th></tr><tr><td></td><td></td></tr></table></div>
+      <table class="p-tbl"><thead><tr><th class="code">번호</th><th>점검 항목 · 왜?</th><th class="c">1차</th><th class="c">2차</th><th>메모</th></tr></thead><tbody>
+      ${CONFIG.spaces.map((sp) => { const list = ITEMS.filter((i) => i.space === sp.id); if (!list.length) return "";
+        return `<tr class="grp"><td colspan="5">${esc(sp.name)}</td></tr>` + list.map((i) => `<tr><td class="code">${esc(codeOf(i))}</td><td>${esc(i.text)}${i.why ? `<span class="why">${esc(i.why)}</span>` : ""}</td><td class="c"></td><td class="c"></td><td class="wline"></td></tr>`).join(""); }).join("")}
+      </tbody></table>
+      <h2>고칠 일 약속 (× 항목 중 위험한데 쉬운 것부터)</h2>
+      <table class="p-tbl"><thead><tr><th class="code">순서</th><th class="code">번호</th><th>우리 집 약속</th><th>담당</th><th>기한</th><th class="c">고침</th></tr></thead><tbody>
+      ${[1, 2, 3, 4, 5].map((n) => `<tr><td class="code">${n}</td><td></td><td style="height:9mm"></td><td style="width:22mm"></td><td style="width:22mm"></td><td class="c"><span class="box"></span></td></tr>`).join("")}</tbody></table>
+      <div class="p-sign"><span>점검자 <i></i></span><span>가족 확인 <i></i></span></div>
+    </section>`;
+  } else if (mode === "promise") {
+    const list = fixList();
+    P.innerHTML = `<section class="p-page p-promise">
+      ${printHead("우리 집 안전 약속서", `1차 점검에서 찾은 고칠 일 ${list.length}개를 위험한데 쉬운 것부터 차례로 실천하고, ${state.rounds[2].date ? esc(state.rounds[2].date.replace(/-/g, ".")) + "에" : "1~2주 뒤"} 다시 점검합니다.`)}
+      <table class="p-tbl"><thead><tr><th class="code">순서</th><th class="code">번호</th><th>고칠 일 · 우리 집 약속</th><th>위험도</th><th>담당</th><th>기한</th><th class="c">고침</th></tr></thead><tbody>
+      ${list.length ? list.map(({ item, f }, n) => `<tr><td class="code">${n + 1}</td><td class="code">${esc(codeOf(item))}</td><td>${esc(item.text)}<span class="why">약속: ${esc(f.plan) || "________________"}</span></td><td class="c">${CONFIG.risk[f.risk]}</td><td>${esc(f.who) || ""}</td><td class="c">${esc(fmtDate(f.due).replace("—", ""))}</td><td class="c"><span class="box"></span></td></tr>`).join("")
+        : `<tr><td colspan="7">1차 점검에서 × 로 표시한 항목이 없습니다.</td></tr>`}
+      </tbody></table>
+      <p class="p-note">함께 사는 사람이 각자 서명합니다. 서명 대신 이름 첫 글자나 손도장도 괜찮아요.</p>
+      <div class="p-sign">${state.members.map((m) => `<span>${esc(m)} <i></i></span>`).join("")}</div>
+    </section>`;
+  } else {
+    const r = state.round, list = fixList();
+    const bars = (groups, key) => groups.map((g) => { const l = ITEMS.filter((i) => i[key] === g.id); if (!l.length) return ""; const t = tally(r, l);
+      return `<tr><td>${esc(g.name)}</td><td class="b">${cellsHtml(r, l)}</td><td class="c">${t.y}</td><td class="c">${t.n}</td><td class="c">${t.na}</td></tr>`; }).join("");
+    const weak = weakFields(r);
+    P.innerHTML = `<section class="p-page">
+      ${printHead("우리 집 안전·에너지 점검 결과", `${r}차 기준 요약 · 함께 사는 사람: ${state.members.map(esc).join(", ")}`)}
+      <div class="p-two">
+        <table class="p-tbl p-bars"><thead><tr><th>공간</th><th>결과</th><th class="c">○</th><th class="c">×</th><th class="c">／</th></tr></thead><tbody>${bars(CONFIG.spaces, "space")}</tbody></table>
+        <table class="p-tbl p-bars"><thead><tr><th>분야</th><th>결과</th><th class="c">○</th><th class="c">×</th><th class="c">／</th></tr></thead><tbody>${bars(CONFIG.fields, "field")}</tbody></table>
+      </div>
+      <p class="p-note"><b>우리 집 취약 분야:</b> ${weak.length ? weak.map((w, n) => `${n + 1}. ${esc(w.f.name)}(× ${w.t.n})`).join(" &nbsp; ") : "× 로 표시한 항목 없음"}</p>
+      <h2>항목별 표시</h2>
+      <table class="p-tbl"><thead><tr><th class="code">번호</th><th>점검 항목</th><th class="c">1차</th><th class="c">2차</th><th>메모</th></tr></thead><tbody>
+      ${CONFIG.spaces.map((sp) => { const l = ITEMS.filter((i) => i.space === sp.id); if (!l.length) return "";
+        return `<tr class="grp"><td colspan="5">${esc(sp.name)}</td></tr>` + l.map((i) => { const a1 = state.rounds[1].ans[i.id] || {}, a2 = state.rounds[2].ans[i.id] || {};
+          return `<tr><td class="code">${esc(codeOf(i))}</td><td>${esc(i.text)}</td><td class="c">${pm(a1.v)}</td><td class="c">${pm(a2.v)}</td><td>${esc([a1.memo, a2.memo].filter(Boolean).join(" / "))}</td></tr>`; }).join(""); }).join("")}
+      </tbody></table>
+      <h2>고칠 일 (1차 × 항목, 우선순위 순)</h2>
+      <table class="p-tbl"><thead><tr><th class="code">순서</th><th class="code">번호</th><th>우리 집 약속</th><th>위험도</th><th>고치기</th><th>담당</th><th>기한</th><th class="c">고침</th></tr></thead><tbody>
+      ${list.length ? list.map(({ item, f }, n) => `<tr><td class="code">${n + 1}</td><td class="code">${esc(codeOf(item))}</td><td>${esc(f.plan || item.text)}</td><td class="c">${CONFIG.risk[f.risk]}</td><td class="c">${CONFIG.ease[f.ease]}</td><td>${esc(f.who)}</td><td class="c">${esc(fmtDate(f.due).replace("—", ""))}</td><td class="c">${f.done ? "○" : ""}</td></tr>`).join("")
+        : `<tr><td colspan="8">없음</td></tr>`}</tbody></table>
+      <div class="p-sign"><span>점검자 <i></i></span><span>가족 확인 <i></i></span></div>
+    </section>`;
+  }
+}
+// ponytail: Ctrl+P로 바로 인쇄하면 결과지, 버튼으로 고른 인쇄물은 인쇄가 끝나면 비움
+window.addEventListener("beforeprint", () => { if (!$("#print").innerHTML) buildPrint("result"); });
+window.addEventListener("afterprint", () => { $("#print").innerHTML = ""; });
+function doPrint(mode) { buildPrint(mode); $("#dlgPrint").close(); setTimeout(() => window.print(), 50); }
+
+/* ---------- 항목 설정 ---------- */
+let draft = [];
+function openItems() { draft = ITEMS.map((i) => ({ ...i })); renderEditor(); $("#dlgItems").showModal(); }
+function renderEditor() {
+  const opt = (obj, cur) => Object.entries(obj).map(([k, v]) => `<option value="${k}" ${+k === cur ? "selected" : ""}>${v}</option>`).join("");
+  $("#edBody").innerHTML = `<p class="sub" style="margin-bottom:var(--sp-4)">문장은 “그렇다면 안전한” 쪽으로 써 주세요(예 = 잘 되어 있음). 근거는 교과서·공식 안내로 확인한 내용만 적어요. 저장하면 이 브라우저에 남고, [항목만 파일로]로 학생에게 나눠 줄 수 있어요.</p>` +
+    CONFIG.spaces.map((sp) => `<div class="ed-space"><h3>${esc(sp.name)}</h3>${draft.map((it, idx) => it.space !== sp.id ? "" : `
+      <div class="ed-row" data-idx="${idx}">
+        <label class="wide">점검 항목<input class="input" data-k="text" maxlength="120" value="${esc(it.text)}"></label>
+        <label class="wide">왜? (한 줄 근거)<input class="input" data-k="why" maxlength="120" value="${esc(it.why)}"></label>
+        <label class="wide">고치는 방법 예시<input class="input" data-k="fix" maxlength="120" value="${esc(it.fix)}"></label>
+        <label>분야<select class="input" data-k="field">${CONFIG.fields.map((f) => `<option value="${f.id}" ${f.id === it.field ? "selected" : ""}>${esc(f.name)}</option>`).join("")}</select></label>
+        <label>위험도<select class="input" data-k="risk">${opt(CONFIG.risk, it.risk)}</select></label>
+        <label>고치기<select class="input" data-k="ease">${opt(CONFIG.ease, it.ease)}</select></label>
+        <button class="btn small danger del" type="button" data-rm="${idx}">삭제</button>
+      </div>`).join("")}<button class="btn small" type="button" data-add="${sp.id}" style="margin-top:var(--sp-2)">${esc(sp.name)}에 항목 추가</button></div>`).join("");
+}
+$("#edBody").addEventListener("input", (e) => {
+  const row = e.target.closest("[data-idx]"); if (!row || !e.target.dataset.k) return;
+  const k = e.target.dataset.k; let v = e.target.value;
+  if (k === "risk" || k === "ease") v = +v;
+  draft[+row.dataset.idx][k] = v;
+});
+$("#edBody").addEventListener("click", (e) => {
+  const add = e.target.closest("[data-add]"), rm = e.target.closest("[data-rm]");
+  if (add) { const sp = add.dataset.add; const last = draft.map((d, i) => (d.space === sp ? i : -1)).filter((i) => i >= 0).pop();
+    const it = { id: "c" + Date.now().toString(36), space: sp, field: CONFIG.fields[0].id, risk: 2, ease: 1, text: "", why: "", fix: "" };
+    draft.splice(last == null ? draft.length : last + 1, 0, it); renderEditor();
+    const rows = $$(`#edBody [data-idx]`); const r = rows.find((x) => draft[+x.dataset.idx] === it); r && r.querySelector("input").focus(); }
+  if (rm) { draft.splice(+rm.dataset.rm, 1); renderEditor(); }
+});
+$("#edSave").addEventListener("click", () => {
+  const clean = normalizeItems(draft.map((d) => ({ ...d, text: (d.text || "").trim() })));
+  if (!clean) { MO.play($("#dlgItems"), "mk-wiggle"); toast("항목이 하나 이상 있어야 해요."); return; }
+  const dropped = draft.length - clean.length;
+  ITEMS = clean; saveItems(true); $("#dlgItems").close(); render();
+  toast(dropped ? `문장이 빈 항목 ${dropped}개는 빼고 저장했어요.` : "항목을 저장했어요.");
+});
+$("#edDefault").addEventListener("click", () => {
+  if (!confirm("처음 항목으로 되돌릴까요? 직접 고친 항목은 사라져요(점검 표시는 남아요).")) return;
+  ITEMS = CONFIG.items.map((i) => ({ ...i })); saveItems(false); $("#dlgItems").close(); render();
+});
+$("#edExport").addEventListener("click", () => {
+  const clean = normalizeItems(draft) || ITEMS;
+  download(`점검항목_${today()}.json`, { app: "homecheck", v: 1, items: clean });
+});
+
+/* ---------- 파일 · 예시 · 초기화 ---------- */
+function download(name, obj) {
+  const url = URL.createObjectURL(new Blob([JSON.stringify(obj, null, 1)], { type: "application/json" }));
+  const a = document.createElement("a"); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+$("#btnExport").addEventListener("click", () => {
+  const custom = !!load(KEY_ITEMS);
+  download(`우리집점검표_${(state.who || "기록").replace(/[\\/:*?"<>|\s]/g, "")}_${today()}.json`, { app: "homecheck", v: 1, items: custom ? ITEMS : null, state });
+});
+$("#btnImport").addEventListener("click", () => $("#fileIn").click());
+$("#fileIn").addEventListener("change", async (e) => {
+  const f = e.target.files[0]; e.target.value = "";
+  if (!f) return;
+  if (f.size > 500000) { toast("파일이 너무 커요. 이 점검표에서 저장한 파일인지 확인해 주세요."); return; }
+  let data;
+  try { data = JSON.parse(await f.text()); } catch (err) { toast("읽을 수 없는 파일이에요."); return; }
+  if (!data || data.app !== "homecheck") { toast("이 점검표에서 저장한 파일이 아니에요."); return; }
+  const items = normalizeItems(data.items);
+  if (data.state) {
+    if (!confirm("지금 기록을 이 파일 내용으로 바꿀까요?")) return;
+    state = normalize(data.state);
+    if (items) { ITEMS = items; saveItems(true); }
+    save(); setTab(state.tab); toast("파일을 불러왔어요.");
+  } else if (items) {
+    if (!confirm(`점검 항목 ${items.length}개를 이 파일 것으로 바꿀까요? 표시한 기록은 남아요.`)) return;
+    ITEMS = items; saveItems(true); render(); toast("점검 항목을 바꿨어요.");
+  } else toast("파일에 불러올 내용이 없어요.");
+});
+$("#btnSample").addEventListener("click", () => {
+  const has = Object.keys(state.rounds[1].ans).length || Object.keys(state.rounds[2].ans).length;
+  if (has && !confirm("지금 기록을 지우고 예시로 채울까요?")) return;
+  ITEMS = CONFIG.items.map((i) => ({ ...i })); saveItems(false);
+  const s = blankState();
+  s.who = "3번"; s.members = ["나", "엄마", "할머니", "동생"];
+  const d = new Date(); const iso = (n) => { const x = new Date(d.getTime() + n * 864e5 - d.getTimezoneOffset() * 60000); return x.toISOString().slice(0, 10); };
+  s.rounds[1].date = iso(-12); s.rounds[2].date = iso(0);
+  const n1 = ["e1", "l1", "l3", "k3", "k4", "b1", "b3", "b4", "r2", "r5", "u1", "u4", "u6"], na = ["u2", "r4"];
+  CONFIG.items.forEach((i) => { s.rounds[1].ans[i.id] = { v: na.includes(i.id) ? "na" : n1.includes(i.id) ? "n" : "y", memo: "" }; });
+  s.rounds[1].ans.l1.memo = "TV 뒤 멀티탭에 멀티탭 연결"; s.rounds[1].ans.b4.memo = "샤워부스 실리콘 검은 곰팡이"; s.rounds[1].ans.u1.memo = "칸막이 앞에 상자 쌓여 있음";
+  const n2 = ["b4", "r5", "u6"];
+  CONFIG.items.forEach((i) => { s.rounds[2].ans[i.id] = { v: na.includes(i.id) ? "na" : n2.includes(i.id) ? "n" : "y", memo: "" }; });
+  s.rounds[2].ans.l2 = { v: "n", memo: "소파를 옮기다 전선이 깔림" };
+  Object.assign(s.fixes, { e1: { who: "나", due: iso(-10) }, l1: { who: "엄마", due: iso(-9) }, k3: { who: "가족 모두", due: iso(-11) }, k4: { who: "나", due: iso(-10) },
+    b1: { who: "엄마", due: iso(-5), ease: 2 }, u1: { who: "할머니", due: iso(-7) }, b4: { who: "엄마", due: iso(5), ease: 3 }, r5: { who: "나", due: iso(3) } });
+  for (const [id, f] of Object.entries(s.fixes)) { const it = CONFIG.items.find((i) => i.id === id); s.fixes[id] = { risk: it.risk, ease: f.ease || it.ease, who: f.who, due: f.due, plan: it.fix, done: !n2.includes(id) }; }
+  s.agreed = true; s.round = "1"; s.tab = "sum";
+  state = s; save(); setTab("sum");
+});
+$("#btnReset").addEventListener("click", () => {
+  if (!confirm("점검 기록을 모두 지우고 새로 시작할까요? (점검 항목 설정은 남아요)")) return;
+  state = blankState(); save(); setTab("info");
+});
+
+/* ---------- 공통 이벤트 ---------- */
+function toast(msg) {
+  const t = document.createElement("div"); t.className = "toast"; t.setAttribute("role", "status"); t.textContent = msg;
+  document.body.appendChild(t); setTimeout(() => t.remove(), 2600);
+}
+$$(".tab").forEach((b) => b.addEventListener("click", () => setTab(b.dataset.tab)));
+$(".tabs").addEventListener("keydown", (e) => {
+  if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+  const tabs = $$(".tab"), i = tabs.findIndex((t) => t.dataset.tab === state.tab);
+  const n = tabs[(i + (e.key === "ArrowRight" ? 1 : tabs.length - 1)) % tabs.length];
+  setTab(n.dataset.tab); n.focus();
+});
+$$(".seg [data-round]").forEach((b) => b.addEventListener("click", () => {
+  if (state.round === b.dataset.round) return;
+  dissolvePane(); state.round = b.dataset.round; save(); render(); MO.play($("#pane"), "mk-fade-in");
+}));
+$("#pane").addEventListener("click", (e) => {
+  const go = e.target.closest("[data-go]");
+  if (go) { if (go.dataset.round) state.round = go.dataset.round; setTab(go.dataset.go); window.scrollTo({ top: $("#sheet").offsetTop - 8 }); return; }
+  const jump = e.target.closest("[data-jump]");
+  if (jump) { const li = document.getElementById("fx-" + jump.dataset.jump); if (li) { li.scrollIntoView({ block: "center" }); li.classList.add("flash"); setTimeout(() => li.classList.remove("flash"), 1200); const f = li.querySelector("select"); f && f.focus({ preventScroll: true }); } return; }
+  const pn = e.target.closest("[data-print-now]");
+  if (pn) doPrint(pn.dataset.printNow);
+});
+$("#btnPrint").addEventListener("click", () => $("#dlgPrint").showModal());
+$("#dlgPrint").addEventListener("click", (e) => { const b = e.target.closest("[data-print]"); if (b) doPrint(b.dataset.print); });
+$("#btnItems").addEventListener("click", openItems);
+$$("dialog [data-close]").forEach((b) => b.addEventListener("click", () => b.closest("dialog").close()));
+$$("dialog").forEach((d) => d.addEventListener("click", (e) => { if (e.target === d) d.close(); }));
+
+setTab(state.tab);
+MO.ripple(document, ".btn");
+</script>
+</body>
+</html>

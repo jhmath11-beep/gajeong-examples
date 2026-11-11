@@ -1,0 +1,1044 @@
+<!--
+  무엇을 하는 앱: 가공식품 포장의 영양정보를 옮겨 적으면 실제 포장 서식 그대로 표를 그려 주고, '다 먹으면?' 환산·1일 기준치 대비 %·알레르기 경고·소비기한 남은 날을 보여 주며, 두 제품을 같은 기준으로 비교해 고른 이유를 확인하는 식품 선택 도우미
+  수업 장면: 식생활(식품 선택과 안전) — 편의점·마트 가공식품 포장(또는 사진)을 보고 숫자 옮기기 → 기준 단위 함정·나트륨·당류·알레르기·소비기한 읽기 → 두 제품 비교, 판단+근거 확인 → A4 비교 활동지 인쇄
+  설정 바꾸는 곳: 아래 <script> 맨 위 CONFIG (1일 영양성분 기준치, 알레르기 유발 물질 목록, 예시 제품, 읽는 법 문장). 기준치·알레르기 목록은 화면의 [⚙ 설정]에서도 고칠 수 있음
+-->
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>식품 표시 읽기 &amp; 현명한 선택</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nanum+Gothic+Coding:wght@400;700&family=Noto+Sans+KR:wght@400;500;700;900&display=swap">
+<style>
+/* Hallmark · pre-emit critique: P4 H4 E4 S5 R4 V4
+ * Hallmark · genre: utilitarian · theme: custom (package back — 흑백 영양정보 표 + 감열지 장바구니 영수증) · macrostructure: workbench (옮겨 적기 | 포장 표) + checkout receipt
+ * axes: cool shelf-grey ground · black label bars · mono thermal receipt · single accent: price-sticker red (경고 전용)
+ * contrast: ink on sheet ≈ 16:1, muted ≈ 7.5:1, warn red on sheet ≈ 5.9:1, sheet on ink ≈ 16:1 (AA)
+ */
+:root {
+  --color-ground:     oklch(93.5% 0.006 250);   /* 진열대 회색 */
+  --color-sheet:      oklch(98.8% 0.003 250);   /* 포장 인쇄면 */
+  --color-thermal:    oklch(97.8% 0.005 225);   /* 감열지 */
+  --color-ink:        oklch(19% 0.010 260);
+  --color-ink-2:      oklch(32% 0.012 260);
+  --color-muted:      oklch(44% 0.012 260);
+  --color-rule:       oklch(78% 0.008 260);
+  --color-rule-soft:  oklch(88% 0.006 260);
+  --color-on-ink:     oklch(98.8% 0.003 250);
+  --color-warn:       oklch(50% 0.190 27);      /* 가격표 스티커 빨강 — 경고에만 */
+  --color-warn-soft:  oklch(95% 0.030 27);
+  --color-ok:         oklch(44% 0.110 150);
+  --color-ok-soft:    oklch(95% 0.035 150);
+  --color-mark:       oklch(91% 0.120 100);     /* 형광펜 */
+  --color-focus:      oklch(52% 0.170 250);
+  --color-scrim:      oklch(19% 0.010 260 / .55);
+
+  --font-label: "Noto Sans KR", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+  --font-mono:  "Nanum Gothic Coding", "D2Coding", "Malgun Gothic", monospace;
+
+  --text-2xs: 0.6875rem; --text-xs: 0.8125rem; --text-sm: 0.9375rem; --text-base: 1rem;
+  --text-md: 1.125rem; --text-lg: 1.375rem; --text-xl: clamp(1.625rem, 2.4vw + 1rem, 2.5rem);
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-5: 20px;
+  --space-6: 24px; --space-8: 32px; --space-12: 48px;
+  --container: 82rem;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-short: 140ms;
+}
+* { box-sizing: border-box; }
+html, body { overflow-x: clip; }
+body { margin: 0; font-family: var(--font-label); font-size: var(--text-base); line-height: 1.6; color: var(--color-ink); background: var(--color-ground); -webkit-font-smoothing: antialiased; }
+@media (min-width: 1600px) { html { font-size: 18px; } }
+h1, h2, h3 { font-weight: 900; font-style: normal; line-height: 1.25; margin: 0; letter-spacing: -0.02em; overflow-wrap: anywhere; min-width: 0; }
+p { margin: 0; }
+button, input, select, textarea { font: inherit; color: inherit; }
+.wrap { max-width: var(--container); margin: 0 auto; padding-inline: clamp(1rem, 4vw, 2rem); }
+.hidden { display: none !important; }
+.num { font-variant-numeric: tabular-nums; }
+.muted { color: var(--color-muted); }
+:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 2px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* 버튼 */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); min-height: 44px; padding: 0 var(--space-4); border: 2px solid var(--color-ink); background: var(--color-ink); color: var(--color-on-ink); font-weight: 700; white-space: nowrap; cursor: pointer; border-radius: 2px; transition: background-color var(--dur-short) var(--ease-out), color var(--dur-short) var(--ease-out); }
+.btn:hover { background: var(--color-ink-2); }
+.btn:active { transform: translateY(1px); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn.line { background: var(--color-sheet); color: var(--color-ink); }
+.btn.line:hover { background: var(--color-rule-soft); }
+.btn.warn { background: var(--color-sheet); color: var(--color-warn); border-color: var(--color-warn); }
+.btn.warn:hover { background: var(--color-warn-soft); }
+
+/* 머리 */
+.mast { padding-top: var(--space-8); }
+.mast-row { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: var(--space-3) var(--space-6); padding-bottom: var(--space-3); border-bottom: 8px solid var(--color-ink); }
+.mast h1 { font-size: var(--text-xl); }
+.mast-lede { margin-top: var(--space-3); padding-bottom: var(--space-4); border-bottom: 1px solid var(--color-ink); max-width: 62ch; color: var(--color-ink-2); }
+
+/* 탭 */
+.tabs { position: sticky; top: 0; z-index: 5; background: var(--color-ground); display: flex; gap: 0; overflow-x: auto; border-bottom: 1px solid var(--color-rule); margin-top: var(--space-4); }
+.tab { min-height: 48px; padding: 0 var(--space-4); border: 0; background: transparent; font-weight: 700; color: var(--color-muted); white-space: nowrap; cursor: pointer; border-bottom: 3px solid transparent; }
+.tab:hover { color: var(--color-ink); }
+.tab[aria-selected="true"] { color: var(--color-ink); border-bottom-color: var(--color-ink); }
+.tab .n { font-family: var(--font-mono); margin-right: var(--space-1); }
+@media (max-width: 440px) { .tab { padding: 0 var(--space-2); font-size: var(--text-sm); } }
+main { padding-block: var(--space-6) var(--space-12); }
+
+/* 작업대: 옮겨 적기 | 포장 표 */
+.bench { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 25rem); gap: var(--space-8); align-items: start; }
+@media (max-width: 920px) { .bench { grid-template-columns: minmax(0, 1fr); } }
+.tools { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; padding-bottom: var(--space-4); border-bottom: 1px solid var(--color-rule); }
+.tools select { min-height: 44px; min-width: 0; max-width: 100%; flex: 1 1 14rem; padding: 0 var(--space-3); border: 2px solid var(--color-ink); background: var(--color-sheet); border-radius: 2px; }
+
+.sheet-form fieldset { border: 0; margin: 0; padding: var(--space-5) 0 var(--space-4); border-bottom: 1px solid var(--color-rule); min-width: 0; }
+.sheet-form legend { padding: 0; font-weight: 900; font-size: var(--text-md); }
+.sheet-form .hint { font-size: var(--text-sm); color: var(--color-muted); margin-top: var(--space-1); max-width: 60ch; }
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3) var(--space-4); margin-top: var(--space-3); }
+@media (max-width: 520px) { .grid2 { grid-template-columns: minmax(0, 1fr); } }
+.fld { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
+.fld > span { font-size: var(--text-sm); font-weight: 700; }
+.inp { min-height: 44px; width: 100%; padding: 0 var(--space-3); border: 1.5px solid var(--color-ink-2); background: var(--color-sheet); border-radius: 2px; }
+textarea.inp { padding: var(--space-2) var(--space-3); min-height: 6rem; resize: vertical; line-height: 1.5; }
+.inp[aria-invalid="true"] { border-color: var(--color-warn); background: var(--color-warn-soft); }
+.unit-in { display: flex; align-items: stretch; }
+.unit-in .inp { border-right: 0; border-radius: 2px 0 0 2px; }
+.unit-in .u { display: flex; align-items: center; padding: 0 var(--space-3); border: 1.5px solid var(--color-ink-2); background: var(--color-rule-soft); font-family: var(--font-mono); font-size: var(--text-sm); white-space: nowrap; }
+.unit-in select.u { min-height: 44px; cursor: pointer; }
+
+.seg { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-3); }
+.seg label { position: relative; }
+.seg input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.seg span { display: inline-flex; align-items: center; min-height: 44px; padding: 0 var(--space-4); border: 1.5px solid var(--color-ink-2); background: var(--color-sheet); font-weight: 700; white-space: nowrap; border-radius: 2px; }
+.seg input:checked + span { background: var(--color-ink); color: var(--color-on-ink); border-color: var(--color-ink); }
+.seg input:focus-visible + span { outline: 3px solid var(--color-focus); outline-offset: 2px; }
+.seg input:disabled + span { opacity: .45; }
+
+/* 영양성분 입력 — 표처럼 줄 긋기 */
+.nrows { margin-top: var(--space-3); border-top: 2px solid var(--color-ink); }
+.nrow { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 9.5rem); gap: var(--space-3); align-items: center; padding: var(--space-1) 0; border-bottom: 1px solid var(--color-rule); }
+.nrow > label { font-weight: 700; }
+.nrow.sub > label { padding-left: var(--space-5); font-weight: 500; }
+.nrow.sub > label::before { content: "└ "; color: var(--color-muted); font-family: var(--font-mono); }
+
+.chips { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-3); }
+.chip { position: relative; }
+.chip input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.chip span { display: inline-flex; align-items: center; min-height: 44px; padding: 0 var(--space-3); border: 1.5px dashed var(--color-ink-2); background: var(--color-sheet); white-space: nowrap; border-radius: 2px; }
+.chip input:checked + span { border-style: solid; border-color: var(--color-ink); background: var(--color-ink); color: var(--color-on-ink); font-weight: 700; }
+.chip input:focus-visible + span { outline: 3px solid var(--color-focus); outline-offset: 2px; }
+.chips.mine .chip input:checked + span { background: var(--color-warn); border-color: var(--color-warn); }
+
+/* 포장 영양정보 표 — 실제 포장 서식 */
+.nl { background: var(--color-sheet); border: 2px solid var(--color-ink); color: var(--color-ink); font-family: var(--font-label); width: 100%; }
+.nl-head { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); background: var(--color-ink); color: var(--color-on-ink); padding: var(--space-2) var(--space-3); }
+.nl-head > b { font-size: 1.75rem; font-weight: 900; letter-spacing: -0.04em; line-height: 1.1; white-space: nowrap; }
+.nl-amt { text-align: right; font-size: var(--text-xs); line-height: 1.35; min-width: 0; overflow-wrap: anywhere; }
+.nl-amt strong { display: block; font-size: var(--text-md); font-weight: 900; }
+.nl-col { display: flex; justify-content: space-between; align-items: end; gap: var(--space-3); padding: var(--space-2) var(--space-3) var(--space-1); border-bottom: 3px solid var(--color-ink); font-size: var(--text-xs); font-weight: 700; line-height: 1.3; }
+.nl-col span:last-child { text-align: right; }
+.nl-row { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-3); padding: 5px var(--space-3); border-bottom: 1px solid var(--color-ink); font-size: var(--text-sm); font-variant-numeric: tabular-nums; }
+.nl-row b { font-weight: 900; margin-right: var(--space-2); }
+.nl-row.sub { padding-left: var(--space-8); }
+.nl-row.sub b { font-weight: 700; }
+.nl-row > strong { font-weight: 900; }
+.nl-row:last-of-type { border-bottom: 3px solid var(--color-ink); }
+.nl-foot { padding: var(--space-2) var(--space-3); font-size: var(--text-2xs); line-height: 1.45; }
+.nl .dash { color: var(--color-muted); }
+.nl-name { font-weight: 900; font-size: var(--text-md); margin-bottom: var(--space-2); overflow-wrap: anywhere; }
+
+/* 포장 옆 정보: 알레르기 · 기한 도장 */
+.pk-box { margin-top: var(--space-3); border: 1.5px solid var(--color-ink); background: var(--color-sheet); padding: var(--space-2) var(--space-3); font-size: var(--text-sm); }
+.pk-box h3 { font-size: var(--text-sm); margin-bottom: var(--space-1); }
+.pk-box.alert { border-color: var(--color-warn); background: var(--color-warn-soft); color: var(--color-warn); }
+.pk-box.alert b { font-weight: 900; }
+.stamp { margin-top: var(--space-3); display: inline-block; font-family: var(--font-mono); font-weight: 700; letter-spacing: .04em; padding: var(--space-1) var(--space-2); border: 1.5px solid var(--color-ink); background: var(--color-sheet); }
+.dday { margin-left: var(--space-2); font-family: var(--font-label); font-weight: 900; }
+.dday.past { color: var(--color-warn); }
+
+/* 다 먹으면? */
+.eat { margin-top: var(--space-6); border-top: 3px double var(--color-ink); padding-top: var(--space-3); }
+.eat h2 { font-size: var(--text-lg); }
+.eat .x { display: inline-block; font-family: var(--font-mono); font-weight: 700; font-size: var(--text-lg); background: var(--color-mark); padding: 0 var(--space-2); margin-left: var(--space-1); }
+.eat p { margin-top: var(--space-2); font-size: var(--text-sm); }
+.eat table { width: 100%; border-collapse: collapse; margin-top: var(--space-3); font-size: var(--text-sm); font-variant-numeric: tabular-nums; }
+.eat th, .eat td { padding: var(--space-1) var(--space-2); border-bottom: 1px solid var(--color-rule); text-align: right; }
+.eat th:first-child, .eat td:first-child { text-align: left; }
+.eat thead th { font-size: var(--text-xs); border-bottom: 2px solid var(--color-ink); }
+.eat td.hi mark { background: var(--color-mark); color: var(--color-ink); font-weight: 900; padding: 0 2px; }
+.checks { margin-top: var(--space-4); padding: 0; list-style: none; font-size: var(--text-sm); }
+.checks li { padding: var(--space-2) 0; border-top: 1px dashed var(--color-rule); }
+.checks li::before { content: "확인 "; font-weight: 900; color: var(--color-warn); }
+.note-sm { margin-top: var(--space-3); font-size: var(--text-xs); color: var(--color-muted); }
+
+/* 비교 */
+.cmp-ctl { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: var(--space-3); align-items: end; }
+@media (max-width: 640px) { .cmp-ctl { grid-template-columns: minmax(0, 1fr); } }
+.cmp-ctl select { min-height: 44px; width: 100%; padding: 0 var(--space-3); border: 2px solid var(--color-ink); background: var(--color-sheet); border-radius: 2px; }
+.cmp-ctl .fld > span .ab { font-family: var(--font-mono); background: var(--color-ink); color: var(--color-on-ink); padding: 0 var(--space-2); margin-right: var(--space-1); }
+.cmp-basis { margin-top: var(--space-4); display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4); }
+.cmp-basis > b { font-size: var(--text-sm); }
+.cmp-basis .seg { margin-top: 0; }
+.cmp-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 23rem); gap: var(--space-6); margin-top: var(--space-6); align-items: start; }
+@media (max-width: 1180px) { .cmp-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .cmp-grid .till { grid-column: 1 / -1; } }
+@media (max-width: 680px) { .cmp-grid { grid-template-columns: minmax(0, 1fr); } }
+.slot-tag { font-family: var(--font-mono); font-weight: 700; font-size: var(--text-lg); line-height: 1; display: inline-block; background: var(--color-ink); color: var(--color-on-ink); padding: var(--space-1) var(--space-2); margin-bottom: var(--space-2); }
+.price { margin-top: var(--space-2); font-family: var(--font-mono); font-size: var(--text-sm); }
+
+.judge { margin-top: var(--space-8); border-top: 8px solid var(--color-ink); padding-top: var(--space-4); display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-4) var(--space-8); }
+@media (max-width: 760px) { .judge { grid-template-columns: minmax(0, 1fr); } }
+.judge h2 { font-size: var(--text-lg); grid-column: 1 / -1; }
+.judge fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+.judge legend { font-weight: 900; padding: 0; margin-bottom: var(--space-2); }
+.judge .seg label { max-width: 100%; }
+.judge .seg span { display: block; line-height: 44px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.claims { display: grid; gap: var(--space-1); }
+.claim { display: flex; gap: var(--space-3); align-items: center; min-height: 44px; padding: 0 var(--space-2); border-bottom: 1px solid var(--color-rule); cursor: pointer; }
+.claim input { width: 20px; height: 20px; accent-color: var(--color-ink); flex: none; }
+.claim.off { color: var(--color-muted); }
+.err { color: var(--color-warn); font-weight: 700; font-size: var(--text-sm); min-height: 1.6em; }
+.judge-act { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
+
+/* 감열지 영수증 */
+.receipt { position: relative; background: var(--color-thermal); font-family: var(--font-mono); font-size: var(--text-sm); padding: var(--space-5) var(--space-5) var(--space-6); margin-bottom: var(--space-3); filter: drop-shadow(0 1px 1px var(--color-rule)); }
+.receipt::after { content: ""; position: absolute; left: 0; right: 0; top: 100%; height: 8px; background: var(--color-thermal);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='8'%3E%3Cpath d='M0 0h16L8 8z'/%3E%3C/svg%3E") 0 0 / 16px 8px repeat-x;
+          mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='8'%3E%3Cpath d='M0 0h16L8 8z'/%3E%3C/svg%3E") 0 0 / 16px 8px repeat-x; }
+.r-title { text-align: center; font-weight: 700; font-size: var(--text-md); letter-spacing: .12em; }
+.r-sub { text-align: center; font-size: var(--text-xs); color: var(--color-muted); }
+.r-sep { border: 0; border-top: 1px dashed var(--color-ink-2); margin: var(--space-3) 0; }
+.r-line { display: flex; justify-content: space-between; gap: var(--space-3); font-variant-numeric: tabular-nums; }
+.r-line > span:first-child { min-width: 0; overflow-wrap: anywhere; }
+.r-line > span:last-child { white-space: nowrap; }
+.r-tbl { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.r-tbl th, .r-tbl td { padding: 2px 0; text-align: right; font-weight: 400; }
+.r-tbl th:first-child, .r-tbl td:first-child { text-align: left; }
+.r-tbl thead th { border-bottom: 1px dashed var(--color-ink-2); }
+.r-tbl td.best { font-weight: 700; }
+.r-tbl td.best::after { content: "*"; }
+.r-ok { color: var(--color-ok); font-weight: 700; }
+.r-no { color: var(--color-warn); font-weight: 700; }
+.r-total { font-weight: 700; font-size: var(--text-md); }
+.r-reason { white-space: pre-wrap; overflow-wrap: anywhere; margin-top: var(--space-1); }
+.r-wait { color: var(--color-muted); text-align: center; padding: var(--space-6) 0; }
+.r-warn { color: var(--color-warn); font-size: var(--text-xs); }
+
+/* 읽는 법 */
+.read { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: var(--space-8); align-items: start; }
+@media (max-width: 880px) { .read { grid-template-columns: minmax(0, 1fr); } }
+.steps { list-style: none; margin: 0; padding: 0; counter-reset: s; }
+.steps li { counter-increment: s; display: grid; grid-template-columns: 3rem minmax(0, 1fr); gap: var(--space-3); padding: var(--space-4) 0; border-bottom: 1px solid var(--color-rule); }
+.steps li::before { content: counter(s); font-family: var(--font-mono); font-weight: 700; font-size: var(--text-xl); line-height: 1; }
+.steps h3 { font-size: var(--text-md); }
+.steps p { margin-top: var(--space-1); max-width: 62ch; color: var(--color-ink-2); }
+.dates { border: 2px solid var(--color-ink); background: var(--color-sheet); }
+.dates h2 { background: var(--color-ink); color: var(--color-on-ink); font-size: var(--text-lg); padding: var(--space-2) var(--space-4); }
+.dates dl { margin: 0; padding: var(--space-3) var(--space-4) 0; }
+.dates dt { font-weight: 900; margin-top: var(--space-2); }
+.dates dd { margin: 0; color: var(--color-ink-2); font-size: var(--text-sm); }
+.dates .calc { padding: var(--space-4); border-top: 1px solid var(--color-ink); margin-top: var(--space-4); }
+.calc-out { margin-top: var(--space-3); font-family: var(--font-mono); font-size: var(--text-md); font-weight: 700; min-height: 1.6em; }
+.calc-out.past { color: var(--color-warn); }
+.dates .src { padding: 0 var(--space-4) var(--space-4); font-size: var(--text-xs); color: var(--color-muted); }
+
+/* 설정 대화상자 */
+dialog { border: 2px solid var(--color-ink); padding: 0; width: min(36rem, calc(100vw - 2rem)); max-height: calc(100dvh - 2rem); background: var(--color-sheet); color: var(--color-ink); border-radius: 2px; }
+dialog::backdrop { background: var(--color-scrim); }
+.dlg-head { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); background: var(--color-ink); color: var(--color-on-ink); padding: var(--space-2) var(--space-4); position: sticky; top: 0; z-index: 1; }
+.dlg-head h2 { font-size: var(--text-lg); }
+.dlg-head .btn { border-color: var(--color-on-ink); }
+.dlg-body { padding: var(--space-4); }
+.dlg-body h3 { font-size: var(--text-md); margin-top: var(--space-4); }
+.dlg-body h3:first-child { margin-top: 0; }
+.dlg-act { display: flex; flex-wrap: wrap; gap: var(--space-2); padding: var(--space-4); border-top: 1px solid var(--color-rule); }
+
+.toast { position: fixed; left: 50%; bottom: var(--space-6); transform: translateX(-50%); background: var(--color-ink); color: var(--color-on-ink); padding: var(--space-3) var(--space-5); font-weight: 700; z-index: 20; max-width: calc(100vw - 2rem); opacity: 0; pointer-events: none; transition: opacity var(--dur-short) var(--ease-out); }
+.toast.show { opacity: 1; }
+footer.colophon { border-top: 1px solid var(--color-ink); padding-block: var(--space-4) var(--space-8); font-size: var(--text-xs); color: var(--color-muted); }
+
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } .btn:active { transform: none; } }
+
+/* ===== 모션 (motion-effects 키트에서 필요한 것만) ===== */
+:root { --mk-accent: var(--color-ink); --mk-ease-out: cubic-bezier(.22,1,.36,1); --mk-ease-in-out: cubic-bezier(.65,0,.35,1); --mk-base: 280ms; --mk-slow: 520ms; --mk-stagger: 35ms; }
+@keyframes mk-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes mk-scale-in { from { opacity: 0; transform: scale(.92); } to { opacity: 1; transform: none; } }
+@keyframes mk-slide-up { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes mk-slide-left { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: none; } }
+@keyframes mk-slide-right { from { opacity: 0; transform: translateX(-24px); } to { opacity: 1; transform: none; } }
+@keyframes mk-receipt { from { clip-path: inset(0 0 100% 0); } to { clip-path: inset(0 0 -12px 0); } } /* 와이프: 영수증이 위에서 아래로 출력(톱니 끝 포함) */
+@keyframes mk-squash { 0% { transform: none; } 30% { transform: scale(1.12,.86); } 55% { transform: scale(.94,1.08); } 75% { transform: scale(1.03,.98); } 100% { transform: none; } }
+@keyframes mk-glitch { 0%,100% { transform: none; text-shadow: none; } 20% { transform: translate(-2px,1px); text-shadow: 2px 0 rgba(255,0,60,.6),-2px 0 rgba(0,200,255,.6); } 40% { transform: translate(2px,-1px); } 60% { transform: translate(-1px,0); text-shadow: -2px 0 rgba(255,0,60,.6),2px 0 rgba(0,200,255,.6); } 80% { transform: translate(1px,1px); } }
+@keyframes mk-pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+@keyframes mk-wiggle { 0%,100% { transform: translateX(0); } 20% { transform: translateX(-6px); } 40% { transform: translateX(5px); } 60% { transform: translateX(-3px); } 80% { transform: translateX(2px); } }
+@keyframes mk-ripple { to { transform: scale(1); opacity: 0; } }
+.mk-fade-in { animation: mk-fade-in var(--mk-base) var(--mk-ease-out) both; }
+.mk-scale-in { animation: mk-scale-in var(--mk-base) var(--mk-ease-out) both; }
+.mk-slide-up { animation: mk-slide-up var(--mk-base) var(--mk-ease-out) both; }
+.mk-slide-left { animation: mk-slide-left var(--mk-base) var(--mk-ease-out) both; }
+.mk-slide-right { animation: mk-slide-right var(--mk-base) var(--mk-ease-out) both; }
+.mk-receipt { animation: mk-receipt 900ms var(--mk-ease-in-out) both; }
+.mk-stagger > * { animation: mk-slide-up var(--mk-base) var(--mk-ease-out) both; animation-delay: calc(var(--i,0) * var(--mk-stagger)); }
+.mk-squash { animation: mk-squash 520ms var(--mk-ease-out); transform-origin: 50% 100%; }
+.mk-glitch { animation: mk-glitch 360ms steps(2,end) 1; }
+.mk-pulse { animation: mk-pulse 1s var(--mk-ease-in-out) 2; }
+.mk-wiggle { animation: mk-wiggle 380ms var(--mk-ease-out); }
+.btn { position: relative; overflow: hidden; isolation: isolate; }
+.mk-ripple { position: absolute; border-radius: 50%; pointer-events: none; background: currentColor; opacity: .18; transform: scale(0); animation: mk-ripple 520ms var(--mk-ease-out) forwards; z-index: -1; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; } }
+
+/* 인쇄용 A4 활동지 */
+#sheet { display: none; }
+@media print {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  @page { size: A4; margin: 12mm; }
+  html { font-size: 10pt; }
+  body { background: var(--color-sheet); }
+  body > *:not(#sheet) { display: none !important; }
+  #sheet { display: block; }
+  .ps-head { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 5px solid var(--color-ink); padding-bottom: 2mm; }
+  .ps-head h1 { font-size: 16pt; }
+  .ps-who { font-size: 10pt; }
+  .ps-who span { display: inline-block; min-width: 30mm; border-bottom: 1px solid var(--color-ink); text-align: center; }
+  .ps-labels { display: grid; grid-template-columns: 1fr 1fr; gap: 6mm; margin-top: 4mm; }
+  .ps-labels .nl-head > b { font-size: 15pt; }
+  .ps-labels .nl-row { padding-block: 0; font-size: 8.5pt; }
+  .ps-labels .nl-foot { font-size: 6.5pt; padding-block: 1mm; }
+  .ps-labels .nl-col { padding-block: 1mm 0.5mm; }
+  .ps-labels .pk-box { margin-top: 2mm; padding: 1mm 2mm; font-size: 8.5pt; }
+  .ps-labels .pk-box.alert { color: var(--color-ink); background: var(--color-sheet); border-color: var(--color-ink); }
+  .ps-labels .stamp { margin-top: 1.5mm; font-size: 8pt; padding: 0 1.5mm; }
+  .ps-labels .price { display: inline-block; margin: 0 0 0 2mm; font-size: 8pt; }
+  .ps-labels .nl-head { padding-block: 1mm; }
+  .ps-labels .nl-name { margin-bottom: 1mm; font-size: 10.5pt; }
+  .ps-tbl { width: 100%; border-collapse: collapse; margin-top: 4mm; font-size: 9pt; font-variant-numeric: tabular-nums; }
+  .ps-tbl th, .ps-tbl td { border: 1px solid var(--color-ink); padding: 1mm 1.2mm; font-size: 8pt; text-align: right; }
+  .ps-tbl th:first-child, .ps-tbl td:first-child { text-align: left; }
+  .ps-tbl thead th { background: var(--color-rule-soft); }
+  .ps-q { margin-top: 3mm; font-size: 9pt; line-height: 1.45; }
+  .ps-q h2 { font-size: 11pt; border-bottom: 2px solid var(--color-ink); padding-bottom: 1mm; margin-bottom: 2mm; }
+  .ps-q ol { margin: 0; padding-left: 5mm; }
+  .ps-q li { margin-bottom: 1.5mm; }
+  .ps-line { border-bottom: 1px solid var(--color-ink); min-height: 6.5mm; padding-top: 1mm; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .ps-foot { margin-top: 3mm; font-size: 7.5pt; color: var(--color-muted); }
+}
+</style>
+</head>
+<body>
+
+<header class="wrap mast">
+  <div class="mast-row">
+    <h1>식품 표시 읽기 &amp; 현명한 선택</h1>
+    <button class="btn line" id="btnSettings" type="button">⚙ 설정</button>
+  </div>
+  <p class="mast-lede">가공식품 포장 뒷면의 영양정보를 그대로 옮겨 적고, 기준 단위·나트륨·당류·알레르기 유발 물질·소비기한을 읽은 뒤 두 제품 중 무엇을 고를지 근거를 들어 정해 봅니다.</p>
+</header>
+
+<nav class="wrap tabs" role="tablist" aria-label="활동 단계">
+  <button class="tab" role="tab" data-tab="entry" aria-selected="true"><span class="n">1</span>옮겨 적기</button>
+  <button class="tab" role="tab" data-tab="cmp" aria-selected="false"><span class="n">2</span>두 제품 고르기</button>
+  <button class="tab" role="tab" data-tab="read" aria-selected="false"><span class="n">3</span>읽는 법·기한</button>
+</nav>
+
+<main class="wrap">
+  <!-- 1. 옮겨 적기 -->
+  <section id="p-entry" role="tabpanel" aria-label="영양정보 옮기기">
+    <div class="tools">
+      <label class="sr" for="loadSel">제품 불러오기</label>
+      <select id="loadSel"></select>
+      <button class="btn line" id="btnExample" type="button">예시로 채워 보기</button>
+      <button class="btn line" id="btnNew" type="button">새로 쓰기</button>
+      <button class="btn" id="btnSave" type="button">내 제품에 저장</button>
+      <button class="btn warn" id="btnDel" type="button">삭제</button>
+    </div>
+    <div class="bench">
+      <form class="sheet-form" id="form" autocomplete="off" onsubmit="return false">
+        <fieldset>
+          <legend>제품</legend>
+          <div class="grid2">
+            <label class="fld"><span>제품 이름</span><input class="inp" id="f-name" maxlength="40" placeholder="예: 감자칩 소금맛"></label>
+            <label class="fld"><span>가격 (영수증에 쓸 값, 없으면 비워 둠)</span>
+              <span class="unit-in"><input class="inp num" id="f-price" type="number" min="0" step="10" inputmode="numeric"><span class="u">원</span></span></label>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>양과 표의 기준</legend>
+          <p class="hint">포장의 ‘총 내용량’과, 영양정보 표가 무엇을 기준으로 적혀 있는지 고릅니다.</p>
+          <div class="grid2">
+            <label class="fld"><span>총 내용량</span>
+              <span class="unit-in"><input class="inp num" id="f-total" type="number" min="0" step="any" inputmode="decimal">
+                <select class="u" id="f-unit" aria-label="단위"><option value="g">g</option><option value="mL">mL</option></select></span></label>
+          </div>
+          <div class="seg" role="radiogroup" aria-label="표의 기준">
+            <label><input type="radio" name="basis" value="total"><span>총 내용량당</span></label>
+            <label><input type="radio" name="basis" value="100"><span id="b100">100g당</span></label>
+            <label><input type="radio" name="basis" value="unit"><span>한 개·한 봉지당</span></label>
+          </div>
+          <div class="grid2" id="unitFields">
+            <label class="fld"><span>단위 이름</span><input class="inp" id="f-sname" maxlength="12" placeholder="예: 1봉지, 1조각"></label>
+            <label class="fld"><span>그 단위의 양</span>
+              <span class="unit-in"><input class="inp num" id="f-samt" type="number" min="0" step="any" inputmode="decimal"><span class="u" id="sUnit">g</span></span></label>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>영양성분 <span class="muted" id="basisEcho" style="font-weight:500;font-size:var(--text-sm)"></span></legend>
+          <p class="hint">포장에 적힌 숫자를 바꾸지 말고 그대로 옮깁니다. 계산은 오른쪽에서 해 줍니다.</p>
+          <div class="nrows" id="nrows"></div>
+        </fieldset>
+        <fieldset>
+          <legend>알레르기 유발 물질 (포장에 표시된 것)</legend>
+          <p class="hint">원재료명 근처의 ‘○○ 함유’ 표시를 보고 고릅니다.</p>
+          <div class="chips" id="algChips"></div>
+        </fieldset>
+        <fieldset>
+          <legend>기한</legend>
+          <div class="grid2">
+            <label class="fld"><span>표시 종류</span>
+              <select class="inp" id="f-dtype"><option value="소비기한">소비기한</option><option value="유통기한">유통기한</option></select></label>
+            <label class="fld"><span>날짜</span><input class="inp num" id="f-date" type="date"></label>
+          </div>
+        </fieldset>
+      </form>
+
+      <aside aria-label="포장 영양정보 미리보기">
+        <div id="pv"></div>
+        <section class="eat" id="eat" aria-live="polite"></section>
+        <ul class="checks" id="checks"></ul>
+        <p class="note-sm">1일 영양성분 기준치 값은 ⚙ 설정에 있습니다. 수업 전 식약처 「식품등의 표시기준」의 기준치로 확인해 주세요.</p>
+      </aside>
+    </div>
+  </section>
+
+  <!-- 2. 비교 -->
+  <section id="p-cmp" role="tabpanel" aria-label="두 제품 고르기" class="hidden">
+    <div class="cmp-ctl">
+      <label class="fld"><span><span class="ab">A</span>첫 번째 제품</span><select id="selA"></select></label>
+      <button class="btn line" id="btnSwap" type="button" aria-label="A와 B 바꾸기">A ⇄ B</button>
+      <label class="fld"><span><span class="ab">B</span>두 번째 제품</span><select id="selB"></select></label>
+    </div>
+    <div class="cmp-basis">
+      <b>무엇에 맞춰 비교할까요?</b>
+      <div class="seg" role="radiogroup" aria-label="비교 기준">
+        <label><input type="radio" name="cbasis" value="100"><span>같은 양(100g·100mL)</span></label>
+        <label><input type="radio" name="cbasis" value="whole"><span>한 개 다 먹으면</span></label>
+      </div>
+    </div>
+    <p class="note-sm" id="cmpNote"></p>
+
+    <div class="cmp-grid">
+      <div id="slotA"></div>
+      <div id="slotB"></div>
+      <div class="till">
+        <div class="receipt" id="receipt" aria-live="polite"></div>
+        <button class="btn line" id="btnPrint" type="button">A4 비교 활동지 인쇄</button>
+      </div>
+    </div>
+
+    <form class="judge" id="judge" onsubmit="return false">
+      <h2>나는 어느 쪽을 고를까?</h2>
+      <div>
+        <label class="fld"><span>번호 또는 별칭</span><input class="inp" id="who" maxlength="20" placeholder="예: 3번"></label>
+        <fieldset style="margin-top:var(--space-4)">
+          <legend>고른 제품</legend>
+          <div class="seg" role="radiogroup" aria-label="고른 제품">
+            <label><input type="radio" name="pick" value="a"><span id="pickA">A</span></label>
+            <label><input type="radio" name="pick" value="b"><span id="pickB">B</span></label>
+          </div>
+        </fieldset>
+        <label class="fld" style="margin-top:var(--space-4)"><span>고른 이유 (내 말로, 숫자를 넣어서)</span>
+          <textarea class="inp" id="reason" maxlength="300" placeholder="예: 100g으로 맞추면 나트륨이 ○○mg 더 적어서"></textarea></label>
+      </div>
+      <fieldset>
+        <legend>근거 고르기 — 고른 제품이 상대보다…</legend>
+        <div class="claims" id="claims"></div>
+      </fieldset>
+      <div class="judge-act">
+        <button class="btn" id="btnCheck" type="button">근거 확인하고 영수증 받기</button>
+        <p class="err" id="judgeErr" role="alert"></p>
+      </div>
+    </form>
+  </section>
+
+  <!-- 3. 읽는 법 -->
+  <section id="p-read" role="tabpanel" aria-label="읽는 법과 기한 계산" class="hidden">
+    <div class="read">
+      <ol class="steps" id="steps"></ol>
+      <div class="dates">
+        <h2>소비기한과 유통기한</h2>
+        <dl id="dateDl"></dl>
+        <div class="calc">
+          <div class="grid2">
+            <label class="fld"><span>표시 종류</span>
+              <select class="inp" id="c-type"><option value="소비기한">소비기한</option><option value="유통기한">유통기한</option></select></label>
+            <label class="fld"><span>포장에 적힌 날짜</span><input class="inp num" id="c-date" type="date"></label>
+          </div>
+          <p class="calc-out" id="c-out" aria-live="polite"></p>
+        </div>
+        <p class="src" id="dateSrc"></p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="wrap colophon">
+  내 제품과 비교 기록은 이 기기의 브라우저에만 저장됩니다. 숫자는 학생이 포장에서 옮겨 적은 값이며, 기준치·알레르기 표시 대상은 교과서와 식약처 자료로 확인한 뒤 ⚙ 설정에서 고쳐 쓰세요.
+</footer>
+
+<dialog id="dlg" aria-labelledby="dlgTitle">
+  <div class="dlg-head"><h2 id="dlgTitle">설정</h2><button class="btn" type="button" id="dlgClose">닫기</button></div>
+  <div class="dlg-body">
+    <h3>1일 영양성분 기준치</h3>
+    <p class="hint muted" style="font-size:var(--text-sm)">식약처 「식품등의 표시기준」의 값으로 확인한 뒤 쓰세요. 바꾸면 모든 % 계산에 반영됩니다.</p>
+    <div class="grid2" id="dvFields"></div>
+    <h3>알레르기 유발 물질 표시 대상</h3>
+    <p class="hint muted" style="font-size:var(--text-sm)">쉼표나 줄바꿈으로 나눠 적습니다. 최신 고시와 맞는지 확인해 주세요.</p>
+    <textarea class="inp" id="algText" rows="5" style="margin-top:var(--space-2)"></textarea>
+    <h3>내 알레르기</h3>
+    <p class="hint muted" style="font-size:var(--text-sm)">고르면 해당 물질이 든 제품에 경고가 뜹니다. (학생 본인 기기에서만 고르세요)</p>
+    <div class="chips mine" id="myChips"></div>
+  </div>
+  <div class="dlg-act">
+    <button class="btn" type="button" id="dlgSave">저장</button>
+    <button class="btn line" type="button" id="dlgReset">처음 값으로</button>
+    <button class="btn warn" type="button" id="dlgWipe">내 제품·기록 모두 지우기</button>
+  </div>
+</dialog>
+
+<div id="sheet" aria-hidden="true"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+/* ===================== CONFIG — 교사가 고치는 곳 ===================== */
+const CONFIG = {
+  storagePrefix: 'foodlabel.v1.',
+  energyBase: 2000,                       // 표 아래 안내 문구의 기준 열량(kcal)
+  // 1일 영양성분 기준치 — 식약처 「식품등의 표시기준」 값으로 확인 후 사용 (화면 ⚙ 설정에서도 수정)
+  dv: { na: 2000, carb: 324, sugar: 100, fat: 54, sat: 15, chol: 300, protein: 55 },
+  // 포장 표에 나오는 순서 그대로. dv:false 는 % 표시 없음
+  nutrients: [
+    { key: 'na',      name: '나트륨',     unit: 'mg' },
+    { key: 'carb',    name: '탄수화물',   unit: 'g' },
+    { key: 'sugar',   name: '당류',       unit: 'g',  sub: true },
+    { key: 'fat',     name: '지방',       unit: 'g' },
+    { key: 'trans',   name: '트랜스지방', unit: 'g',  sub: true, dv: false },
+    { key: 'sat',     name: '포화지방',   unit: 'g',  sub: true },
+    { key: 'chol',    name: '콜레스테롤', unit: 'mg' },
+    { key: 'protein', name: '단백질',     unit: 'g' }
+  ],
+  // 알레르기 유발 물질 표시 대상 — 최신 고시로 확인 후 사용 (⚙ 설정에서 수정)
+  allergens: ['알류(가금류)', '우유', '메밀', '땅콩', '대두', '밀', '고등어', '게', '새우', '돼지고기', '복숭아', '토마토', '아황산류', '호두', '닭고기', '쇠고기', '오징어', '조개류(굴·전복·홍합 포함)', '잣'],
+  // 예시 제품(가상의 일반 제품). dateIn = 오늘부터 며칠 뒤가 기한인지
+  examples: [
+    { id: 'ex1', name: '감자칩 소금맛', unit: 'g', total: 150, basis: '100', kcal: 550,
+      n: { na: 500, carb: 52, sugar: 1, fat: 35, trans: 0, sat: 11, chol: 0, protein: 6 },
+      allergens: ['대두', '우유'], dtype: '소비기한', dateIn: 120, price: 2800 },
+    { id: 'ex2', name: '통밀 크래커 (30g×4봉지)', unit: 'g', total: 120, basis: 'unit', sname: '1봉지', samt: 30, kcal: 140,
+      n: { na: 170, carb: 20, sugar: 3, fat: 5, trans: 0, sat: 2.2, chol: 0, protein: 3 },
+      allergens: ['밀', '대두', '우유'], dtype: '소비기한', dateIn: 75, price: 2400 },
+    { id: 'ex3', name: '복숭아 과즙 음료', unit: 'mL', total: 340, basis: 'total', kcal: 160,
+      n: { na: 15, carb: 40, sugar: 37, fat: 0, trans: 0, sat: 0, chol: 0, protein: 0.5 },
+      allergens: ['복숭아'], dtype: '소비기한', dateIn: 9, price: 1500 }
+  ],
+  // 비교 근거 (고른 제품이 상대보다 …). 판정은 아래 코드가 숫자로 확인
+  claims: [
+    { key: 'kcal',    text: '열량이 더 낮다',           dir: 'low' },
+    { key: 'na',      text: '나트륨이 더 적다',         dir: 'low' },
+    { key: 'sugar',   text: '당류가 더 적다',           dir: 'low' },
+    { key: 'sat',     text: '포화지방이 더 적다',       dir: 'low' },
+    { key: 'protein', text: '단백질이 더 많다',         dir: 'high' },
+    { key: 'allergy', text: '내 알레르기 유발 물질이 없다' },
+    { key: 'date',    text: '기한이 더 많이 남았다' },
+    { key: 'price',   text: '같은 양으로 따지면 더 싸다' }
+  ],
+  readSteps: [
+    ['기준 단위부터 봅니다', '영양정보 표의 숫자는 ‘총 내용량당’, ‘100g당’, ‘1봉지(30g)당’처럼 제품마다 기준이 다릅니다. 기준이 총 내용량이 아니면, 다 먹었을 때의 양은 표의 숫자보다 많을 수 있습니다.'],
+    ['%는 하루 기준치에 대한 비율입니다', '‘1일 영양성분 기준치에 대한 비율’은 표 아래 적힌 열량을 기준으로 한 값이라 사람마다 필요한 양에 따라 달라질 수 있습니다. 기준 단위가 바뀌면 %도 함께 바뀝니다.'],
+    ['같은 기준으로 맞춘 뒤 비교합니다', '두 제품을 비교할 때는 같은 양(100g이나 100mL)으로 맞추거나, 내가 실제로 먹을 양으로 맞춘 다음 나트륨·당류·포화지방을 견줍니다. 어느 쪽으로 맞추느냐에 따라 결과가 달라지기도 합니다.'],
+    ['알레르기 유발 물질을 확인합니다', '알레르기 유발 물질은 원재료명 근처에 따로 표시됩니다. 내 알레르기 물질이 들어 있는지와 함께, 포장에 따라 있는 ‘같은 제조 시설’ 안내 문구도 읽어 봅니다.'],
+    ['기한과 보관 방법을 함께 봅니다', '날짜만 보지 말고 ‘냉장 보관’ 같은 보관 방법도 확인합니다. 보관 방법을 지키지 않으면 기한 전이라도 상할 수 있습니다.']
+  ],
+  dateTerms: [
+    ['소비기한', '표시된 보관 방법을 지켰을 때 먹어도 안전한 기한입니다.'],
+    ['유통기한', '제품을 판매할 수 있는 기한입니다.'],
+    ['언제부터 바뀌었나요?', '2023년 1월 1일부터 식품에 유통기한 대신 소비기한을 표시하는 제도가 시행되었습니다. 일부 품목은 적용 시기가 다를 수 있습니다.']
+  ],
+  dateSource: '세부 적용 품목과 시기는 식품의약품안전처 소비기한 안내 자료로 확인해 주세요.'
+};
+/* ==================================================================== */
+
+const $ = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+/* 모션 도우미 (motion-effects 키트에서 필요한 함수만, 동작 줄이기면 즉시 끝) */
+const MK = (() => {
+  const reduced = () => window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function play(el, cls) { if (!el || reduced()) return; el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); el.addEventListener('animationend', () => el.classList.remove(cls), { once: true }); }
+  function stagger(parent, { max = 20 } = {}) { if (!parent || reduced()) return; [...parent.children].forEach((c, i) => c.style.setProperty('--i', Math.min(i, max))); parent.classList.remove('mk-stagger'); void parent.offsetWidth; parent.classList.add('mk-stagger'); clearTimeout(parent._mkT); parent._mkT = setTimeout(() => parent.classList.remove('mk-stagger'), 400 + 45 * Math.min(parent.children.length, max)); } /* 끝나면 클래스 제거: 다시 그릴 때 또 움직이지 않게 */
+  function ripple(root, selector) {
+    root.addEventListener('pointerdown', e => { const host = e.target.closest(selector); if (!host || host.disabled || reduced()) return;
+      const r = host.getBoundingClientRect(), d = Math.max(r.width, r.height) * 2, s = document.createElement('span'); s.className = 'mk-ripple';
+      Object.assign(s.style, { width: d + 'px', height: d + 'px', left: (e.clientX - r.left - d / 2) + 'px', top: (e.clientY - r.top - d / 2) + 'px' });
+      host.appendChild(s); s.addEventListener('animationend', () => s.remove(), { once: true }); });
+  }
+  return { reduced, play, stagger, ripple };
+})();
+MK.ripple(document, '.btn');
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const LS = {
+  get(k, d) { try { const v = localStorage.getItem(CONFIG.storagePrefix + k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(CONFIG.storagePrefix + k, JSON.stringify(v)); return true; } catch (e) { toast('이 브라우저에서는 저장이 되지 않아요. 창을 닫으면 사라져요.'); return false; } },
+  del(k) { try { localStorage.removeItem(CONFIG.storagePrefix + k); } catch (e) { /* 무시 */ } }
+};
+let toastT;
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 2400); }
+
+/* ---------- 날짜 ---------- */
+const pad = n => String(n).padStart(2, '0');
+const ymd = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+function addDays(n) { const d = new Date(); d.setDate(d.getDate() + n); return ymd(d); }
+function daysLeft(s) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s || '')) return null;
+  const [y, m, d] = s.split('-').map(Number);
+  const t = new Date(); const a = Date.UTC(t.getFullYear(), t.getMonth(), t.getDate()); const b = Date.UTC(y, m - 1, d);
+  return isFinite(b) ? Math.round((b - a) / 86400000) : null;
+}
+function dayText(type, s) {
+  const n = daysLeft(s); if (n == null) return null;
+  if (n > 0) return { text: n + '일 남음', past: false };
+  if (n === 0) return { text: '오늘까지', past: false };
+  return { text: (-n) + '일 지남', past: true };
+}
+const dotDate = s => s ? s.replace(/-/g, '.') : '';
+
+/* ---------- 상태 ---------- */
+const NKEYS = CONFIG.nutrients.map(x => x.key);
+function numOrNull(x) { const v = typeof x === 'string' ? (x.trim() === '' ? NaN : Number(x)) : x; return (typeof v === 'number' && isFinite(v) && v >= 0) ? v : null; }
+function blank() { const n = {}; NKEYS.forEach(k => n[k] = null); return { id: null, name: '', unit: 'g', total: null, basis: 'total', sname: '', samt: null, kcal: null, n, allergens: [], dtype: '소비기한', date: '', price: null }; }
+function clean(o) {
+  const p = blank(); if (!o || typeof o !== 'object') return p;
+  p.id = typeof o.id === 'string' ? o.id.slice(0, 30) : null;
+  p.name = String(o.name || '').slice(0, 40);
+  p.unit = o.unit === 'mL' ? 'mL' : 'g';
+  p.basis = ['total', '100', 'unit'].includes(o.basis) ? o.basis : 'total';
+  p.sname = String(o.sname || '').slice(0, 12);
+  ['total', 'samt', 'kcal', 'price'].forEach(k => p[k] = numOrNull(o[k]));
+  NKEYS.forEach(k => p.n[k] = numOrNull(o.n && o.n[k]));
+  p.allergens = Array.isArray(o.allergens) ? o.allergens.map(a => String(a).slice(0, 30)).slice(0, 30) : [];
+  p.dtype = o.dtype === '유통기한' ? '유통기한' : '소비기한';
+  p.date = /^\d{4}-\d{2}-\d{2}$/.test(o.date || '') ? o.date : '';
+  return p;
+}
+const examples = CONFIG.examples.map(e => clean(Object.assign({}, e, { date: addDays(e.dateIn) })));
+let settings = loadSettings();
+let mine = (LS.get('mine', []) || []).map(clean).filter(p => p.id);
+let draft = clean(LS.get('draft', null));
+let myAlg = (LS.get('myAlg', []) || []).filter(a => typeof a === 'string');
+let cmp = Object.assign({ a: 'ex1', b: 'ex2', basis: '100', pick: '', claims: [], reason: '', who: '', checked: false }, LS.get('cmp', {}) || {});
+if (!Array.isArray(cmp.claims)) cmp.claims = [];
+
+function loadSettings() {
+  const s = LS.get('settings', null) || {};
+  const dv = Object.assign({}, CONFIG.dv);
+  if (s.dv) Object.keys(dv).forEach(k => { const v = numOrNull(s.dv[k]); if (v) dv[k] = v; });
+  const allergens = Array.isArray(s.allergens) && s.allergens.length ? s.allergens.map(String) : CONFIG.allergens.slice();
+  return { dv, allergens };
+}
+const allProducts = () => examples.concat(mine);
+const byId = id => allProducts().find(p => p.id === id) || null;
+
+/* ---------- 계산 ---------- */
+function basisAmt(p) { return p.basis === 'total' ? p.total : p.basis === '100' ? 100 : p.samt; }
+function basisLabel(p) {
+  if (p.basis === 'total') return '총 내용량';
+  if (p.basis === '100') return '100' + p.unit;
+  return (p.sname || '1개') + '(' + (p.samt == null ? '?' : fmtN(p.samt)) + p.unit + ')';
+}
+function wholeFactor(p) { const b = basisAmt(p); return (p.total && b) ? p.total / b : null; }
+function valueOf(p, key) { return key === 'kcal' ? p.kcal : p.n[key]; }
+function scaled(p, key, mode) {
+  const v = valueOf(p, key), b = basisAmt(p); if (v == null || !b) return null;
+  if (mode === 'whole') { if (!p.total) return null; return v * p.total / b; }
+  if (mode === '100') return v * 100 / b;
+  return v;
+}
+function fmtN(v) { if (v == null) return '—'; const r = Math.round(v * 10) / 10; return r.toLocaleString('ko-KR', { maximumFractionDigits: 1 }); }
+function fmtU(v, unit) { if (v == null) return '—'; return (unit === 'mg' || unit === 'kcal') ? Math.round(v).toLocaleString('ko-KR') + unit : fmtN(v) + unit; }
+function pct(v, key) { const d = settings.dv[key]; const meta = CONFIG.nutrients.find(x => x.key === key); if (v == null || !d || (meta && meta.dv === false)) return null; return Math.round(v / d * 100); }
+const unitOf = key => key === 'kcal' ? 'kcal' : CONFIG.nutrients.find(x => x.key === key).unit;
+const nameOf = key => key === 'kcal' ? '열량' : CONFIG.nutrients.find(x => x.key === key).name;
+const myHits = p => p.allergens.filter(a => myAlg.includes(a));
+
+/* ---------- 포장 영양정보 표 ---------- */
+function labelHTML(p) {
+  const bl = basisLabel(p);
+  const top = '총 내용량 ' + (p.total == null ? '—' : fmtN(p.total) + p.unit);
+  const kc = p.kcal == null ? '—kcal' : Math.round(p.kcal).toLocaleString('ko-KR') + 'kcal';
+  const second = p.basis === 'total' ? kc : bl + '당 ' + kc;
+  const rows = CONFIG.nutrients.map(m => {
+    const v = p.n[m.key]; const pc = pct(v, m.key);
+    return '<div class="nl-row' + (m.sub ? ' sub' : '') + '"><span><b>' + esc(m.name) + '</b>' + (v == null ? '<span class="dash">—</span>' : esc(fmtU(v, m.unit))) + '</span>'
+      + (m.dv === false ? '<span></span>' : '<strong>' + (pc == null ? '<span class="dash">—</span>' : pc + '%') + '</strong>') + '</div>';
+  }).join('');
+  return '<div class="nl" role="table" aria-label="영양정보">'
+    + '<div class="nl-head"><b>영양정보</b><div class="nl-amt">' + esc(top) + '<strong>' + esc(second) + '</strong></div></div>'
+    + '<div class="nl-col"><span>' + esc(bl) + '당</span><span>1일 영양성분<br>기준치에 대한 비율</span></div>'
+    + rows
+    + '<p class="nl-foot">1일 영양성분 기준치에 대한 비율(%)은 ' + Number(CONFIG.energyBase).toLocaleString('ko-KR') + 'kcal 기준이므로 개인의 필요 열량에 따라 다를 수 있습니다.</p></div>';
+}
+function sideHTML(p, withPrice) {
+  let h = '';
+  const hits = myHits(p);
+  if (p.allergens.length) {
+    h += '<div class="pk-box' + (hits.length ? ' alert' : '') + '"><h3>알레르기 유발 물질</h3>' + esc(p.allergens.join(', ')) + ' 함유'
+      + (hits.length ? '<br><b>내 알레르기: ' + esc(hits.join(', ')) + ' — 먹지 않아요</b>' : '') + '</div>';
+  } else {
+    h += '<div class="pk-box"><h3>알레르기 유발 물질</h3><span class="muted">표시된 것 없음(옮겨 적지 않았으면 포장을 다시 확인)</span></div>';
+  }
+  if (p.date) {
+    const d = dayText(p.dtype, p.date);
+    h += '<div class="stamp">' + esc(p.dtype) + ' ' + esc(dotDate(p.date)) + '까지' + (d ? '<span class="dday' + (d.past ? ' past' : '') + '">' + esc(d.text) + '</span>' : '') + '</div>';
+  }
+  if (withPrice && p.price != null) {
+    const per = (p.total ? Math.round(p.price / p.total * 100) : null);
+    h += '<p class="price num">' + p.price.toLocaleString('ko-KR') + '원' + (per != null ? ' · 100' + p.unit + '당 ' + per.toLocaleString('ko-KR') + '원' : '') + '</p>';
+  }
+  return h;
+}
+
+/* ---------- 1. 옮겨 적기 ---------- */
+function buildForm() {
+  $('#nrows').innerHTML = [{ key: 'kcal', name: '열량', unit: 'kcal' }].concat(CONFIG.nutrients).map(m =>
+    '<div class="nrow' + (m.sub ? ' sub' : '') + '"><label for="f-' + m.key + '">' + esc(m.name) + '</label>'
+    + '<span class="unit-in"><input class="inp num" id="f-' + m.key + '" type="number" min="0" step="any" inputmode="decimal"><span class="u">' + esc(m.unit) + '</span></span></div>').join('');
+  buildAlgChips();
+}
+function buildAlgChips() {
+  const list = settings.allergens.concat(draft.allergens.filter(a => !settings.allergens.includes(a)));
+  $('#algChips').innerHTML = list.map((a, i) => '<label class="chip"><input type="checkbox" value="' + esc(a) + '"' + (draft.allergens.includes(a) ? ' checked' : '') + '><span>' + esc(a) + '</span></label>').join('');
+}
+function fillForm() {
+  const p = draft;
+  const sv = (id, v) => { $(id).value = v == null ? '' : v; };
+  sv('#f-name', p.name); sv('#f-price', p.price); sv('#f-total', p.total); $('#f-unit').value = p.unit;
+  sv('#f-sname', p.sname); sv('#f-samt', p.samt); sv('#f-kcal', p.kcal);
+  NKEYS.forEach(k => sv('#f-' + k, p.n[k]));
+  $$('input[name="basis"]').forEach(r => r.checked = r.value === p.basis);
+  $('#f-dtype').value = p.dtype; sv('#f-date', p.date);
+  buildAlgChips();
+  syncFormBits();
+}
+function readForm() {
+  const p = draft;
+  const nv = id => { const el = $(id); const raw = el.value; const v = numOrNull(raw); const bad = (raw !== '' && v == null) || (el.validity && el.validity.badInput); el.setAttribute('aria-invalid', bad ? 'true' : 'false'); return v; };
+  p.name = $('#f-name').value.slice(0, 40);
+  p.price = nv('#f-price'); p.total = nv('#f-total'); p.unit = $('#f-unit').value === 'mL' ? 'mL' : 'g';
+  p.sname = $('#f-sname').value.slice(0, 12); p.samt = nv('#f-samt'); p.kcal = nv('#f-kcal');
+  NKEYS.forEach(k => p.n[k] = nv('#f-' + k));
+  const b = $$('input[name="basis"]').find(r => r.checked); p.basis = b ? b.value : 'total';
+  p.allergens = $$('#algChips input:checked').map(i => i.value);
+  p.dtype = $('#f-dtype').value; p.date = $('#f-date').value || '';
+}
+function syncFormBits() {
+  $('#b100').textContent = '100' + draft.unit + '당';
+  $('#sUnit').textContent = draft.unit;
+  $('#unitFields').classList.toggle('hidden', draft.basis !== 'unit');
+  $('#basisEcho').textContent = '— ' + basisLabel(draft) + '당 숫자';
+  $('#btnDel').disabled = !mine.some(m => m.id === draft.id);
+}
+function renderPreview() {
+  const p = draft;
+  const hadAlert = !!$('#pv .pk-box.alert'), oldX = $('#eat .x') ? $('#eat .x').textContent : null;
+  $('#pv').innerHTML = (p.name ? '<p class="nl-name">' + esc(p.name) + '</p>' : '') + labelHTML(p) + sideHTML(p, true);
+  if (!hadAlert) MK.play($('#pv .pk-box.alert'), 'mk-glitch');   // 내 알레르기 경고가 새로 뜸 → 글리치 1회
+  // 다 먹으면?
+  const f = wholeFactor(p); let h = '<h2>다 먹으면?';
+  if (p.basis === 'total') {
+    h += '</h2><p>이 표는 <b>총 내용량</b> 기준이라 표의 숫자가 곧 한 개를 다 먹었을 때의 양이에요.</p>';
+  } else if (f == null) {
+    h += '</h2><p class="muted">총 내용량과 표의 기준 양을 적으면 한 개를 다 먹었을 때의 양을 계산해 줘요.</p>';
+  } else {
+    h += '<span class="x">×' + fmtN(f) + '</span></h2><p>표는 <b>' + esc(basisLabel(p)) + '당</b> 숫자예요. 총 내용량 ' + esc(fmtN(p.total) + p.unit) + '을(를) 다 먹으면 표의 숫자에 ' + esc(fmtN(f)) + '을(를) 곱해야 해요.</p>';
+    h += '<table><thead><tr><th>항목</th><th>표의 숫자</th><th>다 먹으면</th><th>기준치 대비</th></tr></thead><tbody>'
+      + ['kcal'].concat(NKEYS).map(k => {
+        const u = unitOf(k), v = valueOf(p, k), w = scaled(p, k, 'whole'), pc = k === 'kcal' ? (w == null ? null : Math.round(w / CONFIG.energyBase * 100)) : pct(w, k);
+        const hi = pc != null && pc >= 50;
+        return '<tr><td>' + esc(nameOf(k)) + '</td><td>' + esc(fmtU(v, u)) + '</td><td>' + esc(fmtU(w, u)) + '</td><td' + (hi ? ' class="hi"' : '') + '>' + (pc == null ? '—' : (hi ? '<mark>' + pc + '%</mark>' : pc + '%')) + '</td></tr>';
+      }).join('') + '</tbody></table><p class="muted" style="font-size:var(--text-xs)">형광펜: 한 개만으로 하루 기준치의 절반 이상. 열량은 ' + Number(CONFIG.energyBase).toLocaleString('ko-KR') + 'kcal에 대한 비율.</p>';
+  }
+  $('#eat').innerHTML = h;
+  const nx = $('#eat .x'); if (nx && oldX !== null && nx.textContent !== oldX) MK.play(nx, 'mk-pulse');   // '×배수' 바뀜 → 펄스
+  // 입력 확인
+  const c = [];
+  const n = p.n;
+  if (p.total == null) c.push('총 내용량을 적어야 ‘다 먹으면’을 계산할 수 있어요.');
+  if (p.basis === 'unit' && p.samt == null) c.push('한 개·한 봉지의 양(g·mL)을 적어 주세요.');
+  const b = basisAmt(p);
+  if (b && p.total && b > p.total * 1.001) c.push('표의 기준 양(' + fmtN(b) + p.unit + ')이 총 내용량보다 커요. 기준을 다시 확인해 보세요.');
+  if (n.sugar != null && n.carb != null && n.sugar > n.carb) c.push('당류는 탄수화물에 포함돼요. 당류가 탄수화물보다 클 수 없어요.');
+  if (n.fat != null && ((n.sat || 0) + (n.trans || 0)) > n.fat + 0.05) c.push('포화지방·트랜스지방은 지방에 포함돼요. 합이 지방보다 클 수 없어요.');
+  if (p.kcal != null && p.kcal >= 20 && n.carb != null && n.fat != null && n.protein != null) {
+    const est = n.carb * 4 + n.protein * 4 + n.fat * 9;
+    if (Math.abs(est - p.kcal) / p.kcal > 0.3) c.push('탄수화물·단백질 1g≈4kcal, 지방 1g≈9kcal로 어림하면 약 ' + Math.round(est) + 'kcal예요. 열량이나 숫자를 다시 확인해 보세요.');
+  }
+  if ($$('#form [aria-invalid="true"]').length) c.push('빨간 칸은 0 이상의 숫자만 적을 수 있어요.');
+  $('#checks').innerHTML = c.map(t => '<li>' + esc(t) + '</li>').join('');
+}
+function buildLoadSel() {
+  const opt = p => '<option value="' + esc(p.id) + '">' + esc(p.name || '(이름 없음)') + '</option>';
+  $('#loadSel').innerHTML = '<option value="">제품 불러오기…</option><optgroup label="예시">' + examples.map(opt).join('') + '</optgroup>'
+    + (mine.length ? '<optgroup label="내 제품">' + mine.map(opt).join('') + '</optgroup>' : '');
+}
+function setDraft(p) { draft = clean(JSON.parse(JSON.stringify(p))); LS.set('draft', draft); fillForm(); renderPreview(); MK.stagger($('#pv .nl')); } // 예시·불러오기 → 포장 표 줄이 순차 등장
+let exIdx = 0;
+
+/* ---------- 2. 비교 ---------- */
+function buildCmpSel() {
+  const opt = p => '<option value="' + esc(p.id) + '">' + esc(p.name || '(이름 없음)') + '</option>';
+  const html = '<optgroup label="예시">' + examples.map(opt).join('') + '</optgroup>' + (mine.length ? '<optgroup label="내 제품">' + mine.map(opt).join('') + '</optgroup>' : '');
+  $('#selA').innerHTML = html; $('#selB').innerHTML = html;
+  if (!byId(cmp.a)) cmp.a = 'ex1'; if (!byId(cmp.b)) cmp.b = 'ex2';
+  $('#selA').value = cmp.a; $('#selB').value = cmp.b;
+}
+function buildClaims() {
+  $('#claims').innerHTML = CONFIG.claims.map(c => '<label class="claim" data-k="' + c.key + '"><input type="checkbox" value="' + c.key + '"' + (cmp.claims.includes(c.key) ? ' checked' : '') + '><span>' + esc(c.text) + '</span></label>').join('');
+}
+function cmpMode() { return cmp.basis === 'whole' ? 'whole' : '100'; }
+function modeText() { return cmp.basis === 'whole' ? '한 개 다 먹으면' : '같은 양(100g·100mL)'; }
+function judgeClaim(key, X, Y) {
+  const mode = cmpMode();
+  const c = CONFIG.claims.find(x => x.key === key);
+  if (c && c.dir) {
+    const x = scaled(X, key, mode), y = scaled(Y, key, mode); const u = unitOf(key);
+    if (x == null || y == null) return { ok: null, why: '비교할 숫자가 없어요' };
+    const ok = c.dir === 'low' ? x < y - 1e-9 : x > y + 1e-9;
+    const why = fmtU(x, u) + ' 대 ' + fmtU(y, u) + (Math.abs(x - y) < 1e-9 ? ' (같아요)' : '');
+    return { ok, why };
+  }
+  if (key === 'allergy') {
+    if (!myAlg.length) return { ok: null, why: '⚙ 설정에서 내 알레르기를 고르지 않았어요' };
+    const hx = myHits(X);
+    return { ok: hx.length === 0, why: hx.length ? '고른 제품에 ' + hx.join(', ') + ' 함유' : '고른 제품에는 내 알레르기 물질 없음' };
+  }
+  if (key === 'date') {
+    const x = daysLeft(X.date), y = daysLeft(Y.date);
+    if (x == null || y == null) return { ok: null, why: '두 제품 모두 날짜가 있어야 해요' };
+    return { ok: x > y, why: x + '일 대 ' + y + '일' };
+  }
+  if (key === 'price') {
+    if (X.price == null || Y.price == null || !X.total || !Y.total) return { ok: null, why: '가격과 총 내용량이 둘 다 있어야 해요' };
+    const x = X.price / X.total * 100, y = Y.price / Y.total * 100;
+    return { ok: x < y - 1e-9, why: '100' + X.unit + '당 ' + Math.round(x).toLocaleString('ko-KR') + '원 대 100' + Y.unit + '당 ' + Math.round(y).toLocaleString('ko-KR') + '원' + (X.unit !== Y.unit ? ' (단위가 달라 참고만)' : '') };
+  }
+  return { ok: null, why: '' };
+}
+function renderCmp() {
+  const A = byId(cmp.a), B = byId(cmp.b);
+  $$('input[name="cbasis"]').forEach(r => r.checked = r.value === cmp.basis);
+  const slot = (tag, p) => '<span class="slot-tag">' + tag + '</span><p class="nl-name">' + esc(p.name || '(이름 없음)') + '</p>' + labelHTML(p) + sideHTML(p, true);
+  $('#slotA').innerHTML = slot('A', A); $('#slotB').innerHTML = slot('B', B);
+  $('#pickA').textContent = 'A ' + (A.name || ''); $('#pickB').textContent = 'B ' + (B.name || '');
+  $$('input[name="pick"]').forEach(r => r.checked = r.value === cmp.pick);
+  $('#who').value = cmp.who; $('#reason').value = cmp.reason;
+  const notes = [];
+  if (cmp.a === cmp.b) notes.push('A와 B가 같은 제품이에요. 다른 제품을 골라 주세요.');
+  if (A.unit !== B.unit) notes.push('한쪽은 g, 한쪽은 mL이에요. 같은 양 비교는 참고로만 보세요.');
+  notes.push('표의 기준 단위가 서로 다를 수 있어요. 영수증은 ‘' + modeText() + '’에 맞춰 다시 계산해 줍니다.');
+  $('#cmpNote').textContent = notes.join(' ');
+  $$('.claim').forEach(l => { const k = l.dataset.k; const off = (k === 'allergy' && !myAlg.length); l.classList.toggle('off', off); });
+  renderReceipt();
+}
+function validJudge() {
+  if (cmp.a === cmp.b) return 'A와 B에 서로 다른 제품을 골라 주세요.';
+  if (!cmp.pick) return '고른 제품(A 또는 B)을 정해 주세요.';
+  if (!cmp.claims.length) return '근거를 하나 이상 골라 주세요.';
+  if (cmp.reason.trim().length < 10) return '고른 이유를 10자 이상, 내 말로 써 주세요.';
+  return '';
+}
+function results() {
+  const A = byId(cmp.a), B = byId(cmp.b); const X = cmp.pick === 'a' ? A : B, Y = cmp.pick === 'a' ? B : A;
+  return cmp.claims.map(k => Object.assign({ key: k, text: (CONFIG.claims.find(c => c.key === k) || {}).text || k }, judgeClaim(k, X, Y)));
+}
+function receiptTable(A, B) {
+  const mode = cmpMode();
+  return '<table class="r-tbl"><thead><tr><th>항목</th><th>A</th><th>B</th></tr></thead><tbody>' + ['kcal'].concat(NKEYS).map(k => {
+    const u = unitOf(k), a = scaled(A, k, mode), b = scaled(B, k, mode);
+    const hiGood = k === 'protein';
+    let best = '';
+    if (a != null && b != null && Math.abs(a - b) > 1e-9 && k !== 'carb' && k !== 'fat' && k !== 'chol' && k !== 'trans') best = (hiGood ? a > b : a < b) ? 'a' : 'b';
+    return '<tr><td>' + esc(nameOf(k)) + '</td><td' + (best === 'a' ? ' class="best"' : '') + '>' + esc(fmtU(a, u)) + '</td><td' + (best === 'b' ? ' class="best"' : '') + '>' + esc(fmtU(b, u)) + '</td></tr>';
+  }).join('') + '</tbody></table>';
+}
+function renderReceipt() {
+  const A = byId(cmp.a), B = byId(cmp.b);
+  if (!cmp.checked) {
+    $('#receipt').innerHTML = '<p class="r-title">장바구니 영수증</p><hr class="r-sep"><p class="r-wait">아래에서 제품을 고르고 근거와 이유를 쓴 뒤<br>[근거 확인하고 영수증 받기]를 누르면<br>여기에 영수증이 나와요.</p>';
+    return;
+  }
+  const res = results(); const ok = res.filter(r => r.ok === true).length;
+  const line = (l, r, cls) => '<div class="r-line' + (cls ? ' ' + cls : '') + '"><span>' + l + '</span><span>' + r + '</span></div>';
+  const won = p => p.price == null ? '—' : p.price.toLocaleString('ko-KR') + '원';
+  const today = new Date();
+  let h = '<p class="r-title">장바구니 영수증</p><p class="r-sub">' + esc(ymd(today).replace(/-/g, '.')) + ' · ' + esc(cmp.who || '이름 없음') + '</p><hr class="r-sep">'
+    + line('A ' + esc(A.name), esc(won(A))) + line('B ' + esc(B.name), esc(won(B))) + '<hr class="r-sep">'
+    + '<p>비교 기준: ' + esc(modeText()) + '</p>' + receiptTable(A, B)
+    + '<p class="r-sub" style="text-align:left">* 더 적은 쪽(단백질은 더 많은 쪽)</p>';
+  if (A.unit !== B.unit && cmp.basis !== 'whole') h += '<p class="r-warn">g와 mL를 같은 양으로 본 값이라 참고만 하세요.</p>';
+  h += '<hr class="r-sep">' + line('<b>내 선택</b>', '<b>' + (cmp.pick === 'a' ? 'A' : 'B') + '</b>');
+  h += res.map(r => line(esc(r.text) + '<br><span class="muted" style="font-size:var(--text-xs)">' + esc(r.why) + '</span>',
+    r.ok === true ? '<span class="r-ok">맞음</span>' : r.ok === false ? '<span class="r-no">다시 보기</span>' : '<span class="muted">확인 불가</span>')).join('');
+  h += '<hr class="r-sep">' + line('<span class="r-total">근거 확인</span>', '<span class="r-total">' + ok + ' / ' + res.length + '</span>');
+  h += '<p style="margin-top:var(--space-2)">이유</p><p class="r-reason">' + esc(cmp.reason) + '</p>';
+  if (res.some(r => r.ok === false)) h += '<hr class="r-sep"><p class="r-warn">‘다시 보기’ 근거는 표의 기준 단위를 맞췄는지 확인하고 고쳐 보세요.</p>';
+  $('#receipt').innerHTML = h;
+}
+function saveCmp() { LS.set('cmp', cmp); }
+function readJudge() {
+  cmp.who = $('#who').value.slice(0, 20);
+  cmp.reason = $('#reason').value.slice(0, 300);
+  const pk = $$('input[name="pick"]').find(r => r.checked); cmp.pick = pk ? pk.value : '';
+  cmp.claims = $$('#claims input:checked').map(i => i.value);
+}
+
+/* ---------- 3. 읽는 법 ---------- */
+function buildRead() {
+  $('#steps').innerHTML = CONFIG.readSteps.map(s => '<li><div><h3>' + esc(s[0]) + '</h3><p>' + esc(s[1]) + '</p></div></li>').join('');
+  $('#dateDl').innerHTML = CONFIG.dateTerms.map(t => '<dt>' + esc(t[0]) + '</dt><dd>' + esc(t[1]) + '</dd>').join('');
+  $('#dateSrc').textContent = CONFIG.dateSource;
+}
+function calcDate() {
+  const type = $('#c-type').value, s = $('#c-date').value, out = $('#c-out');
+  const d = dayText(type, s);
+  const wasPast = out.classList.contains('past');
+  out.classList.toggle('past', !!(d && d.past));
+  if (!wasPast && d && d.past) MK.play(out, 'mk-glitch');   // 기한 지남 → 글리치 1회
+  if (!d) { out.textContent = '날짜를 고르면 남은 기간을 알려 줘요.'; return; }
+  if (!d.past) out.textContent = type + ' ' + dotDate(s) + ' — ' + d.text;
+  else out.textContent = type + '이 ' + d.text.replace(' 지남', '') + ' 지났어요. ' + (type === '소비기한' ? '먹지 않아요.' : '보관 상태를 확인할 수 없으면 먹지 않아요.');
+}
+
+/* ---------- 인쇄 활동지 ---------- */
+function buildSheet() {
+  const A = byId(cmp.a), B = byId(cmp.b);
+  const res = cmp.checked ? results() : [];
+  const box = (tag, p) => '<div><p class="nl-name">' + tag + ' ' + esc(p.name || '') + '</p>' + labelHTML(p) + sideHTML(p, true) + '</div>';
+  const blankLines = n => Array.from({ length: n }, () => '<div class="ps-line"></div>').join('');
+  $('#sheet').innerHTML =
+    '<div class="ps-head"><h1>식품 표시 읽고 고르기 활동지</h1><p class="ps-who">번호·별칭 <span>' + esc(cmp.who) + '</span> &nbsp; 날짜 <span>' + esc(dotDate(ymd(new Date()))) + '</span></p></div>'
+    + '<div class="ps-labels">' + box('A', A) + box('B', B) + '</div>'
+    + '<table class="ps-tbl"><thead><tr><th>' + esc(modeText()) + '</th>' + ['kcal'].concat(NKEYS).map(k => '<th>' + esc(nameOf(k)) + '</th>').join('') + '</tr></thead><tbody>'
+    + [['A', A], ['B', B]].map(([t, p]) => '<tr><td>' + t + '</td>' + ['kcal'].concat(NKEYS).map(k => '<td>' + esc(fmtU(scaled(p, k, cmpMode()), unitOf(k))) + '</td>').join('') + '</tr>').join('')
+    + '</tbody></table>'
+    + '<div class="ps-q"><h2>읽고 판단하기</h2><ol>'
+    + '<li>A와 B의 영양정보 표는 각각 무엇을 기준으로 적혀 있나요? A: ' + esc(basisLabel(A)) + '당 / B: ' + esc(basisLabel(B)) + '당 — 한 개를 다 먹으면 표의 숫자에 몇을 곱해야 하나요?' + blankLines(1) + '</li>'
+    + '<li>내가 고른 제품: <b>' + (cmp.pick ? (cmp.pick === 'a' ? 'A' : 'B') : '____') + '</b> &nbsp; 근거' + (res.length ? '<div class="ps-line">' + res.map(r => esc(r.text) + ' — ' + (r.ok === true ? '맞음' : r.ok === false ? '다시 보기' : '확인 불가') + ' (' + esc(r.why) + ')').join(' / ') + '</div>' : blankLines(1)) + '</li>'
+    + '<li>고른 이유' + (cmp.reason ? '<div class="ps-line">' + esc(cmp.reason) + '</div>' : blankLines(2)) + '</li>'
+    + '<li>알레르기 유발 물질과 기한을 확인했나요? 확인한 내용을 적어 보세요.' + blankLines(1) + '</li>'
+    + '<li>다음에 간식을 살 때 내가 꼭 볼 표시 한 가지와 그 까닭' + blankLines(cmp.reason.length > 150 ? 1 : 2) + '</li>'
+    + '</ol></div>'
+    + '<p class="ps-foot">% 값은 1일 영양성분 기준치(⚙ 설정 값)에 대한 비율이며 ' + Number(CONFIG.energyBase).toLocaleString('ko-KR') + 'kcal 기준입니다. 숫자는 포장에서 옮겨 적은 값입니다.</p>';
+}
+
+/* ---------- 설정 ---------- */
+const DV_NAMES = { na: '나트륨 (mg)', carb: '탄수화물 (g)', sugar: '당류 (g)', fat: '지방 (g)', sat: '포화지방 (g)', chol: '콜레스테롤 (mg)', protein: '단백질 (g)' };
+function openSettings() {
+  $('#dvFields').innerHTML = Object.keys(settings.dv).map(k => '<label class="fld"><span>' + esc(DV_NAMES[k] || k) + '</span><input class="inp num" type="number" min="0" step="any" data-dv="' + k + '" value="' + esc(settings.dv[k]) + '"></label>').join('');
+  $('#algText').value = settings.allergens.join(', ');
+  renderMyChips(myAlg);
+  $('#dlg').showModal(); MK.play($('#dlg'), 'mk-scale-in');
+}
+function renderMyChips(sel) {
+  $('#myChips').innerHTML = settings.allergens.map(a => '<label class="chip"><input type="checkbox" value="' + esc(a) + '"' + (sel.includes(a) ? ' checked' : '') + '><span>' + esc(a) + '</span></label>').join('');
+}
+function refreshAll() { buildAlgChips(); renderPreview(); buildLoadSel(); buildCmpSel(); renderCmp(); syncFormBits(); }
+
+/* ---------- 탭 ---------- */
+function showTab(t) {
+  $$('.tab').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === t ? 'true' : 'false'));
+  ['entry', 'cmp', 'read'].forEach(x => $('#p-' + x).classList.toggle('hidden', x !== t));
+  if (t === 'cmp') { buildCmpSel(); renderCmp(); }
+  t === 'read' ? MK.stagger($('#steps')) : MK.play($('#p-' + t), 'mk-slide-up');   // 탭 전환 → 슬라이드 인 / 읽는 법은 단계 순차 등장
+  LS.set('tab', t);
+}
+
+/* ---------- 이벤트 ---------- */
+buildForm(); fillForm(); renderPreview(); buildLoadSel(); buildClaims(); buildCmpSel(); buildRead(); calcDate();
+showTab(['entry', 'cmp', 'read'].includes(LS.get('tab', 'entry')) ? LS.get('tab', 'entry') : 'entry');
+
+$$('.tab').forEach(b => b.addEventListener('click', () => showTab(b.dataset.tab)));
+$('#form').addEventListener('input', () => { readForm(); syncFormBits(); LS.set('draft', draft); renderPreview(); });
+$('#loadSel').addEventListener('change', e => { const p = byId(e.target.value); if (p) { setDraft(p); toast('‘' + (p.name || '제품') + '’을(를) 불러왔어요.'); } e.target.value = ''; });
+$('#btnExample').addEventListener('click', () => { const p = examples[exIdx % examples.length]; exIdx++; setDraft(Object.assign({}, p, { id: null })); });
+$('#btnNew').addEventListener('click', () => { if (draft.name || draft.kcal != null) { if (!confirm('지금 쓰던 내용을 비우고 새로 쓸까요? (저장한 제품은 남아 있어요)')) return; } setDraft(blank()); $('#f-name').focus(); });
+$('#btnSave').addEventListener('click', () => {
+  readForm();
+  if (!draft.name.trim()) { toast('제품 이름을 먼저 적어 주세요.'); $('#f-name').focus(); MK.play($('#f-name'), 'mk-wiggle'); return; }
+  if (draft.kcal == null && NKEYS.every(k => draft.n[k] == null)) { toast('영양성분 숫자를 하나 이상 적어 주세요.'); MK.play($('#nrows'), 'mk-wiggle'); return; }
+  const i = mine.findIndex(m => m.id === draft.id);
+  if (i >= 0) mine[i] = clean(draft);
+  else { if (mine.length >= 40) { toast('내 제품은 40개까지 저장돼요. 안 쓰는 제품을 지워 주세요.'); return; } draft.id = 'p' + Date.now().toString(36); mine.push(clean(draft)); }
+  LS.set('mine', mine); LS.set('draft', draft); buildLoadSel(); buildCmpSel(); syncFormBits();
+  toast('‘' + draft.name + '’을(를) 내 제품에 저장했어요. 2단계에서 비교할 수 있어요.');
+  MK.play($('#btnSave'), 'mk-squash');   // 저장 성공 → 스쿼시
+});
+$('#btnDel').addEventListener('click', () => {
+  const i = mine.findIndex(m => m.id === draft.id); if (i < 0) return;
+  if (!confirm('‘' + mine[i].name + '’을(를) 내 제품에서 지울까요?')) return;
+  mine.splice(i, 1); LS.set('mine', mine); draft.id = null; LS.set('draft', draft); buildLoadSel(); buildCmpSel(); syncFormBits(); toast('지웠어요.');
+});
+
+$('#selA').addEventListener('change', e => { cmp.a = e.target.value; cmp.checked = false; saveCmp(); renderCmp(); MK.play($('#slotA'), 'mk-fade-in'); });   // 제품 바꿈 → 페이드
+$('#selB').addEventListener('change', e => { cmp.b = e.target.value; cmp.checked = false; saveCmp(); renderCmp(); MK.play($('#slotB'), 'mk-fade-in'); });
+$('#btnSwap').addEventListener('click', () => { [cmp.a, cmp.b] = [cmp.b, cmp.a]; if (cmp.pick) cmp.pick = cmp.pick === 'a' ? 'b' : 'a'; buildCmpSel(); saveCmp(); renderCmp();
+  MK.play($('#slotA'), 'mk-slide-left'); MK.play($('#slotB'), 'mk-slide-right'); });   // A⇄B → 서로 반대편에서 미끄러져 자리 바꿈
+$$('input[name="cbasis"]').forEach(r => r.addEventListener('change', () => { cmp.basis = r.value; saveCmp(); renderCmp(); }));
+$('#judge').addEventListener('input', () => {
+  readJudge();
+  if (cmp.checked && validJudge()) cmp.checked = false;
+  saveCmp(); renderReceipt(); $('#judgeErr').textContent = '';
+});
+$('#btnCheck').addEventListener('click', () => {
+  readJudge(); const e = validJudge(); $('#judgeErr').textContent = e;
+  if (e) { MK.play($('#judgeErr'), 'mk-wiggle'); return; }   // 빈칸·근거 없음 → 흔들림
+  cmp.checked = true; saveCmp(); renderReceipt();
+  const rc = $('#receipt'); MK.play(rc, 'mk-receipt');        // 영수증 → 위에서 아래로 와이프 출력
+  if (results().every(r => r.ok === true)) {                  // 근거 모두 맞음 → 출력이 끝난 뒤 합계 스쿼시
+    const tot = $$('#receipt .r-total').pop();
+    if (!MK.reduced()) rc.addEventListener('animationend', () => MK.play(tot, 'mk-squash'), { once: true });
+  }
+  if (window.matchMedia('(max-width: 1180px)').matches) $('#receipt').scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
+$('#btnPrint').addEventListener('click', () => { buildSheet(); window.print(); });
+window.addEventListener('beforeprint', buildSheet);
+
+$('#c-type').addEventListener('change', calcDate);
+$('#c-date').addEventListener('input', calcDate);
+
+$('#btnSettings').addEventListener('click', openSettings);
+$('#dlgClose').addEventListener('click', () => $('#dlg').close());
+$('#dlgSave').addEventListener('click', () => {
+  const dv = Object.assign({}, settings.dv);
+  $$('#dvFields [data-dv]').forEach(i => { const v = numOrNull(i.value); if (v) dv[i.dataset.dv] = v; });
+  const al = $('#algText').value.split(/[,\n]/).map(s => s.trim()).filter(Boolean).map(s => s.slice(0, 30)).slice(0, 40);
+  settings = { dv, allergens: al.length ? Array.from(new Set(al)) : CONFIG.allergens.slice() };
+  myAlg = $$('#myChips input:checked').map(i => i.value).filter(a => settings.allergens.includes(a));
+  LS.set('settings', settings); LS.set('myAlg', myAlg);
+  $('#dlg').close(); refreshAll(); toast('설정을 저장했어요.');
+});
+$('#algText').addEventListener('input', () => {
+  const sel = $$('#myChips input:checked').map(i => i.value);
+  const al = $('#algText').value.split(/[,\n]/).map(s => s.trim()).filter(Boolean);
+  $('#myChips').innerHTML = Array.from(new Set(al)).map(a => '<label class="chip"><input type="checkbox" value="' + esc(a) + '"' + (sel.includes(a) ? ' checked' : '') + '><span>' + esc(a) + '</span></label>').join('');
+});
+$('#dlgReset').addEventListener('click', () => {
+  if (!confirm('기준치와 알레르기 목록을 처음 값으로 되돌릴까요? (내 제품은 그대로예요)')) return;
+  LS.del('settings'); settings = loadSettings(); myAlg = myAlg.filter(a => settings.allergens.includes(a)); LS.set('myAlg', myAlg);
+  $('#dlg').close(); refreshAll(); toast('처음 값으로 되돌렸어요.');
+});
+$('#dlgWipe').addEventListener('click', () => {
+  if (!confirm('이 기기에 저장된 내 제품, 쓰던 내용, 비교 기록, 내 알레르기를 모두 지울까요? 되돌릴 수 없어요.')) return;
+  ['mine', 'draft', 'cmp', 'myAlg'].forEach(LS.del);
+  mine = []; myAlg = []; cmp = { a: 'ex1', b: 'ex2', basis: '100', pick: '', claims: [], reason: '', who: '', checked: false };
+  $('#dlg').close(); buildClaims(); setDraft(blank()); refreshAll(); toast('모두 지웠어요.');
+});
+</script>
+</body>
+</html>

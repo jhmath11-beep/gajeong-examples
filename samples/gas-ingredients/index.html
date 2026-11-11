@@ -228,8 +228,29 @@ body.hide-private .private { filter: blur(7px); user-select: none; }
 @media (min-width: 90rem) { .forms { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 
+/* ===== 모션 (motion-effects 키트에서 필요한 것만) ===== */
+:root { --mk-accent: var(--color-accent); --mk-ease-out: cubic-bezier(.22,1,.36,1); --mk-ease-in-out: cubic-bezier(.65,0,.35,1); --mk-spring: cubic-bezier(.34,1.56,.64,1); --mk-base: 280ms; --mk-slow: 520ms; --mk-stagger: 45ms; }
+@keyframes mk-slide-up { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes mk-wipe-down { from { clip-path: inset(0 0 100% 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes mk-wiggle { 0%,100% { transform: translateX(0); } 20% { transform: translateX(-6px); } 40% { transform: translateX(5px); } 60% { transform: translateX(-3px); } 80% { transform: translateX(2px); } }
+@keyframes mk-wave { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+@keyframes mk-ripple { to { transform: scale(1); opacity: 0; } }
+@keyframes mk-particle { to { transform: translate(var(--dx),var(--dy)) rotate(var(--rot)); opacity: 0; } }
+@keyframes mk-stamp { from { opacity: 0; transform: scale(1.8) rotate(-12deg); } to { opacity: 1; transform: rotate(-3deg); } } /* 접수 도장 찍힘(스케일 인 + 탄성) */
+.mk-slide-up { animation: mk-slide-up var(--mk-base) var(--mk-ease-out) both; }
+.mk-wipe-down { animation: mk-wipe-down var(--mk-slow) var(--mk-ease-in-out) both; }
+.mk-stagger > * { animation: mk-slide-up var(--mk-base) var(--mk-ease-out) both; animation-delay: calc(var(--i,0) * var(--mk-stagger)); }
+.mk-wiggle { animation: mk-wiggle 380ms var(--mk-ease-out); }
+.mk-stamp { animation: mk-stamp 420ms var(--mk-spring) both; }
+.mk-wave { display: inline-flex; gap: 4px; margin-left: var(--space-2xs); }
+.mk-wave > i { width: 6px; height: 6px; border-radius: 50%; background: var(--mk-accent); animation: mk-wave 900ms var(--mk-ease-in-out) infinite; animation-delay: calc(var(--i,0) * 90ms); }
+.btn, .chip { position: relative; overflow: hidden; isolation: isolate; }
+.mk-ripple { position: absolute; border-radius: 50%; pointer-events: none; background: currentColor; opacity: .18; transform: scale(0); animation: mk-ripple 520ms var(--mk-ease-out) forwards; z-index: -1; }
+.mk-particle { position: fixed; width: 7px; height: 7px; border-radius: 2px; pointer-events: none; z-index: 9999; background: var(--mk-accent); animation: mk-particle 800ms var(--mk-ease-out) forwards; }
+
 #printArea { display: none; }
 @media print {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
   body.printing > *:not(#printArea) { display: none !important; }
   body.printing { background: none; }
   body.printing #printArea { display: block; font-size: 11pt; font-family: var(--font-body); }
@@ -260,7 +281,7 @@ body.hide-private .private { filter: blur(7px); user-select: none; }
     <span class="stamp">체험 모드</span>
     <span class="hint">데이터는 이 브라우저에만 저장돼요.</span>
     <span class="spacer"></span>
-    <button class="btn btn--ghost btn--sm" id="demoFill">샘플 넣기</button>
+    <button class="btn btn--ghost btn--sm" id="demoFill">예시 신청 넣기</button>
     <button class="btn btn--ghost btn--sm" id="demoClear">체험 데이터 지우기</button>
   </div>
 </div>
@@ -357,6 +378,35 @@ body.hide-private .private { filter: blur(7px); user-select: none; }
 <div id="printArea"></div>
 
 <script>
+/* ======================= 모션 도우미 (motion-effects 키트에서 필요한 함수만, 동작 줄이기면 즉시 끝) ======================= */
+const MK = (() => {
+  const reduced = () => window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function play(el, cls) { if (!el || reduced()) return; el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); el.addEventListener('animationend', () => el.classList.remove(cls), { once: true }); }
+  function stagger(parent, { max = 20 } = {}) { if (!parent || reduced()) return; [...parent.children].forEach((c, i) => c.style.setProperty('--i', Math.min(i, max))); parent.classList.remove('mk-stagger'); void parent.offsetWidth; parent.classList.add('mk-stagger'); clearTimeout(parent._mkT); parent._mkT = setTimeout(() => parent.classList.remove('mk-stagger'), 400 + 45 * Math.min(parent.children.length, max)); } /* 끝나면 클래스 제거: 다시 그릴 때 또 움직이지 않게 */
+  function ripple(root, selector) {
+    root.addEventListener('pointerdown', e => { const host = e.target.closest(selector); if (!host || host.disabled || reduced()) return;
+      const r = host.getBoundingClientRect(), d = Math.max(r.width, r.height) * 2, s = document.createElement('span'); s.className = 'mk-ripple';
+      Object.assign(s.style, { width: d + 'px', height: d + 'px', left: (e.clientX - r.left - d / 2) + 'px', top: (e.clientY - r.top - d / 2) + 'px' });
+      host.appendChild(s); s.addEventListener('animationend', () => s.remove(), { once: true }); });
+  }
+  function burstAt(el, { count = 18, colors } = {}) {
+    if (!el || reduced()) return; const r = el.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2;
+    for (let i = 0; i < count; i++) { const p = document.createElement('i'); p.className = 'mk-particle';
+      const a = (Math.PI * 2 * i) / count + Math.random() * .4, dist = 50 + Math.random() * 60;
+      p.style.left = x + 'px'; p.style.top = y + 'px'; p.style.setProperty('--dx', Math.cos(a) * dist + 'px'); p.style.setProperty('--dy', Math.sin(a) * dist + 'px'); p.style.setProperty('--rot', (Math.random() * 360) + 'deg');
+      if (colors) p.style.background = colors[i % colors.length];
+      document.body.appendChild(p); p.addEventListener('animationend', () => p.remove(), { once: true }); }
+  }
+  function countUp(el, to, { duration = 700, format = n => Math.round(n).toLocaleString('ko-KR') } = {}) {
+    if (!el) return; const from = parseFloat(el.dataset.mkVal || 0) || 0; el.dataset.mkVal = to;
+    if (reduced() || from === to) { el.textContent = format(to); return; }
+    const start = performance.now(), ease = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    (function f(now) { const p = Math.min(1, (now - start) / duration); el.textContent = format(from + (to - from) * ease(p)); if (p < 1) requestAnimationFrame(f); })(start);
+  }
+  return { reduced, play, stagger, ripple, burstAt, countUp };
+})();
+MK.ripple(document, '.btn, .chip');
+
 /* ======================= 서버 호출 래퍼 =======================
    Apps Script 안에서 열리면 google.script.run(Code.gs)을 부르고,
    그냥 파일로 열면 '체험 모드'로 아래 DEMO가 같은 일을 브라우저 저장소에서 흉내 냅니다. */
@@ -476,7 +526,9 @@ function toast(msg, isErr) {
 }
 async function busy(btn, label, fn) {
   const old = btn.textContent; btn.disabled = true; btn.textContent = label;
-  try { return await fn(); } catch (e) { toast(e.message || '잠시 뒤 다시 시도해 주세요.', true); } finally { btn.disabled = false; btn.textContent = old; }
+  btn.insertAdjacentHTML('beforeend', '<span class="mk-wave" aria-hidden="true"><i style="--i:0"></i><i style="--i:1"></i><i style="--i:2"></i></span>'); // Apps Script 기다림 → 웨이브
+  try { return await fn(); } catch (e) { toast(e.message || '잠시 뒤 다시 시도해 주세요.', true); btn.textContent = old; MK.play(btn, 'mk-wiggle'); } // 빈칸·PIN 오류 → 흔들림
+  finally { btn.disabled = false; btn.textContent = old; }
 }
 function printHtml(html) {
   $('#printArea').innerHTML = html;
@@ -492,6 +544,7 @@ document.querySelectorAll('.tab').forEach(btn => btn.addEventListener('click', (
   $('#tab-student').hidden = t !== 'student';
   $('#tab-teacher').hidden = t !== 'teacher';
   document.body.classList.toggle('wide', t === 'teacher' && !$('#dash').hidden);
+  MK.play($('#tab-' + t), 'mk-slide-up');   // 탭 전환 → 슬라이드 인
 }));
 
 /* ======================= 학생(모둠) 화면 ======================= */
@@ -526,7 +579,7 @@ function syncItems() {
     el.querySelector('.pick').checked = !!p;
     if (p) { el.querySelector('.q').value = p.qty; el.querySelector('.b').checked = p.bring; }
   });
-  $('#pickCount').textContent = Object.keys(picked).length + '개 선택';
+  MK.countUp($('#pickCount'), Object.keys(picked).length, { duration: 300, format: n => Math.round(n) + '개 선택' }); // 고른 개수 → 숫자 올라가기
 }
 $('#itemList').addEventListener('change', e => {
   const el = e.target.closest('.item'); if (!el) return;
@@ -536,6 +589,7 @@ $('#itemList').addEventListener('change', e => {
     else delete picked[it.name];
   } else if (e.target.classList.contains('b') && picked[it.name]) picked[it.name].bring = e.target.checked;
   syncItems();
+  if (e.target.classList.contains('pick') && e.target.checked) MK.play(el.querySelector('.item__more'), 'mk-slide-up'); // 수량 칸 펼침 → 슬라이드 인
 });
 $('#itemList').addEventListener('input', e => {
   if (!e.target.classList.contains('q')) return;
@@ -560,7 +614,7 @@ function fillForm(o) {
   syncItems();
 }
 $('#loadMine').addEventListener('click', e => {
-  if (!$('#fCls').value || !$('#fGroup').value) return toast('반과 모둠을 먼저 골라 주세요.', true);
+  if (!$('#fCls').value || !$('#fGroup').value) { MK.play($('.cells'), 'mk-wiggle'); return toast('반과 모둠을 먼저 골라 주세요.', true); }
   busy(e.currentTarget, '불러오는 중…', async () => {
     const o = await api('getOrder', $('#fCls').value, Number($('#fGroup').value));
     if (!o) return toast('아직 낸 신청이 없어요. 새로 작성하세요.');
@@ -581,12 +635,16 @@ $('#orderForm').addEventListener('submit', e => {
     $('#doneRecap').innerHTML = `<p><b>${esc(order.menu)}</b> · ${order.people}명</p><ul>${order.items.map(it =>
       `<li><span>${esc(it.name)}${it.bring ? ' <span class="tag-bring">가져옴</span>' : ''}</span><span class="num">${fmt(it.qty)} ${esc(CONFIG.items.find(x => x.name === it.name).unit)}</span></li>`).join('')}</ul>`;
     window.scrollTo(0, 0);
+    const stamp = $('#doneCard .stamp');   // 제출 완료 → '접수' 도장 찍힘, 이어서 파티클 1회
+    if (!MK.reduced()) { MK.play(stamp, 'mk-stamp'); stamp.addEventListener('animationend', () => MK.burstAt(stamp), { once: true }); }
   });
 });
 $('#editAgain').addEventListener('click', () => { $('#doneCard').hidden = true; $('#orderForm').hidden = false; });
 
 /* ======================= 교사 화면 ======================= */
 let PIN = '', DATA = null;
+const prevTally = [];   // 합계 숫자 이전 값(숫자 올라가기 시작점)
+const $$ = s => [...document.querySelectorAll(s)];
 const view = { classes: new Set() };
 
 $('#pinForm').addEventListener('submit', e => {
@@ -596,6 +654,7 @@ $('#pinForm').addEventListener('submit', e => {
     PIN = $('#pin').value; $('#pin').value = '';
     $('#pinForm').hidden = true; $('#dash').hidden = false; document.body.classList.add('wide');
     renderDash();
+    MK.play($('.receipt'), 'mk-wipe-down');   // 장부 열림 → 장보기 영수증이 위에서 아래로 출력
   });
 });
 $('#refresh').addEventListener('click', e => busy(e.currentTarget, '불러오는 중…', async () => { DATA = await api('getTeacherData', PIN); renderDash(); }));
@@ -636,7 +695,12 @@ function renderDash() {
     [expected - orders.length, '아직 안 낸 모둠', expected - orders.length ? ' is-warn' : ''],
     [orders.reduce((s, o) => s + o.people, 0), '실습 인원 합계', ''],
     [shop.filter(r => r.groups).length, '사야 할 품목', '']
-  ].map(([n, l, c]) => `<div class="tally${c}"><b>${n}</b><span>${l}</span></div>`).join('');
+  ].map(([n, l, c], i) => `<div class="tally${c}"><b data-k="${i}"${prevTally[i] != null ? ` data-mk-val="${prevTally[i]}"` : ''}>${n}</b><span>${l}</span></div>`).join('');
+  // 합계 숫자 → 이전 값에서 숫자 올라가기 (제출 모둠 '3/24'는 앞 숫자만)
+  $$('#stats b').forEach((b, i) => {
+    const total = String(b.textContent).split('/'), n = +total[0]; prevTally[i] = n;
+    MK.countUp(b, n, { format: v => Math.round(v) + (total[1] ? '/' + total[1] : '') });
+  });
 
   $('#statusBox').innerHTML = C.classes.filter(c => view.classes.has(c)).map(c => {
     let chips = '';
@@ -674,6 +738,7 @@ $('#clsChips').addEventListener('click', e => {
   const k = c.dataset.c;
   if (view.classes.has(k) && view.classes.size > 1) view.classes.delete(k); else view.classes.add(k);
   renderDash();
+  MK.stagger($('#statusBox'));   // 반 고르기 → 반별 현황 줄 순차 등장
 });
 
 /* 인쇄 */
@@ -710,7 +775,7 @@ async function init() {
   $('#fPeople').max = CONFIG.maxPeople;
   showDate(); renderItems(); syncItems();
 }
-$('#demoFill').addEventListener('click', () => { demoFill(); toast('샘플 신청을 넣었어요. 교사 장부(PIN 1234)에서 보세요.'); if (DATA) $('#refresh').click(); });
+$('#demoFill').addEventListener('click', () => { demoFill(); toast('예시 신청을 넣었어요. 교사 장부(PIN 1234)에서 보세요.'); if (DATA) $('#refresh').click(); });
 $('#demoClear').addEventListener('click', () => { if (!confirm('체험 데이터를 모두 지울까요?')) return; localStorage.removeItem(DEMO_KEY); toast('체험 데이터를 지웠어요.'); if (DATA) $('#refresh').click(); });
 init();
 </script>

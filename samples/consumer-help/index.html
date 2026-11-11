@@ -1,0 +1,1019 @@
+<!--
+  무엇을 하는 앱: 청소년이 실제로 겪는 소비자 피해 사례를 읽고 문제·근거·관련 권리·해결 순서를 판단한 뒤, 판매자에게 보낼 요청문을 써 보는 소비자 피해 해결 길잡이
+  수업 장면: 소비생활(소비자 권리와 책임) — 사례 토의(TV 크게 보기) → 개인·모둠 판단(판단+이유) → 해결 순서도 확인 → 요청문 작성 → A4 활동지 인쇄
+  설정 바꾸는 곳: 아래 <script> 맨 위 CONFIG (사례·문제 유형·8대 권리·책무·해결 순서도). 화면의 ⚙ 설정에서 JSON으로 내보내기/불러오기도 됩니다.
+  주의: 법률 상담이 아닌 학습용. 제도·기준은 한국소비자원·1372 소비자상담센터 공식 안내와 교과서로 확인하세요.
+-->
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>소비자 피해 해결 길잡이</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@700;800&family=Gothic+A1:wght@400;600;800&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Hallmark · pre-emit critique: P4 H4 E4 S5 R4 V5
+ * Hallmark · genre: editorial(utilitarian) · theme: custom (상담 접수 서식 — 괘선 표, 회색 머리칸, 인주 도장, 순서도) · macrostructure: docket + ruled form
+ * axes: light paper(cool sage) · display: Nanum Myeongjo(서식 제목) · body: Gothic A1 · numerals: IBM Plex Mono
+ * contrast: ink on sheet ≈ 15:1, muted ≈ 7:1, seal-red ≈ 5.8:1, ok-green ≈ 6:1 (AA)
+ */
+:root {
+  --color-desk:        oklch(92.5% 0.014 165);   /* 책상 위 서류철 배경 */
+  --color-sheet:       oklch(98.4% 0.006 165);   /* 서식 용지 */
+  --color-head:        oklch(93.2% 0.012 165);   /* 서식 머리칸 */
+  --color-head-2:      oklch(88.5% 0.016 165);
+  --color-rule:        oklch(72% 0.020 200);
+  --color-rule-soft:   oklch(86% 0.012 190);
+  --color-ink:         oklch(21% 0.025 245);
+  --color-ink-2:       oklch(33% 0.025 245);
+  --color-muted:       oklch(44% 0.020 230);
+  --color-on-ink:      oklch(97.5% 0.006 165);
+  --color-seal:        oklch(50% 0.185 27);      /* 인주 */
+  --color-seal-soft:   oklch(95% 0.025 27);
+  --color-ok:          oklch(43% 0.110 155);
+  --color-ok-soft:     oklch(94.5% 0.035 155);
+  --color-warn-soft:   oklch(95.5% 0.045 90);
+  --color-focus:       oklch(52% 0.150 245);
+  --color-scrim:       oklch(21% 0.025 245 / 0.55);
+
+  --font-display: "Nanum Myeongjo", "Batang", "AppleMyungjo", serif;
+  --font-body:    "Gothic A1", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+  --font-num:     "IBM Plex Mono", Consolas, monospace;
+
+  --text-xs: 0.8125rem; --text-sm: 0.9375rem; --text-base: 1.0625rem; --text-md: 1.2rem;
+  --text-lg: 1.5rem; --text-xl: clamp(1.6rem, 2.4vw + 1rem, 2.5rem);
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
+  --space-6: 24px; --space-8: 32px; --space-12: 48px;
+  --container: 76rem;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur: 150ms;
+}
+* { box-sizing: border-box; }
+html, body { overflow-x: clip; }
+body { margin: 0; font-family: var(--font-body); font-size: var(--text-base); line-height: 1.6; color: var(--color-ink); background: var(--color-desk); -webkit-font-smoothing: antialiased; word-break: keep-all; overflow-wrap: anywhere; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 800; font-style: normal; line-height: 1.25; margin: 0; overflow-wrap: anywhere; min-width: 0; }
+p { margin: 0; }
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 2px; }
+.wrap { max-width: var(--container); margin: 0 auto; padding-inline: clamp(0.75rem, 3vw, 2rem); }
+.hidden { display: none !important; }
+.num { font-family: var(--font-num); font-variant-numeric: tabular-nums; letter-spacing: 0; }
+.muted { color: var(--color-muted); }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* 버튼 */
+.btn { min-height: 44px; padding: 0 var(--space-4); border: 1px solid var(--color-ink); background: var(--color-sheet); color: var(--color-ink); cursor: pointer; white-space: nowrap; font-weight: 600; font-size: var(--text-sm); transition: background-color var(--dur) var(--ease-out), color var(--dur) var(--ease-out); }
+.btn:hover { background: var(--color-head); }
+.btn:active { background: var(--color-head-2); }
+.btn[disabled] { opacity: .45; cursor: not-allowed; }
+.btn.primary { background: var(--color-ink); color: var(--color-on-ink); }
+.btn.primary:hover { background: var(--color-ink-2); }
+.btn.seal { border-color: var(--color-seal); color: var(--color-seal); }
+.btn.seal:hover { background: var(--color-seal-soft); }
+.btn-row { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+
+/* 머리: 서식 머리표 */
+.mast { padding-top: var(--space-6); }
+.mast-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; border: 2px solid var(--color-ink); background: var(--color-sheet); }
+.mast-title { padding: var(--space-4) var(--space-6); border-right: 1px solid var(--color-ink); min-width: 0; }
+.mast-kicker { font-size: var(--text-xs); color: var(--color-muted); letter-spacing: .08em; }
+.mast-title h1 { font-size: var(--text-xl); margin-top: var(--space-1); letter-spacing: -0.01em; }
+.mast-title p { margin-top: var(--space-2); color: var(--color-ink-2); font-size: var(--text-sm); max-width: 44em; }
+.mast-meta { display: grid; grid-template-columns: auto minmax(0, 12rem); font-size: var(--text-sm); }
+.mast-meta > * { padding: var(--space-2) var(--space-3); border-bottom: 1px solid var(--color-rule); display: flex; align-items: center; min-height: 44px; }
+.mast-meta > :nth-last-child(-n+2) { border-bottom: 0; }
+.mast-meta .k { background: var(--color-head); border-right: 1px solid var(--color-rule); font-weight: 600; white-space: nowrap; }
+.mast-meta input { width: 100%; min-height: 36px; border: 0; border-bottom: 1px dashed var(--color-rule); background: transparent; padding: 0 var(--space-1); }
+.mast-meta .gear { justify-content: flex-end; gap: var(--space-2); }
+
+/* 탭: 서식 장(章) 표시 */
+.tabs { position: sticky; top: 0; z-index: 5; background: var(--color-desk); padding-top: var(--space-3); }
+.tabs-inner { display: flex; gap: 0; overflow-x: auto; scrollbar-width: thin; border-bottom: 2px solid var(--color-ink); }
+.tab { min-height: 44px; padding: 0 var(--space-4); border: 1px solid var(--color-rule); border-bottom: 0; background: var(--color-head); cursor: pointer; white-space: nowrap; font-size: var(--text-sm); font-weight: 600; color: var(--color-ink-2); margin-right: -1px; }
+.tab .num { color: var(--color-muted); margin-right: var(--space-1); }
+.tab[aria-selected="true"] { background: var(--color-ink); color: var(--color-on-ink); border-color: var(--color-ink); }
+.tab[aria-selected="true"] .num { color: var(--color-on-ink); }
+
+main { padding-block: var(--space-6) var(--space-12); }
+.panel-head { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-4); }
+.panel-head h2 { font-size: var(--text-lg); }
+.panel-head p { color: var(--color-muted); font-size: var(--text-sm); margin-top: var(--space-1); }
+
+/* 사례: 접수 대기철 + 서식 */
+.case-layout { display: grid; grid-template-columns: 17rem minmax(0, 1fr); gap: var(--space-6); align-items: start; }
+.docket { border: 1px solid var(--color-ink); background: var(--color-sheet); }
+.docket h3 { font-family: var(--font-body); font-size: var(--text-sm); font-weight: 800; padding: var(--space-2) var(--space-3); background: var(--color-head); border-bottom: 1px solid var(--color-ink); }
+.docket ol { list-style: none; margin: 0; padding: 0; }
+.docket button { width: 100%; display: grid; grid-template-columns: 2.6rem minmax(0, 1fr) auto; gap: var(--space-2); align-items: center; text-align: left; min-height: 52px; padding: var(--space-2) var(--space-3); border: 0; border-bottom: 1px solid var(--color-rule-soft); background: transparent; cursor: pointer; }
+.docket li:last-child button { border-bottom: 0; }
+.docket button:hover { background: var(--color-head); }
+.docket button[aria-current="true"] { background: var(--color-ink); color: var(--color-on-ink); }
+.docket button[aria-current="true"] .d-tag { color: var(--color-on-ink); }
+.d-no { font-size: var(--text-sm); }
+.d-title { font-weight: 600; line-height: 1.35; }
+.d-tag { display: block; font-size: var(--text-xs); color: var(--color-muted); font-weight: 400; }
+.d-state { font-size: var(--text-xs); border: 1px solid currentColor; padding: 0 var(--space-1); white-space: nowrap; }
+.d-state.done { color: var(--color-seal); }
+.docket button[aria-current="true"] .d-state.done { color: var(--color-on-ink); }
+
+.sheet { scroll-margin-top: 64px; position: relative; background: var(--color-sheet); border: 2px solid var(--color-ink); }
+.sheet-top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: var(--space-2) var(--space-4); padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--color-ink); }
+.sheet-top h2 { font-size: var(--text-lg); }
+.sheet-top .no { font-size: var(--text-sm); color: var(--color-muted); }
+.frow { display: grid; grid-template-columns: 9.5rem minmax(0, 1fr) 3.5rem; border-bottom: 1px solid var(--color-rule); }
+.frow:last-of-type { border-bottom: 0; }
+.th { background: var(--color-head); border-right: 1px solid var(--color-rule); padding: var(--space-3); font-weight: 800; font-size: var(--text-sm); }
+.th small { display: block; font-weight: 400; color: var(--color-muted); font-size: var(--text-xs); margin-top: var(--space-1); }
+.td { padding: var(--space-3) var(--space-4); min-width: 0; }
+.mark { border-left: 1px solid var(--color-rule); display: grid; place-items: center; font-family: var(--font-display); font-size: var(--text-lg); color: var(--color-seal); }
+.mark .lbl { font-family: var(--font-body); font-size: var(--text-xs); color: var(--color-muted); }
+.mark.ok { color: var(--color-ok); }
+.case-text { font-size: var(--text-md); line-height: 1.75; }
+.choices { display: grid; gap: var(--space-1); }
+.choice { display: flex; gap: var(--space-3); align-items: flex-start; min-height: 44px; padding: var(--space-2) var(--space-3); border: 1px solid var(--color-rule-soft); cursor: pointer; line-height: 1.5; }
+.choice:hover { border-color: var(--color-rule); background: var(--color-head); }
+.choice input { width: 20px; height: 20px; margin: 2px 0 0; flex: none; accent-color: var(--color-ink); }
+.choice:has(input:checked) { border-color: var(--color-ink); background: var(--color-head); }
+.sheet .choice.right { border-color: var(--color-ok); background: var(--color-ok-soft); }
+.sheet .choice.wrong { border-color: var(--color-seal); background: var(--color-seal-soft); }
+fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
+.order-picked { list-style: none; counter-reset: o; margin: 0 0 var(--space-3); padding: 0; display: grid; gap: var(--space-1); }
+.order-picked li { counter-increment: o; }
+.order-picked li button, .order-pool button { width: 100%; text-align: left; min-height: 44px; padding: var(--space-2) var(--space-3); cursor: pointer; line-height: 1.45; }
+.order-picked li button { display: grid; grid-template-columns: 2rem minmax(0, 1fr) auto; gap: var(--space-2); align-items: center; border: 1px solid var(--color-ink); background: var(--color-sheet); }
+.order-picked li button::before { content: counter(o); font-family: var(--font-num); width: 1.7rem; height: 1.7rem; border: 1px solid var(--color-ink); border-radius: 50%; display: grid; place-items: center; font-size: var(--text-xs); }
+.order-picked li button::after { content: "빼기"; font-size: var(--text-xs); color: var(--color-muted); }
+.order-picked .empty { color: var(--color-muted); font-size: var(--text-sm); padding: var(--space-2) 0; border-top: 1px dashed var(--color-rule); border-bottom: 1px dashed var(--color-rule); }
+.order-pool { display: grid; gap: var(--space-1); }
+.order-pool button { border: 1px dashed var(--color-rule); background: transparent; }
+.order-pool button:hover { background: var(--color-head); border-style: solid; }
+.order-hint { font-size: var(--text-xs); color: var(--color-muted); margin-bottom: var(--space-2); }
+.order-answer { margin-top: var(--space-3); font-size: var(--text-sm); border-top: 1px dashed var(--color-rule); padding-top: var(--space-2); }
+.order-answer ol { margin: var(--space-1) 0 0; padding-left: 1.4em; }
+.sheet-foot { border-top: 1px solid var(--color-ink); padding: var(--space-3) var(--space-4); display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; justify-content: space-between; }
+.result-line { font-weight: 600; }
+.explain { border-top: 1px solid var(--color-ink); padding: var(--space-4); background: var(--color-head); }
+.explain h3 { font-family: var(--font-body); font-size: var(--text-sm); font-weight: 800; margin-bottom: var(--space-1); }
+.explain p + h3 { margin-top: var(--space-3); }
+.explain .ask { font-size: var(--text-sm); color: var(--color-ink-2); }
+
+/* 인주 도장 */
+.stamp { position: relative; flex: none; width: 76px; height: 76px; margin: -6px 0; border-radius: 50%; border: 3px solid var(--color-seal); color: var(--color-seal); display: grid; place-content: center; text-align: center; transform: rotate(-9deg); font-family: var(--font-display); line-height: 1.15; pointer-events: none; }
+.stamp::before { content: ""; position: absolute; inset: 4px; border-radius: 50%; border: 1px solid var(--color-seal); }
+.stamp b { font-size: .82rem; }
+.stamp span { font-family: var(--font-num); font-size: .8rem; }
+.foot-left { display: flex; align-items: center; gap: var(--space-4); min-width: 0; }
+
+/* 요청문 */
+.letter-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-6); align-items: start; }
+.fgrid { display: grid; grid-template-columns: 9.5rem minmax(0, 1fr); }
+.fgrid > .th, .fgrid > .td { border-bottom: 1px solid var(--color-rule); }
+.fgrid > :nth-last-child(-n+2) { border-bottom: 0; }
+.fgrid label.th { display: block; }
+.field { width: 100%; min-height: 44px; padding: var(--space-2) var(--space-3); border: 1px solid var(--color-rule); background: var(--color-sheet); }
+.field:focus-visible { outline-offset: 0; }
+textarea.field { min-height: 7.5rem; resize: vertical; line-height: 1.6; }
+.field.missing { border-color: var(--color-seal); background: var(--color-seal-soft); }
+.checks { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-2); }
+.checks label { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 44px; padding: 0 var(--space-3); border: 1px solid var(--color-rule-soft); cursor: pointer; font-size: var(--text-sm); }
+.checks input { width: 18px; height: 18px; accent-color: var(--color-ink); }
+.counter { font-size: var(--text-xs); color: var(--color-muted); text-align: right; margin-top: var(--space-1); }
+.warn { margin-top: var(--space-2); padding: var(--space-2) var(--space-3); background: var(--color-warn-soft); border: 1px solid var(--color-rule); font-size: var(--text-sm); }
+.letter { background: var(--color-sheet); border: 1px solid var(--color-rule); padding: var(--space-6); position: relative; }
+.letter::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 6px; background: repeating-linear-gradient(90deg, var(--color-ink) 0 14px, transparent 14px 20px); opacity: .7; }
+.letter-subj { font-family: var(--font-display); font-size: var(--text-md); padding-bottom: var(--space-2); border-bottom: 1px solid var(--color-ink); margin-bottom: var(--space-3); }
+.letter-body { white-space: pre-wrap; line-height: 1.85; overflow-wrap: anywhere; }
+.letter-body .blank { color: var(--color-seal); }
+.letter-note { margin-top: var(--space-3); font-size: var(--text-xs); color: var(--color-muted); }
+
+/* 권리·책임 */
+.rights { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 2px solid var(--color-ink); border-left: 1px solid var(--color-rule); background: var(--color-sheet); }
+.right { border-right: 1px solid var(--color-rule); border-bottom: 1px solid var(--color-rule); padding: var(--space-4); min-width: 0; }
+.right .n { font-size: var(--text-sm); color: var(--color-seal); }
+.right h3 { font-size: var(--text-md); margin: var(--space-1) 0 var(--space-2); }
+.right p { font-size: var(--text-sm); color: var(--color-ink-2); }
+.right .ex { margin-top: var(--space-2); font-size: var(--text-xs); color: var(--color-muted); border-top: 1px dashed var(--color-rule); padding-top: var(--space-2); }
+.duties { margin-top: var(--space-8); display: grid; grid-template-columns: 12rem minmax(0, 1fr); border: 2px solid var(--color-ink); background: var(--color-sheet); }
+.duties .th { border-right: 1px solid var(--color-ink); font-family: var(--font-display); font-size: var(--text-md); display: grid; align-content: center; }
+.duties ol { margin: 0; padding: var(--space-4) var(--space-4) var(--space-4) 2.2em; display: grid; gap: var(--space-2); }
+.source { margin-top: var(--space-3); font-size: var(--text-xs); color: var(--color-muted); }
+
+/* 순서도 */
+.flow-wrap { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: var(--space-8); align-items: start; }
+.flow { list-style: none; margin: 0; padding: 0; }
+.flow li { position: relative; }
+.flow li + li { padding-top: 46px; }
+.flow li + li::before { content: ""; position: absolute; left: 2.2rem; top: 0; height: 46px; border-left: 2px solid var(--color-ink); }
+.flow li + li::after { content: attr(data-if); position: absolute; left: 3.2rem; top: 12px; font-size: var(--text-xs); color: var(--color-muted); }
+.fbox { display: grid; grid-template-columns: 4.4rem minmax(0, 1fr); border: 2px solid var(--color-ink); background: var(--color-sheet); }
+.fbox .step { border-right: 1px solid var(--color-ink); display: grid; place-items: center; font-family: var(--font-num); font-size: var(--text-lg); background: var(--color-head); }
+.fbox div:last-child { padding: var(--space-3) var(--space-4); }
+.fbox h3 { font-size: var(--text-md); }
+.fbox p { font-size: var(--text-sm); color: var(--color-ink-2); margin-top: var(--space-1); }
+.fbox.call { border-color: var(--color-seal); }
+.fbox.call .step { background: var(--color-seal); color: var(--color-on-ink); border-color: var(--color-seal); }
+.side h3 { font-family: var(--font-body); font-size: var(--text-sm); font-weight: 800; padding: var(--space-2) var(--space-3); background: var(--color-head); border: 1px solid var(--color-ink); border-bottom: 0; }
+.side dl { margin: 0; border: 1px solid var(--color-ink); background: var(--color-sheet); }
+.side dt { font-weight: 800; padding: var(--space-3) var(--space-3) 0; font-size: var(--text-sm); }
+.side dd { margin: 0; padding: var(--space-1) var(--space-3) var(--space-3); font-size: var(--text-sm); color: var(--color-ink-2); border-bottom: 1px solid var(--color-rule-soft); }
+.side dd:last-child { border-bottom: 0; }
+.side + .side { margin-top: var(--space-6); }
+.fact { font-size: var(--text-sm); }
+
+/* 접수 대장 */
+.table-scroll { overflow-x: auto; border: 2px solid var(--color-ink); background: var(--color-sheet); }
+table.ledger { width: 100%; border-collapse: collapse; font-size: var(--text-sm); min-width: 640px; }
+.ledger th, .ledger td { border: 1px solid var(--color-rule); padding: var(--space-2) var(--space-3); text-align: left; vertical-align: top; }
+.ledger thead th { background: var(--color-head); font-weight: 800; white-space: nowrap; }
+.ledger td.num { white-space: nowrap; }
+.ledger td.c { text-align: center; font-family: var(--font-display); font-size: var(--text-md); }
+.ledger td.c.o { color: var(--color-ok); }
+.ledger td.c.x { color: var(--color-seal); }
+.ledger tfoot td { font-weight: 800; background: var(--color-head); }
+.empty-note { padding: var(--space-6); text-align: center; color: var(--color-muted); }
+
+/* 하단 */
+footer.legal { border-top: 1px solid var(--color-rule); padding-block: var(--space-6) var(--space-8); font-size: var(--text-sm); color: var(--color-ink-2); }
+footer.legal b { color: var(--color-seal); }
+
+/* 대화상자 */
+dialog { border: 2px solid var(--color-ink); background: var(--color-sheet); color: var(--color-ink); padding: 0; max-width: min(48rem, calc(100vw - 24px)); width: 100%; }
+dialog::backdrop { background: var(--color-scrim); }
+.dlg-head { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--color-ink); background: var(--color-head); }
+.dlg-head h2 { font-size: var(--text-md); }
+.dlg-body { padding: var(--space-4); display: grid; gap: var(--space-3); }
+.dlg-body textarea { min-height: 18rem; font-family: var(--font-num); font-size: var(--text-xs); }
+
+/* TV 크게 보기 */
+dialog.tv { max-width: none; max-height: none; width: 100vw; height: 100vh; border: 0; margin: 0; }
+.tv-in { height: 100%; display: grid; grid-template-rows: auto 1fr auto; padding: clamp(1rem, 3vw, 3rem) clamp(1rem, 5vw, 5rem); gap: var(--space-6); }
+.tv-top { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-4); border-bottom: 3px solid var(--color-ink); padding-bottom: var(--space-3); }
+.tv-top h2 { font-size: clamp(1.8rem, 3.6vw, 3.6rem); }
+.tv-top .num { font-size: clamp(1rem, 1.6vw, 1.6rem); color: var(--color-muted); }
+.tv-text { font-size: clamp(1.25rem, 2.9vw, 3.4rem); line-height: 1.7; max-width: 38em; overflow-y: auto; }
+.tv-q { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-4); }
+.tv-q li { border: 2px solid var(--color-ink); padding: var(--space-3) var(--space-4); font-size: clamp(1rem, 1.6vw, 1.6rem); font-weight: 600; }
+.tv-q li span { display: block; font-family: var(--font-num); font-size: .75em; color: var(--color-seal); font-weight: 500; }
+.tv-nav { display: flex; gap: var(--space-2); }
+
+.toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); background: var(--color-ink); color: var(--color-on-ink); padding: var(--space-3) var(--space-4); max-width: calc(100vw - 24px); z-index: 50; font-size: var(--text-sm); }
+
+#print-sheet { display: none; }
+
+@media (max-width: 1000px) {
+  .case-layout, .letter-layout, .flow-wrap { grid-template-columns: minmax(0, 1fr); }
+  .docket ol { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr)); }
+  .docket button { border-right: 1px solid var(--color-rule-soft); }
+  .rights { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 640px) {
+  .mast-form { grid-template-columns: minmax(0, 1fr); }
+  .mast-title { border-right: 0; border-bottom: 1px solid var(--color-ink); padding: var(--space-3) var(--space-4); }
+  .frow { grid-template-columns: minmax(0, 1fr) 3rem; }
+  .frow .th { grid-column: 1 / -1; border-right: 0; border-bottom: 1px solid var(--color-rule); }
+  .frow.case .td { grid-column: 1 / -1; }
+  .fgrid { grid-template-columns: minmax(0, 1fr); }
+  .fgrid > .th { border-bottom: 0; padding-bottom: var(--space-1); }
+  .rights { grid-template-columns: minmax(0, 1fr); }
+  .duties { grid-template-columns: minmax(0, 1fr); }
+  .duties .th { border-right: 0; border-bottom: 1px solid var(--color-ink); }
+  .tv-q { grid-template-columns: minmax(0, 1fr); }
+  .letter { padding: var(--space-4); }
+}
+
+/* ── 모션 (motion-effects kit에서 필요한 것만) ── */
+:root { --mk-accent: var(--color-seal); --mk-ease-out: cubic-bezier(.22,1,.36,1); --mk-ease-in-out: cubic-bezier(.65,0,.35,1); --mk-base: 280ms; --mk-slow: 520ms; --mk-stagger: 45ms; }
+@keyframes mk-fade-in { from { opacity: 0 } to { opacity: 1 } }
+@keyframes mk-scale-in { from { opacity: 0; transform: scale(.92) } to { opacity: 1; transform: none } }
+@keyframes mk-slide-up { from { opacity: 0; transform: translateY(14px) } to { opacity: 1; transform: none } }
+@keyframes mk-slide-left { from { opacity: 0; transform: translateX(24px) } to { opacity: 1; transform: none } }
+@keyframes mk-wipe-in { from { clip-path: inset(0 100% 0 0) } to { clip-path: inset(0 0 0 0) } }
+@keyframes mk-wipe-down { from { clip-path: inset(0 0 100% 0) } to { clip-path: inset(0 0 0 0) } }
+@keyframes mk-wiggle { 0%,100% { transform: translateX(0) } 20% { transform: translateX(-6px) } 40% { transform: translateX(5px) } 60% { transform: translateX(-3px) } 80% { transform: translateX(2px) } }
+@keyframes mk-glitch { 0%,100% { transform: none; text-shadow: none } 20% { transform: translate(-2px,1px); text-shadow: 2px 0 rgba(255,0,60,.6),-2px 0 rgba(0,200,255,.6) } 40% { transform: translate(2px,-1px) } 60% { transform: translate(-1px,0); text-shadow: -2px 0 rgba(255,0,60,.6),2px 0 rgba(0,200,255,.6) } 80% { transform: translate(1px,1px) } }
+@keyframes mk-pulse { 0%,100% { transform: scale(1) } 50% { transform: scale(1.06) } }
+@keyframes mk-ripple { to { transform: scale(1); opacity: 0 } }
+@keyframes mk-blink { 50% { opacity: 0 } }
+@keyframes mk-particle { to { transform: translate(var(--dx),var(--dy)) rotate(var(--rot)); opacity: 0 } }
+/* 판단 완료 도장: 크게 떨어져 눌렸다 펴짐(스케일+스쿼시). 도장은 이미 rotate 돼 있어 scale 속성만 움직임 */
+@keyframes mk-stamp { 0% { opacity: 0; scale: 2.4 } 45% { opacity: 1; scale: 1.14 .82 } 70% { scale: .94 1.06 } 100% { opacity: 1; scale: 1 } }
+.mk-fade-in { animation: mk-fade-in var(--mk-base) var(--mk-ease-out) both; }
+.mk-scale-in { animation: mk-scale-in var(--mk-base) var(--mk-ease-out) both; }
+.mk-slide-up { animation: mk-slide-up var(--mk-base) var(--mk-ease-out) both; }
+.mk-slide-left { animation: mk-slide-left var(--mk-base) var(--mk-ease-out) both; }
+.mk-wipe-in { animation: mk-wipe-in var(--mk-slow) var(--mk-ease-in-out) both; }
+.mk-wipe-down { animation: mk-wipe-down var(--mk-slow) var(--mk-ease-in-out) both; }
+.mk-wiggle { animation: mk-wiggle 380ms var(--mk-ease-out); }
+.mk-glitch { animation: mk-glitch 360ms steps(2,end) 1; }
+.mk-pulse { animation: mk-pulse 1s var(--mk-ease-in-out) 2; }
+.mk-stamp { animation: mk-stamp 560ms var(--mk-ease-out) both; }
+.result-line.mk-wipe-in { animation-delay: .4s; }
+.explain.mk-slide-up { animation-delay: .7s; }
+.mk-stagger > * { animation: mk-slide-up var(--mk-base) var(--mk-ease-out) both; animation-delay: calc(var(--i,0) * var(--mk-stagger)); }
+.btn { position: relative; overflow: hidden; isolation: isolate; }
+.mk-ripple { position: absolute; border-radius: 50%; pointer-events: none; background: currentColor; opacity: .18; transform: scale(0); animation: mk-ripple 520ms var(--mk-ease-out) forwards; z-index: -1; }
+.mk-caret::after { content: ""; display: inline-block; width: .08em; height: 1em; margin-left: .06em; background: currentColor; vertical-align: -.12em; animation: mk-blink 1s steps(1) infinite; }
+.mk-particle { position: fixed; width: 7px; height: 7px; border-radius: 2px; pointer-events: none; z-index: 9999; background: var(--mk-accent); animation: mk-particle 800ms var(--mk-ease-out) forwards; }
+dialog[open] { animation: mk-scale-in var(--mk-base) var(--mk-ease-out); }
+.toast:not(.hidden) { animation: mk-fade-in var(--mk-base) var(--mk-ease-out); }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; animation-delay: 0s !important; transition-duration: 1ms !important; }
+  .mk-caret::after { animation: none !important; }
+}
+
+@media print {
+  @page { size: A4; margin: 12mm; }
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  body { background: none; font-size: 10.5pt; line-height: 1.5; }
+  body > *:not(#print-sheet) { display: none !important; }
+  #print-sheet { display: block !important; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .ps-head { display: grid; grid-template-columns: 1fr auto; border: 1.5pt solid var(--color-ink); }
+  .ps-head h1 { font-size: 17pt; padding: 3mm 4mm; border-right: 1px solid var(--color-ink); }
+  .ps-head h1 small { display: block; font-family: var(--font-body); font-size: 8.5pt; font-weight: 400; color: var(--color-muted); }
+  .ps-meta { display: grid; grid-template-columns: auto 34mm; font-size: 9pt; }
+  .ps-meta > * { padding: 1.4mm 2.5mm; border-bottom: 1px solid var(--color-rule); }
+  .ps-meta > :nth-last-child(-n+2) { border-bottom: 0; }
+  .ps-meta .k { background: var(--color-head); border-right: 1px solid var(--color-rule); font-weight: 600; }
+  .ps-table { width: 100%; border-collapse: collapse; margin-top: 3mm; }
+  .ps-table th, .ps-table td { border: 1px solid var(--color-ink); padding: 2mm 3mm; vertical-align: top; text-align: left; }
+  .ps-table th { width: 30mm; background: var(--color-head); font-size: 9.5pt; }
+  .ps-table td .ln { border-bottom: 1px dotted var(--color-rule); min-height: 7mm; }
+  .ps-table ol { margin: 0; padding-left: 1.3em; }
+  .ps-letter { margin-top: 3mm; border: 1px solid var(--color-ink); padding: 3mm 4mm; }
+  .ps-letter h2 { font-size: 11pt; border-bottom: 1px solid var(--color-ink); padding-bottom: 1.5mm; margin-bottom: 2mm; }
+  .ps-letter .body { white-space: pre-wrap; line-height: 1.7; }
+  .ps-letter .ln { border-bottom: 1px dotted var(--color-rule); height: 7.5mm; }
+  .ps-foot { margin-top: 3mm; font-size: 8pt; color: var(--color-muted); }
+}
+</style>
+</head>
+<body>
+
+<header class="mast wrap">
+  <div class="mast-form">
+    <div class="mast-title">
+      <div class="mast-kicker">소비생활 · 소비자 권리와 책임 · 상담 접수 서식</div>
+      <h1>소비자 피해 해결 길잡이</h1>
+      <p>사례를 읽고 무엇이 문제인지, 어떤 권리와 관련되는지, 무엇부터 해야 하는지 판단해 보세요. 마지막엔 판매자에게 보낼 요청문을 직접 씁니다.</p>
+    </div>
+    <div class="mast-meta">
+      <div class="k">접수번호</div><div class="num" id="metaNo">—</div>
+      <div class="k">접수일</div><div class="num" id="metaDate">—</div>
+      <label class="k" for="who">번호·별칭</label><div><input id="who" maxlength="12" placeholder="예: 2-3 17번" autocomplete="off"></div>
+      <div class="k">설정</div><div class="gear"><button class="btn" id="btnSettings" type="button" aria-label="설정 열기">⚙ 설정</button></div>
+    </div>
+  </div>
+</header>
+
+<nav class="tabs" aria-label="화면 선택">
+  <div class="wrap"><div class="tabs-inner" role="tablist">
+    <button class="tab" role="tab" data-tab="case" aria-selected="true"><span class="num">1</span>사례 판단</button>
+    <button class="tab" role="tab" data-tab="letter" aria-selected="false"><span class="num">2</span>요청문 쓰기</button>
+    <button class="tab" role="tab" data-tab="rights" aria-selected="false"><span class="num">3</span>권리와 책임</button>
+    <button class="tab" role="tab" data-tab="flow" aria-selected="false"><span class="num">4</span>해결 순서도</button>
+    <button class="tab" role="tab" data-tab="ledger" aria-selected="false"><span class="num">5</span>내 판단 기록</button>
+  </div></div>
+</nav>
+
+<main class="wrap">
+  <!-- 1. 사례 판단 -->
+  <section class="panel" id="p-case" role="tabpanel">
+    <div class="panel-head">
+      <div><h2>사례 판단</h2><p>판단(무엇이 문제인가)과 그 근거를 둘 다 맞혀야 1점. 관련 권리 1점, 해결 순서 1점 — 사례마다 3점입니다.</p></div>
+    </div>
+    <div class="case-layout">
+      <nav class="docket" aria-label="사례 목록"><h3>접수 대기 사례</h3><ol id="docket"></ol></nav>
+      <article class="sheet" id="sheet" aria-live="polite"></article>
+    </div>
+  </section>
+
+  <!-- 2. 요청문 -->
+  <section class="panel hidden" id="p-letter" role="tabpanel">
+    <div class="panel-head">
+      <div><h2>요청문 쓰기</h2><p>빈칸을 채우면 판매자에게 보낼 정중한 요청문이 완성됩니다. 이름·전화번호·주소는 쓰지 마세요.</p></div>
+      <div class="btn-row"><button class="btn" id="btnLetterExample" type="button">지금 사례로 채우기</button><button class="btn" id="btnLetterClear" type="button">비우기</button></div>
+    </div>
+    <div class="letter-layout">
+      <form class="sheet" id="letterForm" autocomplete="off" onsubmit="return false">
+        <div class="sheet-top"><h2>요청 내용</h2><span class="no">빨간 칸은 아직 비어 있어요</span></div>
+        <div class="fgrid">
+          <label class="th" for="lfDate">구매일</label><div class="td"><input class="field" type="date" id="lfDate"></div>
+          <label class="th" for="lfWhere">구매한 곳</label><div class="td"><select class="field" id="lfWhere"></select></div>
+          <label class="th" for="lfItem">상품</label><div class="td"><input class="field" id="lfItem" maxlength="40" placeholder="예: 흰색 운동화 240mm"></div>
+          <label class="th" for="lfIssue">문제 상황<small>사실만, 차분하게</small></label><div class="td"><textarea class="field" id="lfIssue" maxlength="300" placeholder="예: 흰색 240mm를 주문했는데 회색 250mm가 배송되었습니다. 상자를 열어 확인만 하고 신지는 않았습니다."></textarea><div class="counter num" id="lfIssueCount">0/300</div><div class="warn hidden" id="lfWarn"></div></div>
+          <label class="th" for="lfWant">원하는 해결</label><div class="td"><input class="field" id="lfWant" list="wantList" maxlength="40" placeholder="목록에서 고르거나 직접 쓰기"><datalist id="wantList"></datalist></div>
+          <div class="th">함께 보낼 증거</div><div class="td"><div class="checks" id="lfEvidence"></div></div>
+          <label class="th" for="lfDays">답변 요청</label><div class="td"><select class="field" id="lfDays"><option value="3">3일 안에</option><option value="5">5일 안에</option><option value="7">7일 안에</option></select></div>
+        </div>
+      </form>
+      <div>
+        <div class="letter" id="letterOut"></div>
+        <div class="btn-row" style="margin-top: var(--space-3)">
+          <button class="btn primary" id="btnCopy" type="button">요청문 복사</button>
+          <button class="btn" id="btnPrintLetter" type="button">활동지 인쇄</button>
+        </div>
+        <p class="letter-note">실제로 보낼 때는 주문번호를 채우고, 보낸 날짜와 답변을 기록해 두세요. 판매자가 답하지 않으면 1372 소비자상담센터에 상담합니다.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. 권리와 책임 -->
+  <section class="panel hidden" id="p-rights" role="tabpanel">
+    <div class="panel-head"><div><h2>소비자의 8대 권리</h2><p>각 권리 아래에는 이 앱의 사례 중 관련된 것을 적어 두었습니다.</p></div></div>
+    <div class="rights" id="rights"></div>
+    <div class="duties"><div class="th">소비자의 책임</div><ol id="duties"></ol></div>
+    <p class="source" id="rightsSource"></p>
+  </section>
+
+  <!-- 4. 해결 순서도 -->
+  <section class="panel hidden" id="p-flow" role="tabpanel">
+    <div class="panel-head"><div><h2>소비자 피해, 이 순서로</h2><p>위 단계에서 해결되면 거기서 끝납니다. 해결되지 않을 때만 다음 칸으로 내려갑니다.</p></div></div>
+    <div class="flow-wrap">
+      <ol class="flow" id="flow"></ol>
+      <div>
+        <div class="side"><h3>이럴 땐 먼저</h3><dl id="sideNotes"></dl></div>
+        <div class="side"><h3>알아 둘 원칙</h3><dl id="facts"></dl></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. 기록 -->
+  <section class="panel hidden" id="p-ledger" role="tabpanel">
+    <div class="panel-head">
+      <div><h2>내 판단 기록</h2><p>이 기기에 저장됩니다. 새로고침해도 남아 있어요.</p></div>
+      <div class="btn-row"><button class="btn" id="btnPrintAll" type="button">기록 인쇄</button><button class="btn seal" id="btnWipe" type="button">기록 모두 지우기</button></div>
+    </div>
+    <div id="ledger"></div>
+  </section>
+</main>
+
+<footer class="legal wrap">
+  <p><b>법률 상담이 아닌 학습용 도구입니다.</b> 사례의 판단은 수업용으로 단순화했고, 실제 피해는 조건에 따라 결과가 달라집니다. 실제 문제는 <b>1372 소비자상담센터</b>에 상담하고, 제도와 기준은 한국소비자원 공식 안내로 확인하세요.</p>
+</footer>
+
+<dialog id="dlgTv" class="tv" aria-label="사례 크게 보기">
+  <div class="tv-in">
+    <div class="tv-top"><h2 id="tvTitle"></h2><span class="num" id="tvNo"></span></div>
+    <div class="tv-text" id="tvText"></div>
+    <div>
+      <ol class="tv-q" id="tvQ"></ol>
+      <div class="tv-nav" style="margin-top: var(--space-4)">
+        <button class="btn" id="tvPrev" type="button">이전 사례</button>
+        <button class="btn" id="tvNext" type="button">다음 사례</button>
+        <button class="btn primary" id="tvClose" type="button" style="margin-left:auto">닫기 (Esc)</button>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="dlgSettings" aria-labelledby="setTitle">
+  <div class="dlg-head"><h2 id="setTitle">설정 — 사례·권리 내용 바꾸기</h2><button class="btn" id="setClose" type="button">닫기</button></div>
+  <div class="dlg-body">
+    <p class="muted" style="font-size: var(--text-sm)">아래 JSON을 고쳐 [적용]하면 이 기기에서 바뀝니다. 다른 교실 컴퓨터로 옮길 때는 [파일로 내보내기] → [파일 불러오기]. 사례의 <code>reasons</code>는 첫 번째가 정답, <code>steps</code>는 올바른 순서대로 씁니다.</p>
+    <label class="sr" for="setJson">설정 JSON</label>
+    <textarea class="field" id="setJson" spellcheck="false"></textarea>
+    <p class="warn hidden" id="setErr" role="alert"></p>
+    <div class="btn-row">
+      <button class="btn primary" id="setApply" type="button">적용</button>
+      <button class="btn" id="setExport" type="button">파일로 내보내기</button>
+      <label class="btn" style="display:inline-flex;align-items:center" for="setFile">파일 불러오기</label>
+      <input type="file" id="setFile" accept=".json,application/json" class="sr">
+      <button class="btn seal" id="setReset" type="button" style="margin-left:auto">처음 내용으로</button>
+    </div>
+  </div>
+</dialog>
+
+<div class="toast hidden" id="toast" role="status"></div>
+<div id="print-sheet"></div>
+
+<script>
+/* ===================== CONFIG — 선생님이 고치는 곳 =====================
+ * problems : 문제 유형 보기(사례마다 정답 + 다른 유형 3개가 보기로 나옴)
+ * rights   : 소비자 8대 권리(소비자기본법 제4조를 쉬운 말로) — 교과서 표현에 맞게 고쳐 쓰세요
+ * duties   : 소비자의 책무(같은 법 제5조를 쉬운 말로)
+ * cases    : 사례. reasons[0]이 정답 근거(화면에선 섞임), steps는 올바른 순서, decoys는 순서에 넣으면 안 되는 행동
+ * flow / sideNotes / facts : 해결 순서도와 원칙 안내
+ */
+const CONFIG = {
+  storageKey: 'consumer-help.v1',
+  configKey: 'consumer-help.config.v1',
+  where: ['온라인 쇼핑몰', '앱(게임·앱 마켓)', '오프라인 매장', 'SNS 광고를 보고 들어간 쇼핑몰', '중고거래 앱의 개인 판매자'],
+  wants: ['청약철회(반품) 후 환불', '교환', '환불', '수리', '미성년자 결제 취소', '결제 취소'],
+  evidence: ['주문 내역', '상품 사진', '광고 화면 캡처', '대화 내용 캡처', '결제 내역'],
+  problems: [
+    { id: 'withdraw', label: '온라인으로 산 물건의 반품(청약철회)을 거절당함' },
+    { id: 'defect',   label: '제품 결함 때문에 다칠 위험이 생김' },
+    { id: 'minor',    label: '미성년자가 보호자 동의 없이 한 계약(결제)' },
+    { id: 'ad',       label: '광고 내용과 실제가 다름(거짓·과장 광고)' },
+    { id: 'fraud',    label: '개인 간 거래에서 돈만 받고 물건을 보내지 않음' },
+    { id: 'mismatch', label: '주문한 것과 다른 상품이 배송됨' }
+  ],
+  rights: [
+    { id: 'safe',    name: '안전할 권리',             text: '물품·서비스 때문에 생명·신체·재산에 위해를 입지 않도록 보호받을 권리' },
+    { id: 'know',    name: '알 권리',                 text: '물품·서비스를 고를 때 필요한 지식과 정보를 제공받을 권리' },
+    { id: 'choice',  name: '선택할 권리',             text: '거래 상대·구입 장소·가격·거래 조건 등을 자유롭게 선택할 권리' },
+    { id: 'opinion', name: '의견을 반영할 권리',      text: '소비생활에 영향을 주는 국가·지방자치단체의 정책과 사업자의 사업 활동에 의견을 반영할 권리' },
+    { id: 'comp',    name: '피해 보상을 받을 권리',   text: '물품·서비스를 쓰다 입은 피해를 신속·공정한 절차에 따라 적절히 보상받을 권리' },
+    { id: 'edu',     name: '교육을 받을 권리',        text: '합리적인 소비생활에 필요한 교육을 받을 권리' },
+    { id: 'org',     name: '단체를 조직하고 활동할 권리', text: '소비자 스스로 권익을 높이기 위해 단체를 만들고 그 단체를 통해 활동할 권리' },
+    { id: 'env',     name: '안전하고 쾌적한 환경에서 소비할 권리', text: '안전하고 쾌적한 환경에서 소비생활을 할 권리' }
+  ],
+  duties: [
+    '물품·서비스를 올바르게 선택하고, 소비자의 기본 권리를 정당하게 행사한다.',
+    '스스로의 권익을 높이기 위해 필요한 지식과 정보를 익힌다.',
+    '자주적이고 합리적으로 행동하며, 자원을 아끼고 환경을 생각하는 소비생활을 한다.'
+  ],
+  rightsSource: '소비자기본법 제4조(소비자의 기본적 권리)·제5조(소비자의 책무)를 학생 눈높이로 옮긴 것입니다. 수업 전 교과서 표현과 대조해 쓰세요.',
+  cases: [
+    { id: 'shirt', tag: '온라인 쇼핑', title: '세일 티셔츠 반품 거절',
+      text: '민서는 온라인 쇼핑몰에서 세일 중인 티셔츠를 샀다. 받은 지 3일째, 입어 보지 않아 태그도 그대로인데 마음이 바뀌어 반품을 요청했다. 판매자는 "세일 상품은 반품이 안 됩니다"라는 답만 보냈다.',
+      problem: 'withdraw',
+      reasons: ['온라인으로 샀고, 받은 지 7일이 지나지 않았으며, 입지 않아 상품이 그대로이다', '세일 상품은 어떤 경우에도 반품할 수 없다', '판매자가 답장을 했으니 이미 해결된 일이다', '마음이 바뀐 것은 소비자 잘못이라 요청할 수 없다'],
+      right: 'comp', rightDecoys: ['edu', 'org', 'env'],
+      steps: ['주문 내역·판매자 답변·상품 사진을 저장한다', '판매자에게 청약철회(반품)를 다시 요청한다', '해결되지 않으면 1372 소비자상담센터에 상담한다'],
+      decoys: ['쇼핑몰 후기 게시판에 판매자 욕을 쓴다', '택배 상자를 버리고 그냥 입는다'],
+      explain: '온라인(전자상거래)으로 산 물건은 원칙적으로 받은 날부터 7일 안에 청약철회(반품)를 요청할 수 있어요. 판매자가 써 둔 "세일 상품 반품 불가" 문구만 보고 포기하지 말고, 예외에 해당하는지는 1372에 확인해요. 단순 변심일 때 반품 배송비는 소비자가 냅니다.',
+      letter: { where: '온라인 쇼핑몰', item: '세일 티셔츠', issue: '상품을 받은 지 3일이 지났고, 입지 않아 태그도 그대로입니다. 반품을 요청드렸는데 "세일 상품은 반품이 안 된다"는 답을 받았습니다.', want: '청약철회(반품) 후 환불', evidence: ['주문 내역', '상품 사진', '대화 내용 캡처'] } },
+    { id: 'battery', tag: '제품 안전', title: '부풀어 오른 보조배터리',
+      text: '준호가 인터넷으로 산 보조배터리를 설명서대로 충전했는데, 2주 만에 충전 중 몹시 뜨거워지더니 몸체가 부풀어 올랐다.',
+      problem: 'defect',
+      reasons: ['설명서대로 썼는데도 과열되고 부풀어 다칠 위험이 생겼다', '2주나 썼으니 소비자가 책임져야 한다', '보조배터리는 원래 뜨거워지는 물건이라 문제가 아니다', '값이 싸서 생긴 일이니 어쩔 수 없다'],
+      right: 'safe', rightDecoys: ['choice', 'org', 'opinion'],
+      steps: ['바로 사용을 멈추고 불이 옮겨붙지 않는 곳에 둔다', '상품 사진·구매 내역을 남기고 판매자에게 교환·환불을 요청한다', '해결되지 않으면 1372 소비자상담센터에 상담한다'],
+      decoys: ['부푼 배터리를 눌러 원래대로 펴 본다', '계속 쓰면서 상태를 지켜본다'],
+      explain: '정상적으로 썼는데 위험이 생겼다면 안전할 권리와 관련된 문제예요. 부푼 배터리는 사용을 멈추는 것이 먼저입니다. 교환·환불·보상 기준은 제품과 상황에 따라 다르니 1372 상담으로 확인해요.',
+      letter: { where: '온라인 쇼핑몰', item: '보조배터리', issue: '설명서대로 충전해 사용했는데 2주 만에 충전 중 몹시 뜨거워지고 몸체가 부풀었습니다. 위험해서 지금은 사용을 멈춘 상태입니다.', want: '환불', evidence: ['주문 내역', '상품 사진'] } },
+    { id: 'game', tag: '모바일 게임', title: '보호자 몰래 한 아이템 결제',
+      text: '중학교 2학년 지우(만 14세)가 자기 휴대폰 게임에서 보호자에게 묻지 않고 아이템을 여러 번 결제했다. 다음 달 휴대폰 요금 청구서에 15만 원이 찍혀 나왔다.',
+      problem: 'minor',
+      reasons: ['만 19세가 안 된 미성년자가 보호자(법정대리인) 동의 없이 결제했다', '게임 아이템은 디지털 상품이라 소비자 문제가 아니다', '결제 버튼을 누른 사람이 책임지므로 방법이 없다', '게임 회사가 광고를 너무 많이 했다'],
+      right: 'comp', rightDecoys: ['org', 'env', 'opinion'],
+      steps: ['보호자에게 사실대로 알리고 결제 내역을 함께 확인한다', '게임사·앱 마켓에 미성년자 결제 취소를 요청한다', '해결되지 않으면 1372 소비자상담센터에 상담한다'],
+      decoys: ['요금이 나온 것을 숨기고 용돈으로 몰래 갚는다', '게임을 지우면 결제도 사라진다고 보고 지운다'],
+      explain: '미성년자가 법정대리인(보호자) 동의 없이 한 계약은 원칙적으로 취소할 수 있어요. 다만 보호자가 쓰라고 허락한 용돈 범위 안의 결제이거나 나이를 속인 경우 등은 취소가 어려울 수 있어요. 사례에 따라 다르니 보호자와 함께 1372에 상담해요.',
+      letter: { where: '앱(게임·앱 마켓)', item: '게임 아이템', issue: '만 14세 미성년자가 보호자 동의 없이 게임 아이템을 여러 번 결제했습니다. 보호자와 함께 결제 내역을 확인했습니다.', want: '미성년자 결제 취소', evidence: ['결제 내역'] } },
+    { id: 'jelly', tag: '광고', title: '2주 만에 5kg? 다이어트 젤리',
+      text: 'SNS 광고에 "먹기만 하면 2주 만에 5kg 감량"이라는 젤리가 나왔다. 하윤이는 그 말을 믿고 샀지만 아무 변화가 없었고, 상품 상세 페이지 어디에도 그런 효과의 근거가 없었다.',
+      problem: 'ad',
+      reasons: ['광고한 효과와 실제가 다르고, 광고에 근거가 없었다', '젤리 맛이 기대보다 별로였다', '택배가 하루 늦게 도착했다', '먹는 것은 어떤 경우에도 환불이 안 된다'],
+      right: 'know', rightDecoys: ['org', 'env', 'opinion'],
+      steps: ['광고 화면과 상품 상세 페이지를 캡처해 둔다', '판매자에게 광고와 다르다고 알리고 환불을 요청한다', '해결되지 않으면 1372 소비자상담센터에 상담한다'],
+      decoys: ['같은 젤리를 더 사서 효과를 다시 확인한다', '광고 댓글에 친구를 태그해 함께 산다'],
+      explain: '광고가 사실과 다르거나 부풀려져 있으면 소비자가 바른 정보로 고를 수 없어 알 권리와 관련돼요. 광고는 금방 내려가니 먼저 캡처해 두세요. 먹은 양·개봉 여부에 따라 환불 범위가 달라질 수 있으니 1372에 상담해요.',
+      letter: { where: 'SNS 광고를 보고 들어간 쇼핑몰', item: '다이어트 젤리', issue: '광고에서 "먹기만 하면 2주 만에 5kg 감량"이라고 해서 구매했지만 효과가 없었고, 상품 페이지에서도 그 근거를 찾을 수 없었습니다.', want: '환불', evidence: ['주문 내역', '광고 화면 캡처'] } },
+    { id: 'used', tag: '중고거래', title: '돈만 받고 사라진 판매자',
+      text: '도현이는 중고거래 앱에서 개인 판매자에게 중고 게임기 값 12만 원을 계좌로 먼저 보냈다. 판매자는 "내일 택배로 보낸다"고 한 뒤 연락을 끊었고, 판매 글도 사라졌다.',
+      problem: 'fraud',
+      reasons: ['돈을 받은 뒤 물건을 보내지 않고 연락을 끊었다', '중고 물건은 원래 상태가 나쁠 수 있다', '택배가 하루 늦는 것은 흔한 일이다', '개인 판매자는 반품을 받아 줄 의무가 없다'],
+      right: 'comp', rightDecoys: ['env', 'org', 'opinion'],
+      steps: ['대화 내용·입금 내역·판매 글 캡처를 모아 둔다', '경찰과 중고거래 앱 고객센터에 신고한다'],
+      decoys: ['판매자가 연락할 때까지 아무것도 하지 않는다', '판매자의 계좌번호와 이름을 SNS에 올린다'],
+      explain: '개인과 개인 사이의 거래는 사업자와 소비자 사이의 거래가 아니어서 한국소비자원 피해구제 대상이 아닐 수 있어요. 돈만 받고 연락을 끊었다면 사기가 의심되니 증거를 모아 경찰에 신고하고, 어떤 절차가 맞는지 모르겠으면 1372에 물어보세요. 판매자 정보를 SNS에 올리는 것은 또 다른 문제를 만들 수 있어요.',
+      letter: { where: '중고거래 앱의 개인 판매자', item: '중고 게임기', issue: '판매 글을 보고 대금을 계좌로 먼저 보냈습니다. "내일 택배로 보낸다"는 답을 받은 뒤 연락이 끊겼고 판매 글도 사라졌습니다.', want: '환불', evidence: ['대화 내용 캡처', '결제 내역'] } },
+    { id: 'shoes', tag: '온라인 쇼핑', title: '주문과 다른 운동화',
+      text: '서윤이는 온라인 쇼핑몰에서 흰색 운동화 240mm를 주문했는데 회색 250mm가 왔다. 상자를 열어 확인만 하고 신어 보지는 않았다.',
+      problem: 'mismatch',
+      reasons: ['주문 내역과 받은 상품의 색·치수가 다르다', '회색이 생각보다 예뻐 보이지 않는다', '배송 상자가 조금 찌그러져 있었다', '운동화는 신어 봐야만 문제를 알 수 있다'],
+      right: 'comp', rightDecoys: ['org', 'env', 'opinion'],
+      steps: ['받은 상품과 주문 내역을 사진으로 남긴다', '판매자에게 주문한 상품으로 교환(또는 환불)을 요청한다', '해결되지 않으면 1372 소비자상담센터에 상담한다'],
+      decoys: ['일단 신고 다녀 보고 나중에 연락한다', '다른 쇼핑몰에서 같은 신발을 또 산다'],
+      explain: '받은 물건이 주문(계약) 내용과 다르면 판매자에게 교환·환불을 요청할 수 있고, 이때 돌려보내는 비용은 판매자가 내는 것이 원칙이에요. 신으면 상태가 바뀌니 확인만 하고 그대로 두세요.',
+      letter: { where: '온라인 쇼핑몰', item: '흰색 운동화 240mm', issue: '흰색 240mm를 주문했는데 회색 250mm가 배송되었습니다. 상자를 열어 확인만 하고 신지는 않았습니다.', want: '교환', evidence: ['주문 내역', '상품 사진'] } }
+  ],
+  flow: [
+    { title: '증거 모으기', text: '주문 내역, 상품 사진, 광고 화면, 판매자와 주고받은 대화를 날짜가 보이게 저장해요.' },
+    { title: '판매자(사업자)에게 요청', text: '무엇이 문제이고 무엇을 원하는지 정중하고 분명하게 써서 보내요. 보낸 날짜와 답변을 기록해요.', if: '' },
+    { title: '1372 소비자상담센터 상담', text: '판매자가 답하지 않거나 거절하면 전화 1372나 누리집으로 상담해요. 내 경우에 맞는 기준을 안내받아요.', call: true, if: '해결되지 않으면' },
+    { title: '한국소비자원 피해구제 신청', text: '상담으로 해결되지 않으면 피해구제를 신청할 수 있어요. 사실을 조사해 양쪽에 합의를 권하는 절차예요.', if: '해결되지 않으면' },
+    { title: '소비자분쟁조정위원회 분쟁조정', text: '피해구제 단계에서 합의가 되지 않으면 분쟁조정으로 넘어갈 수 있어요.', if: '합의가 안 되면' }
+  ],
+  sideNotes: [
+    { k: '다칠 위험이 있을 때', v: '요청보다 먼저 사용을 멈추고, 위험한 물건은 안전한 곳에 둡니다.' },
+    { k: '미성년자일 때', v: '혼자 해결하려 하지 말고 보호자에게 먼저 알리고 함께 요청합니다.' },
+    { k: '개인 간 거래에서 사기가 의심될 때', v: '증거를 모아 경찰에 신고합니다. 개인 간 거래는 한국소비자원 피해구제 대상이 아닐 수 있어요.' }
+  ],
+  facts: [
+    { k: '온라인 구매 반품(청약철회)', v: '원칙적으로 받은 날부터 7일 안에 요청할 수 있어요. 예외가 있어 사례에 따라 다르니 1372에 상담하세요.' },
+    { k: '미성년자의 계약', v: '만 19세 미만이 법정대리인 동의 없이 한 계약은 원칙적으로 취소할 수 있어요. 허락받은 용돈 범위 등 예외가 있어요.' },
+    { k: '1372', v: '소비자상담센터 전화번호입니다. 어디에 무엇을 요청해야 할지 모를 때 먼저 물어보세요.' }
+  ]
+};
+</script>
+<script>
+'use strict';
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const clone = o => JSON.parse(JSON.stringify(o));
+const pad = n => String(n).padStart(2, '0');
+// 받침 있으면 a(을/이), 없으면 b(를/가). 한글 아니면 a(b) 둘 다
+function josa(word, a, b) {
+  const s = String(word).trim(); const c = s.charCodeAt(s.length - 1);
+  if (!s) return a + '(' + b + ')';
+  if (c >= 0xAC00 && c <= 0xD7A3) return ((c - 0xAC00) % 28) ? a : b;
+  return a + '(' + b + ')';
+}
+let toastTimer;
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.remove('hidden'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.add('hidden'), 3500); }
+
+/* ---------- 모션 도우미 (motion-effects kit에서 필요한 것만) — 동작 줄이기 설정이면 바로 끝 상태 ---------- */
+const MK = (() => {
+  const reduced = () => window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function play(el, cls) {
+    if (!el || reduced()) return;
+    el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls);
+    const done = e => { if (e.target !== el) return; el.classList.remove(cls); el.removeEventListener('animationend', done); };
+    el.addEventListener('animationend', done);
+  }
+  // 순차 등장 — 끝나면 클래스를 떼서 다음 렌더 때 다시 움직이지 않게
+  function stagger(parent, { max = 20 } = {}) {
+    if (!parent || reduced()) return;
+    const kids = Array.from(parent.children); kids.forEach((c, i) => c.style.setProperty('--i', Math.min(i, max)));
+    parent.classList.remove('mk-stagger'); void parent.offsetWidth; parent.classList.add('mk-stagger');
+    clearTimeout(parent._mkT); parent._mkT = setTimeout(() => parent.classList.remove('mk-stagger'), Math.min(kids.length, max) * 45 + 400);
+  }
+  // 타이프라이터 — 사례 제목에만(정답에는 쓰지 않음)
+  function typewriter(el, text, { speed = 45 } = {}) {
+    if (!el) return;
+    clearInterval(el._mkT);
+    if (reduced()) { el.textContent = text; return; }
+    el.textContent = ''; el.classList.add('mk-caret');
+    const chars = Array.from(text); let i = 0;
+    el._mkT = setInterval(() => {
+      el.textContent += chars[i++] ?? '';
+      if (i >= chars.length) { clearInterval(el._mkT); setTimeout(() => el.classList.remove('mk-caret'), 600); }
+    }, speed);
+  }
+  function ripple(root = document, selector = '.btn') {
+    root.addEventListener('pointerdown', e => {
+      const host = e.target.closest(selector); if (!host || host.disabled || reduced()) return;
+      const r = host.getBoundingClientRect(), d = Math.max(r.width, r.height) * 2;
+      const s = document.createElement('span'); s.className = 'mk-ripple';
+      Object.assign(s.style, { width: d + 'px', height: d + 'px', left: (e.clientX - r.left - d / 2) + 'px', top: (e.clientY - r.top - d / 2) + 'px' });
+      host.appendChild(s); s.addEventListener('animationend', () => s.remove(), { once: true });
+    });
+  }
+  // 파티클 — 만점(3/3) 순간에 한 번만
+  function burstAt(el, { count = 18 } = {}) {
+    if (!el || reduced()) return;
+    const r = el.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2;
+    for (let i = 0; i < count; i++) {
+      const p = document.createElement('i'); p.className = 'mk-particle';
+      const a = (Math.PI * 2 * i) / count + Math.random() * .4, dist = 50 + Math.random() * 60;
+      p.style.left = x + 'px'; p.style.top = y + 'px';
+      p.style.setProperty('--dx', Math.cos(a) * dist + 'px'); p.style.setProperty('--dy', Math.sin(a) * dist + 'px'); p.style.setProperty('--rot', (Math.random() * 360) + 'deg');
+      document.body.appendChild(p); p.addEventListener('animationend', () => p.remove(), { once: true });
+    }
+  }
+  return { reduced, play, stagger, typewriter, ripple, burstAt };
+})();
+MK.ripple();
+
+/* ---------- 설정(교사 수정본) ---------- */
+const EDITABLE = ['where', 'wants', 'evidence', 'problems', 'rights', 'duties', 'rightsSource', 'cases', 'flow', 'sideNotes', 'facts'];
+function pickEditable(src) { const o = {}; EDITABLE.forEach(k => { o[k] = clone(src[k]); }); return o; }
+function validateConfig(c) {
+  if (!c || typeof c !== 'object') return '내용이 JSON 객체가 아니에요.';
+  for (const k of ['problems', 'rights', 'cases', 'flow']) if (!Array.isArray(c[k]) || !c[k].length) return `"${k}" 목록이 비어 있거나 없어요.`;
+  const pIds = new Set(c.problems.map(p => p && p.id)); const rIds = new Set(c.rights.map(r => r && r.id));
+  const seen = new Set();
+  for (const [i, cs] of c.cases.entries()) {
+    const at = `사례 ${i + 1}`;
+    if (!cs || !cs.id || !cs.title || !cs.text) return `${at}: id·title·text가 필요해요.`;
+    if (seen.has(cs.id)) return `${at}: id "${cs.id}"가 겹쳐요.`; seen.add(cs.id);
+    if (!pIds.has(cs.problem)) return `${at}: problem "${cs.problem}"이 problems 목록에 없어요.`;
+    if (!rIds.has(cs.right)) return `${at}: right "${cs.right}"가 rights 목록에 없어요.`;
+    if (!Array.isArray(cs.reasons) || cs.reasons.length < 2) return `${at}: reasons는 2개 이상이어야 해요(첫 번째가 정답).`;
+    if (!Array.isArray(cs.steps) || !cs.steps.length) return `${at}: steps(올바른 순서)가 필요해요.`;
+  }
+  return '';
+}
+let cfg = pickEditable(CONFIG);
+try {
+  const saved = JSON.parse(localStorage.getItem(CONFIG.configKey) || 'null');
+  if (saved && !validateConfig(Object.assign(pickEditable(CONFIG), saved))) cfg = Object.assign(pickEditable(CONFIG), saved);
+} catch (e) { /* 저장소 사용 불가 — 기본값 */ }
+
+/* ---------- 학생 기록 ---------- */
+let store = { who: '', tab: 'case', cur: '', answers: {}, letter: null };
+try { const d = JSON.parse(localStorage.getItem(CONFIG.storageKey) || 'null'); if (d && typeof d === 'object' && d.answers) store = Object.assign(store, d); } catch (e) { /* 메모리로만 */ }
+let warnedStore = false;
+function persist() { try { localStorage.setItem(CONFIG.storageKey, JSON.stringify(store)); } catch (e) { if (!warnedStore) { warnedStore = true; toast('이 브라우저에서는 저장이 되지 않아요. 화면을 닫으면 사라져요.'); } } }
+
+const today = new Date();
+const ymd = `${today.getFullYear()}.${pad(today.getMonth() + 1)}.${pad(today.getDate())}`;
+const caseIdx = id => Math.max(0, cfg.cases.findIndex(c => c.id === id));
+const caseNo = id => `${String(today.getFullYear()).slice(2)}${pad(today.getMonth() + 1)}${pad(today.getDate())}-${pad(caseIdx(id) + 1)}`;
+const curCase = () => cfg.cases.find(c => c.id === store.cur) || cfg.cases[0];
+const rightName = id => (cfg.rights.find(r => r.id === id) || {}).name || '';
+const probLabel = id => (cfg.problems.find(p => p.id === id) || {}).label || '';
+function ans(id) { if (!store.answers[id]) store.answers[id] = { prob: '', reason: -1, right: '', order: [], checked: false }; return store.answers[id]; }
+function stepText(cs, tok) { const [k, i] = [tok[0], +tok.slice(1)]; return (k === 's' ? cs.steps : (cs.decoys || []))[i] || ''; }
+
+/* ---------- 탭 ---------- */
+function showTab(t) {
+  if (!$('#p-' + t)) t = 'case';
+  store.tab = t; persist();
+  $$('.tab').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === t)));
+  $$('.panel').forEach(p => p.classList.toggle('hidden', p.id !== 'p-' + t));
+  if (t === 'ledger') renderLedger();
+  if (t === 'letter') renderLetter();
+  // 탭 전환: 카드·순서도·기록 줄이 있는 탭은 순차 등장, 나머지는 슬라이드 인
+  const list = { rights: '#rights', flow: '#flow', ledger: '#ledger tbody' }[t];
+  if (list && $(list)) MK.stagger($(list)); else MK.play($('#p-' + t), 'mk-slide-up');
+}
+$$('.tab').forEach(b => b.addEventListener('click', () => showTab(b.dataset.tab)));
+
+/* ---------- 1. 사례 판단 ---------- */
+function marksOf(id) { const a = store.answers[id]; return a && a.checked ? a.marks : null; }
+function renderDocket() {
+  const cur = curCase();
+  $('#docket').innerHTML = cfg.cases.map((c, i) => {
+    const m = marksOf(c.id); const sc = m ? (m.pr + m.ri + m.or) : 0;
+    return `<li><button type="button" data-case="${esc(c.id)}" aria-current="${c.id === cur.id}">
+      <span class="d-no num">${pad(i + 1)}</span>
+      <span class="d-title">${esc(c.title)}<span class="d-tag">${esc(c.tag || '')}</span></span>
+      ${m ? `<span class="d-state done num">${sc}/3</span>` : '<span class="d-state">미판단</span>'}</button></li>`;
+  }).join('');
+}
+$('#docket').addEventListener('click', e => { const b = e.target.closest('[data-case]'); if (!b) return; store.cur = b.dataset.case; persist(); renderCase(); caseEnter(); if (matchMedia('(max-width: 1000px)').matches) $('#sheet').scrollIntoView({ block: 'start' }); });
+// 사례를 고르면: 서식이 페이드 인, 사례 제목은 타이프라이터(문제 제목만 — 정답·해설은 움직이지 않음)
+function caseEnter() { MK.play($('#sheet'), 'mk-fade-in'); MK.typewriter($('#sheet .sheet-top h2'), curCase().title); }
+
+let pool = []; // 순서 보기(섞인 토큰)
+function renderCase() {
+  const cs = curCase(); store.cur = cs.id;
+  const a = ans(cs.id); const done = a.checked; const m = a.marks || {};
+  $('#metaNo').textContent = caseNo(cs.id);
+  renderDocket();
+  const others = shuffle(cfg.problems.filter(p => p.id !== cs.problem)).slice(0, 3);
+  const probOpts = shuffle([cfg.problems.find(p => p.id === cs.problem), ...others]);
+  const reasonOpts = shuffle(cs.reasons.map((t, i) => ({ t, i })));
+  const rIds = [cs.right, ...(cs.rightDecoys && cs.rightDecoys.length ? cs.rightDecoys : shuffle(cfg.rights.map(r => r.id).filter(id => id !== cs.right)).slice(0, 3))];
+  const rightOpts = shuffle(rIds.filter(id => cfg.rights.some(r => r.id === id)).filter((v, i, s) => s.indexOf(v) === i));
+  const toks = [...cs.steps.map((_, i) => 's' + i), ...(cs.decoys || []).map((_, i) => 'd' + i)];
+  pool = shuffle(toks);
+  const cls = (ok, chosen) => done ? (ok ? ' right' : (chosen ? ' wrong' : '')) : '';
+  const mk = (v, lbl) => done ? `<div class="mark${v ? ' ok' : ''}" aria-label="${lbl} ${v ? '맞음' : '틀림'}">${v ? '○' : '×'}</div>` : '<div class="mark"><span class="lbl">확인</span></div>';
+  $('#sheet').innerHTML = `
+    <div class="sheet-top"><h2>${esc(cs.title)}</h2><span class="no num">접수 ${esc(caseNo(cs.id))} · ${esc(cs.tag || '')}</span></div>
+    <div class="frow case"><div class="th">사례 내용</div><div class="td"><p class="case-text">${esc(cs.text)}</p></div></div>
+    <div class="frow"><div class="th">1. 무엇이 문제인가<small>판단</small></div><div class="td"><fieldset ${done ? 'disabled' : ''}><legend class="sr">무엇이 문제인가</legend><div class="choices">
+      ${probOpts.map(p => `<label class="choice${cls(p.id === cs.problem, a.prob === p.id)}"><input type="radio" name="prob" value="${esc(p.id)}" ${a.prob === p.id ? 'checked' : ''}>${esc(p.label)}</label>`).join('')}
+    </div></fieldset></div>${mk(m.pr, '판단과 근거')}</div>
+    <div class="frow"><div class="th">2. 그렇게 본 근거<small>이유 — 1·2 둘 다 맞아야 1점</small></div><div class="td"><fieldset ${done ? 'disabled' : ''}><legend class="sr">근거</legend><div class="choices">
+      ${reasonOpts.map(r => `<label class="choice${cls(r.i === 0, a.reason === r.i)}"><input type="radio" name="reason" value="${r.i}" ${a.reason === r.i ? 'checked' : ''}>${esc(r.t)}</label>`).join('')}
+    </div></fieldset></div><div class="mark"><span class="lbl">↑</span></div></div>
+    <div class="frow"><div class="th">3. 관련된 소비자 권리</div><div class="td"><fieldset ${done ? 'disabled' : ''}><legend class="sr">관련 권리</legend><div class="choices">
+      ${rightOpts.map(id => `<label class="choice${cls(id === cs.right, a.right === id)}"><input type="radio" name="right" value="${esc(id)}" ${a.right === id ? 'checked' : ''}>${esc(rightName(id))}</label>`).join('')}
+    </div></fieldset></div>${mk(m.ri, '권리')}</div>
+    <div class="frow"><div class="th">4. 해결 순서<small>할 일만 골라 차례대로</small></div><div class="td" id="orderBox"></div>${mk(m.or, '순서')}</div>
+    <div class="sheet-foot">
+      <div class="foot-left">${done ? `<div class="stamp" aria-hidden="true"><b>판단<br>완료</b><span>${m.pr + m.ri + m.or}/3</span></div>` : ''}<span class="result-line" id="resultLine">${done ? `판단·근거 ${m.pr ? '○' : '×'} · 권리 ${m.ri ? '○' : '×'} · 순서 ${m.or ? '○' : '×'} — ${m.pr + m.ri + m.or}점` : '네 칸을 모두 채우고 [판단 확인]을 누르세요.'}</span></div>
+      <div class="btn-row">
+        ${done ? '<button class="btn" type="button" id="btnRedo">다시 풀기</button>' : '<button class="btn primary" type="button" id="btnCheck">판단 확인</button>'}
+        <button class="btn" type="button" id="btnTv">TV로 크게 보기</button>
+        <button class="btn" type="button" id="btnToLetter">이 사례로 요청문 쓰기</button>
+        <button class="btn" type="button" id="btnPrintCase">활동지 인쇄</button>
+      </div>
+    </div>
+    ${done ? `<div class="explain"><h3>짚어 볼 점</h3><p>${esc(cs.explain || '')}</p><h3>정답 판단</h3><p class="ask">${esc(probLabel(cs.problem))} — ${esc(cs.reasons[0])} · 관련 권리: ${esc(rightName(cs.right))}</p></div>` : ''}`;
+  renderOrder();
+  $$('#sheet input[type=radio]').forEach(inp => inp.addEventListener('change', () => {
+    const a2 = ans(cs.id);
+    if (inp.name === 'prob') a2.prob = inp.value; else if (inp.name === 'reason') a2.reason = +inp.value; else a2.right = inp.value;
+    persist();
+  }));
+  const on = (id, fn) => { const el = $('#' + id); if (el) el.addEventListener('click', fn); };
+  on('btnCheck', checkCase); on('btnRedo', () => { store.answers[cs.id] = { prob: '', reason: -1, right: '', order: [], checked: false }; persist(); renderCase(); });
+  on('btnTv', openTv); on('btnToLetter', () => { fillLetterFromCase(cs); showTab('letter'); });
+  on('btnPrintCase', () => printSheet(cs.id));
+}
+function renderOrder() {
+  const cs = curCase(); const a = ans(cs.id); const done = a.checked;
+  const left = pool.filter(t => !a.order.includes(t));
+  $('#orderBox').innerHTML = `
+    ${done ? '' : '<p class="order-hint">아래 보기를 누르면 순서대로 들어갑니다. 해서는 안 되는 행동은 넣지 마세요. 넣은 것을 누르면 빠집니다.</p>'}
+    <ol class="order-picked" aria-label="내가 고른 순서">${a.order.length ? a.order.map(t => `<li><button type="button" data-out="${t}" ${done ? 'disabled' : ''}>${esc(stepText(cs, t))}</button></li>`).join('') : '<li class="empty">아직 고른 단계가 없어요.</li>'}</ol>
+    ${done ? `<div class="order-answer"><b>올바른 순서</b><ol>${cs.steps.map(s => `<li>${esc(s)}</li>`).join('')}</ol></div>`
+      : `<div class="order-pool" aria-label="보기">${left.map(t => `<button type="button" data-in="${t}">${esc(stepText(cs, t))}</button>`).join('')}</div>`}`;
+}
+$('#sheet').addEventListener('click', e => {
+  const b = e.target.closest('[data-in],[data-out]'); if (!b) return;
+  const a = ans(curCase().id); if (a.checked) return;
+  if (b.dataset.in) a.order.push(b.dataset.in); else a.order = a.order.filter(t => t !== b.dataset.out);
+  persist(); renderOrder();
+  if (b.dataset.in) MK.play($('#orderBox .order-picked li:last-child'), 'mk-slide-left');   // 고른 단계가 순서 칸으로 들어옴
+  const next = $(b.dataset.in ? '#orderBox [data-in]' : '#orderBox [data-out]') || $('#orderBox [data-in]'); if (next) next.focus();
+});
+function checkCase() {
+  const cs = curCase(); const a = ans(cs.id);
+  const miss = [];
+  if (!a.prob) miss.push('문제'); if (a.reason < 0) miss.push('근거'); if (!a.right) miss.push('권리'); if (!a.order.length) miss.push('해결 순서');
+  if (miss.length) { toast(miss.join('·') + ' 칸을 채워 주세요.'); MK.play($('#btnCheck'), 'mk-wiggle'); return; }
+  const want = cs.steps.map((_, i) => 's' + i);
+  a.marks = {
+    pr: (a.prob === cs.problem && a.reason === 0) ? 1 : 0,
+    ri: a.right === cs.right ? 1 : 0,
+    or: (a.order.length === want.length && a.order.every((t, i) => t === want[i])) ? 1 : 0
+  };
+  a.checked = true; a.at = Date.now(); persist(); renderCase();
+  const top = $('#sheet'); if (top.getBoundingClientRect().top < 0) top.scrollIntoView({ block: 'start' });
+  // 판단 완료: 도장 쾅(스케일+스쿼시) → 결과 줄 와이프 → 해설 슬라이드. 3점 만점이면 도장 자리에서 파티클 한 번
+  const stamp = $('#sheet .stamp');
+  MK.play(stamp, 'mk-stamp'); MK.play($('#resultLine'), 'mk-wipe-in'); MK.play($('#sheet .explain'), 'mk-slide-up');
+  if (a.marks.pr + a.marks.ri + a.marks.or === 3) setTimeout(() => MK.burstAt(stamp), 300);
+}
+
+/* ---------- TV 크게 보기 ---------- */
+const dlgTv = $('#dlgTv');
+function renderTv() {
+  const cs = curCase();
+  $('#tvTitle').textContent = cs.title; $('#tvNo').textContent = `사례 ${pad(caseIdx(cs.id) + 1)} / ${pad(cfg.cases.length)}`;
+  $('#tvText').textContent = cs.text;
+  $('#tvQ').innerHTML = ['무엇이 문제일까? 그렇게 본 근거는?', '어떤 소비자 권리와 관련될까?', '무엇부터, 어떤 순서로 해결할까?'].map((q, i) => `<li><span>질문 ${i + 1}</span>${esc(q)}</li>`).join('');
+}
+function openTv() { renderTv(); dlgTv.showModal(); $('#tvClose').focus(); MK.typewriter($('#tvTitle'), curCase().title); }
+// TV 사례 넘기기: 제목 타이프라이터 + 본문 페이드(정답은 TV에 없음)
+function moveTv(d) { const i = (caseIdx(curCase().id) + d + cfg.cases.length) % cfg.cases.length; store.cur = cfg.cases[i].id; persist(); renderTv(); renderCase();
+  MK.typewriter($('#tvTitle'), curCase().title); MK.play($('#tvText'), 'mk-fade-in'); }
+$('#tvPrev').addEventListener('click', () => moveTv(-1));
+$('#tvNext').addEventListener('click', () => moveTv(1));
+$('#tvClose').addEventListener('click', () => dlgTv.close());
+dlgTv.addEventListener('keydown', e => { if (e.key === 'ArrowRight') moveTv(1); if (e.key === 'ArrowLeft') moveTv(-1); });
+
+/* ---------- 2. 요청문 ---------- */
+const LF = ['date', 'where', 'item', 'issue', 'want', 'days'];
+const emptyLetter = () => ({ date: '', where: '', item: '', issue: '', want: '', evidence: [], days: '3' });
+if (!store.letter) store.letter = emptyLetter();
+$('#lfWhere').innerHTML = '<option value="">고르세요</option>' + cfg.where.map(w => `<option>${esc(w)}</option>`).join('');
+$('#wantList').innerHTML = cfg.wants.map(w => `<option value="${esc(w)}">`).join('');
+$('#lfEvidence').innerHTML = cfg.evidence.map((v, i) => `<label><input type="checkbox" value="${esc(v)}" id="ev${i}">${esc(v)}</label>`).join('');
+const fieldEl = k => $('#lf' + k[0].toUpperCase() + k.slice(1));
+function fillLetterForm() {
+  const L = store.letter;
+  if (L.where && !cfg.where.includes(L.where)) $('#lfWhere').insertAdjacentHTML('beforeend', `<option>${esc(L.where)}</option>`);
+  LF.forEach(k => { fieldEl(k).value = L[k] || (k === 'days' ? '3' : ''); });
+  $$('#lfEvidence input').forEach(c => { c.checked = (L.evidence || []).includes(c.value); });
+}
+function readLetterForm() {
+  const L = store.letter;
+  LF.forEach(k => { L[k] = fieldEl(k).value.trim(); });
+  L.evidence = $$('#lfEvidence input:checked').map(c => c.value);
+  persist();
+}
+function korDate(v) { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v || ''); return m ? `${+m[1]}년 ${+m[2]}월 ${+m[3]}일` : ''; }
+const PII = /01[016789][-\s.]?\d{3,4}[-\s.]?\d{4}|\d{6}[-\s]?[1-4]\d{6}|[\w.+-]+@[\w-]+\.[\w.]+/;
+function buildLetter() {
+  const L = store.letter;
+  const B = (v, ph) => v ? { t: v } : { t: ph, blank: true };
+  const date = B(korDate(L.date), '(구매일)'), where = B(L.where, '(구매한 곳)'), item = B(L.item, '(상품)'), issue = B(L.issue, '(문제 상황을 적어 주세요)'), want = B(L.want, '(원하는 해결)');
+  const ev = (L.evidence || []).join('·');
+  const parts = [
+    ['안녕하세요. 저는 '], date, ['에 '], where, ['에서 '], item, [item.blank ? '을(를)' : josa(item.t, '을', '를'), ' 구매한 소비자입니다. (주문번호: ____________)\n\n'],
+    issue, ['\n\n이에 '], want, [(want.blank ? '을(를)' : josa(want.t, '을', '를')) + ' 요청드립니다.'],
+    [ev ? ` 확인하실 수 있도록 ${ev}${josa(ev, '을', '를')} 함께 보내 드립니다.` : ''],
+    [`\n${L.days || 3}일 안에 처리 방법을 알려 주시면 감사하겠습니다. 해결이 어려우면 소비자상담센터(1372)에 상담을 받아 보겠습니다.\n\n감사합니다.`]
+  ];
+  const subject = `${item.blank ? '(상품)' : item.t} ${want.blank ? '(원하는 해결)' : want.t} 요청드립니다`;
+  const text = parts.map(p => Array.isArray(p) ? p.join('') : p.t).join('');
+  const html = parts.map(p => Array.isArray(p) ? esc(p.join('')) : (p.blank ? `<span class="blank">${esc(p.t)}</span>` : esc(p.t))).join('');
+  const missing = [['구매일', date], ['구매한 곳', where], ['상품', item], ['문제 상황', issue], ['원하는 해결', want]].filter(x => x[1].blank).map(x => x[0]);
+  return { subject, text, html, missing };
+}
+function renderLetter() {
+  fillLetterForm(); updateLetter();
+}
+function updateLetter() {
+  const L = store.letter; const r = buildLetter();
+  $('#letterOut').innerHTML = `<div class="letter-subj">제목: ${esc(r.subject)}</div><div class="letter-body">${r.html}</div>`;
+  ['date', 'where', 'item', 'issue', 'want'].forEach(k => fieldEl(k).classList.toggle('missing', !L[k]));
+  $('#lfIssueCount').textContent = `${(L.issue || '').length}/300`;
+  const pii = PII.test(`${L.item} ${L.issue} ${L.want}`);
+  const wasHidden = $('#lfWarn').classList.contains('hidden');
+  $('#lfWarn').classList.toggle('hidden', !pii);
+  if (pii && wasHidden) MK.play($('#lfWarn'), 'mk-glitch');   // 개인정보 경고가 막 뜬 순간 글리치 1회
+  $('#lfWarn').textContent = pii ? '전화번호·주민등록번호·이메일처럼 보이는 내용이 있어요. 요청문 연습에는 개인정보를 쓰지 마세요.' : '';
+}
+$('#letterForm').addEventListener('input', () => { readLetterForm(); updateLetter(); });
+$('#letterForm').addEventListener('change', () => { readLetterForm(); updateLetter(); });
+function fillLetterFromCase(cs) {
+  const l = cs.letter || {};
+  store.letter = Object.assign(emptyLetter(), { where: l.where || '', item: l.item || '', issue: l.issue || '', want: l.want || '', evidence: (l.evidence || []).slice(), days: '3' });
+  persist();
+}
+$('#btnLetterExample').addEventListener('click', () => { fillLetterFromCase(curCase()); renderLetter(); MK.play($('#letterOut'), 'mk-wipe-down'); });   // 요청문이 위에서부터 써 내려감
+$('#btnLetterClear').addEventListener('click', () => { store.letter = emptyLetter(); persist(); renderLetter(); });
+$('#btnCopy').addEventListener('click', async () => {
+  const r = buildLetter(); const txt = `제목: ${r.subject}\n\n${r.text}`;
+  let ok = false;
+  try { await navigator.clipboard.writeText(txt); ok = true; } catch (e) {
+    const ta = document.createElement('textarea'); ta.value = txt; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select();
+    try { ok = document.execCommand('copy'); } catch (e2) { ok = false; } ta.remove();
+  }
+  if (ok) MK.play($('#btnCopy'), 'mk-pulse');   // 복사 성공
+  toast(ok ? (r.missing.length ? `복사했어요. 아직 빈 칸: ${r.missing.join(', ')}` : '복사했어요. 주문번호를 채워 보내세요.') : '복사가 막혀 있어요. 요청문을 길게 눌러 직접 복사해 주세요.');
+});
+$('#btnPrintLetter').addEventListener('click', () => printSheet(store.cur, true));
+
+/* ---------- 3. 권리와 책임 ---------- */
+function renderRights() {
+  $('#rights').innerHTML = cfg.rights.map((r, i) => {
+    const rel = cfg.cases.filter(c => c.right === r.id).map(c => c.title);
+    return `<div class="right"><div class="n num">${pad(i + 1)}</div><h3>${esc(r.name)}</h3><p>${esc(r.text)}</p>${rel.length ? `<p class="ex">관련 사례: ${esc(rel.join(', '))}</p>` : ''}</div>`;
+  }).join('');
+  $('#duties').innerHTML = (cfg.duties || []).map(d => `<li>${esc(d)}</li>`).join('');
+  $('#rightsSource').textContent = cfg.rightsSource || '';
+}
+
+/* ---------- 4. 순서도 ---------- */
+function renderFlow() {
+  $('#flow').innerHTML = cfg.flow.map((f, i) => `<li data-if="${esc(i ? (f.if || '해결되지 않으면') : '')}"><div class="fbox${f.call ? ' call' : ''}"><div class="step">${pad(i + 1)}</div><div><h3>${esc(f.title)}</h3><p>${esc(f.text)}</p></div></div></li>`).join('');
+  const dl = arr => (arr || []).map(x => `<dt>${esc(x.k)}</dt><dd>${esc(x.v)}</dd>`).join('');
+  $('#sideNotes').innerHTML = dl(cfg.sideNotes); $('#facts').innerHTML = dl(cfg.facts);
+}
+
+/* ---------- 5. 기록 ---------- */
+function renderLedger() {
+  const rows = cfg.cases.map((c, i) => ({ c, i, a: store.answers[c.id] })).filter(x => x.a && x.a.checked);
+  if (!rows.length) { $('#ledger').innerHTML = '<div class="table-scroll"><p class="empty-note">아직 판단을 마친 사례가 없어요. [사례 판단]에서 첫 사례부터 시작해 보세요.</p></div>'; return; }
+  const sum = k => rows.reduce((s, x) => s + x.a.marks[k], 0);
+  const c = v => `<td class="c ${v ? 'o' : 'x'}">${v ? '○' : '×'}</td>`;
+  const tm = t => { const d = new Date(t); return isNaN(d) ? '' : `${pad(d.getMonth() + 1)}.${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+  $('#ledger').innerHTML = `<div class="table-scroll"><table class="ledger"><thead><tr><th>접수번호</th><th>사례</th><th>내가 본 문제</th><th>판단·근거</th><th>권리</th><th>순서</th><th>판단한 때</th></tr></thead><tbody>
+    ${rows.map(x => `<tr><td class="num">${esc(caseNo(x.c.id))}</td><td>${esc(x.c.title)}</td><td>${esc(probLabel(x.a.prob))}<br><span class="muted">${esc(rightName(x.a.right))}</span></td>${c(x.a.marks.pr)}${c(x.a.marks.ri)}${c(x.a.marks.or)}<td class="num">${esc(tm(x.a.at))}</td></tr>`).join('')}
+    </tbody><tfoot><tr><td colspan="3">합계 (${rows.length}/${cfg.cases.length}개 사례) · ${sum('pr') + sum('ri') + sum('or')}점 / ${rows.length * 3}점</td><td class="num">${sum('pr')}</td><td class="num">${sum('ri')}</td><td class="num">${sum('or')}</td><td></td></tr></tfoot></table></div>`;
+}
+$('#btnWipe').addEventListener('click', () => { if (!confirm('이 기기에 저장된 판단 기록과 요청문을 모두 지울까요? 되돌릴 수 없어요.')) return; store.answers = {}; store.letter = emptyLetter(); persist(); renderLedger(); renderCase(); });
+$('#btnPrintAll').addEventListener('click', () => printSheet(store.cur));
+
+/* ---------- 인쇄 활동지 ---------- */
+function printSheet(caseId, withLetterFocus) {
+  const cs = cfg.cases.find(c => c.id === caseId) || curCase(); const a = store.answers[cs.id] || {};
+  const ln = n => Array.from({ length: n }, () => '<div class="ln"></div>').join('');
+  const filled = (v, n) => v ? esc(v) : ln(n);
+  const order = (a.order || []).map(t => stepText(cs, t)).filter(Boolean);
+  const r = buildLetter();
+  const hasLetter = store.letter && (store.letter.item || store.letter.issue);
+  $('#print-sheet').innerHTML = `
+    <div class="ps-head"><h1><small>소비생활 · 소비자 권리와 책임 — 사례 분석 활동지</small>소비자 피해 해결 길잡이</h1>
+      <div class="ps-meta"><div class="k">접수번호</div><div class="num">${esc(caseNo(cs.id))}</div><div class="k">날짜</div><div class="num">${esc(ymd)}</div><div class="k">번호·별칭</div><div>${esc(store.who || '')}</div></div></div>
+    <table class="ps-table">
+      <tr><th>사례</th><td><b>${esc(cs.title)}</b><br>${esc(cs.text)}</td></tr>
+      <tr><th>무엇이 문제인가</th><td>${filled(probLabel(a.prob), 2)}</td></tr>
+      <tr><th>그렇게 본 근거</th><td>${filled(a.reason >= 0 ? cs.reasons[a.reason] : '', 2)}</td></tr>
+      <tr><th>관련된 권리</th><td>${filled(rightName(a.right), 1)}</td></tr>
+      <tr><th>해결 순서</th><td>${order.length ? `<ol>${order.map(s => `<li>${esc(s)}</li>`).join('')}</ol>` : ln(3)}</td></tr>
+      <tr><th>판단 결과</th><td>${a.checked ? `판단·근거 ${a.marks.pr ? '○' : '×'} · 권리 ${a.marks.ri ? '○' : '×'} · 순서 ${a.marks.or ? '○' : '×'}` : ln(1)}</td></tr>
+      <tr><th>새로 알게 된 점</th><td>${ln(2)}</td></tr>
+    </table>
+    <div class="ps-letter"><h2>판매자에게 보낼 요청문${hasLetter ? ` — ${esc(r.subject)}` : ''}</h2>${hasLetter ? `<div class="body">${esc(r.text)}</div>` : ln(withLetterFocus ? 9 : 7)}</div>
+    <p class="ps-foot">법률 상담이 아닌 학습용 활동지입니다. 실제 피해는 1372 소비자상담센터에 상담하고, 제도와 기준은 한국소비자원 공식 안내로 확인하세요.</p>`;
+  window.print();
+}
+
+/* ---------- 설정 ---------- */
+const dlgSet = $('#dlgSettings');
+function showSetErr(m) { $('#setErr').textContent = m; $('#setErr').classList.toggle('hidden', !m); if (m) MK.play($('#setErr'), 'mk-wiggle'); }
+$('#btnSettings').addEventListener('click', () => { $('#setJson').value = JSON.stringify(cfg, null, 2); showSetErr(''); dlgSet.showModal(); });
+$('#setClose').addEventListener('click', () => dlgSet.close());
+function applyConfig(obj) {
+  const next = Object.assign(pickEditable(CONFIG), obj);
+  const err = validateConfig(next); if (err) { showSetErr(err); return false; }
+  cfg = next;
+  try { localStorage.setItem(CONFIG.configKey, JSON.stringify(obj)); } catch (e) { toast('설정을 저장하지 못했어요. 이번 화면에서만 적용됩니다.'); }
+  if (!cfg.cases.some(c => c.id === store.cur)) store.cur = cfg.cases[0].id;
+  renderAll(); dlgSet.close(); toast('설정을 적용했어요.'); return true;
+}
+$('#setApply').addEventListener('click', () => { let o; try { o = JSON.parse($('#setJson').value); } catch (e) { showSetErr('JSON 형식이 맞지 않아요: ' + e.message); return; } applyConfig(o); });
+$('#setExport').addEventListener('click', () => {
+  const blob = new Blob([JSON.stringify(cfg, null, 2)], { type: 'application/json' });
+  const u = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = u; link.download = 'consumer-help-설정.json'; document.body.appendChild(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(u), 1000);
+});
+$('#setFile').addEventListener('change', e => {
+  const f = e.target.files[0]; if (!f) return;
+  const rd = new FileReader();
+  rd.onload = () => { try { const o = JSON.parse(rd.result); $('#setJson').value = JSON.stringify(o, null, 2); applyConfig(o); } catch (err) { showSetErr('파일을 읽지 못했어요: ' + err.message); } };
+  rd.readAsText(f); e.target.value = '';
+});
+$('#setReset').addEventListener('click', () => {
+  if (!confirm('사례와 권리 내용을 처음 상태로 되돌릴까요?')) return;
+  try { localStorage.removeItem(CONFIG.configKey); } catch (e) { /* 무시 */ }
+  cfg = pickEditable(CONFIG); if (!cfg.cases.some(c => c.id === store.cur)) store.cur = cfg.cases[0].id;
+  renderAll(); dlgSet.close();
+});
+
+/* ---------- 시작 ---------- */
+$('#metaDate').textContent = ymd;
+$('#who').value = store.who || '';
+$('#who').addEventListener('input', e => { store.who = e.target.value.slice(0, 12); persist(); });
+function renderAll() { renderCase(); renderRights(); renderFlow(); if (store.tab === 'ledger') renderLedger(); if (store.tab === 'letter') renderLetter(); }
+renderAll();
+showTab(store.tab || 'case');
+</script>
+</body>
+</html>

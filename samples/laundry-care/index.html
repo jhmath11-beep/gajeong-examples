@@ -222,7 +222,36 @@ td:first-child { font-family: var(--font-display); white-space: nowrap; }
 footer a { color: var(--color-accent); overflow-wrap: anywhere; }
 footer { border-top: 1px solid var(--color-rule); padding-block: var(--space-6); font-size: var(--text-sm); color: var(--color-muted); }
 
-@media (prefers-reduced-motion: reduce) { * { transition-duration: 0.01ms !important; } }
+/* ── 모션 (motion-effects kit에서 필요한 것만) ── */
+:root {
+  --mk-accent: var(--color-accent);
+  --mk-ease-out: cubic-bezier(.22,1,.36,1); --mk-ease-in-out: cubic-bezier(.65,0,.35,1);
+  --mk-fast: 160ms; --mk-base: 280ms; --mk-slow: 520ms; --mk-stagger: 45ms;
+}
+@keyframes mk-slide-up { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes mk-scale-in { from { opacity: 0; transform: scale(.92); } to { opacity: 1; transform: none; } }
+@keyframes mk-wipe-in { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes mk-bounce { 0%, 100% { transform: translateY(0); } 35% { transform: translateY(-14px); } 55% { transform: translateY(0); } 70% { transform: translateY(-5px); } 85% { transform: translateY(0); } }
+@keyframes mk-wiggle { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-6px); } 40% { transform: translateX(5px); } 60% { transform: translateX(-3px); } 80% { transform: translateX(2px); } }
+@keyframes mk-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.04); } }
+@keyframes mk-blink { 50% { opacity: 0; } }
+@keyframes mk-particle { to { transform: translate(var(--dx), var(--dy)) rotate(var(--rot)); opacity: 0; } }
+@keyframes mk-ripple { to { transform: scale(1); opacity: 0; } }
+.mk-slide-up { animation: mk-slide-up var(--mk-base) var(--mk-ease-out) both; }
+.mk-scale-in { animation: mk-scale-in var(--mk-base) var(--mk-ease-out) both; }
+.mk-wipe-in { animation: mk-wipe-in var(--mk-slow) var(--mk-ease-in-out) both; }
+.mk-stagger > * { animation: mk-slide-up var(--mk-base) var(--mk-ease-out) both; animation-delay: calc(var(--i, 0) * var(--mk-stagger)); }
+.mk-bounce { animation: mk-bounce 700ms var(--mk-ease-out); }
+.mk-wiggle { animation: mk-wiggle 380ms var(--mk-ease-out); }
+.mk-pulse { animation: mk-pulse 1s var(--mk-ease-in-out) 2; }
+.mk-caret::after { content: ""; display: inline-block; width: .08em; height: 1em; margin-left: .06em; background: currentColor; vertical-align: -.12em; animation: mk-blink 1s steps(1) infinite; }
+.mk-particle { position: fixed; width: 7px; height: 7px; border-radius: 2px; pointer-events: none; z-index: 9999; background: var(--mk-accent); animation: mk-particle 800ms var(--mk-ease-out) forwards; }
+.btn { position: relative; overflow: hidden; isolation: isolate; }
+.mk-ripple { position: absolute; border-radius: 50%; pointer-events: none; background: currentColor; opacity: .18; transform: scale(0); animation: mk-ripple var(--mk-slow) var(--mk-ease-out) forwards; z-index: -1; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important; }
+  .mk-caret::after { animation: none !important; }
+}
 
 @media print {
   @page { size: A4; margin: 12mm; }
@@ -235,7 +264,8 @@ footer { border-top: 1px solid var(--color-rule); padding-block: var(--space-6);
   .slot { grid-template-columns: 52mm 1fr; }
   .slot-label { border-bottom: 0; border-right: 1px dashed var(--color-rule-strong); }
   .slot-body .ln { min-height: 8.5mm; }
-  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; animation: none !important; transition: none !important; }
+  .mk-caret::after { display: none; }
 }
 </style>
 </head>
@@ -324,7 +354,7 @@ footer { border-top: 1px solid var(--color-rule); padding-block: var(--space-6);
 </main>
 
 <footer class="wrap no-print">
-  기호 출처: 국제 기준(ISO 3758·GINETEX) 기호입니다 — GINETEX 기호표 <a href="https://www.ginetex.net/userfiles/files/Textile_care_symbols_en.pdf" target="_blank" rel="noopener">ginetex.net/…/Textile_care_symbols_en.pdf</a>. 우리나라 KS K 0021 기호·교과서 표와 일부 다를 수 있으니 교과서 표와 대조 후 사용하세요. 2023년 ISO 개정에서 손세탁·다림질 온도 일부가 바뀌었다는 보도가 있어 최신 교과서 값을 우선하세요. 저장은 이 기기의 브라우저에만 됩니다.
+  기호 출처: 국제 기준(ISO 3758·GINETEX) 기호입니다 — GINETEX 기호표 <a href="https://www.ginetex.net/userfiles/files/Textile_care_symbols_en.pdf" target="_blank" rel="noopener">ginetex.net/…/Textile_care_symbols_en.pdf</a>. 우리나라 KS K 0021 기호·교과서 표와 일부 다를 수 있으니 교과서 표와 대조 후 사용하세요. 기준은 개정될 수 있으니 온도 등 세부 값은 최신 교과서를 우선하세요. 저장은 이 기기의 브라우저에만 됩니다.
 </footer>
 
 <div class="toast hidden" id="toast" role="status"></div>
@@ -431,7 +461,7 @@ const CONFIG = {
       reasons: ['물통 안 숫자 60 = 최고 60℃까지 세탁기 세탁 가능', '숫자 60은 60분 동안 빨라는 뜻', '수건은 라벨과 상관없이 삶아야 한다', '빈 삼각형이 있어서 뜨거운 물이 된다'],
       exp: '물통 속 숫자는 물 온도의 최댓값(℃)이에요. 60이면 60℃ 이하로 빨 수 있어요. 밑줄이 없으니 일반 코스도 괜찮아요.' },
   ],
-  judgeText: { yes: '그대로 해도 된다', no: '안 된다', change: '방법을 바꾸면 된다' },
+  judgeText: { yes: '그대로 해도 된다', no: '안 된다 — 그 방법은 금지', change: '조건(온도·널기 방식·장소)만 바꾸면 된다' },
 };
 /* ======================================================= */
 
@@ -439,6 +469,42 @@ const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
 const esc = (s) => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const symById = (id) => CONFIG.symbols.find(s => s.id === id);
+/* ---- 모션 도우미 (motion-effects kit 일부) — 동작 줄이기 설정이면 바로 끝 상태 ---- */
+const MK = (() => {
+  const reduced = () => window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function play(el, cls) { if (!el || reduced()) return; el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); el.addEventListener('animationend', () => el.classList.remove(cls), { once: true }); }
+  function stagger(parent, { max = 20 } = {}) { if (!parent || reduced()) return; [...parent.children].forEach((c, i) => c.style.setProperty('--i', Math.min(i, max))); parent.classList.remove('mk-stagger'); void parent.offsetWidth; parent.classList.add('mk-stagger'); }
+  function typewriter(el, text, { speed = 28 } = {}) {
+    if (!el) return; if (reduced()) { el.textContent = text; return; }
+    clearInterval(el._mkT); el.textContent = ''; el.classList.add('mk-caret');
+    const chars = [...text]; let i = 0;
+    el._mkT = setInterval(() => { el.textContent += chars[i++] ?? ''; if (i >= chars.length) { clearInterval(el._mkT); setTimeout(() => el.classList.remove('mk-caret'), 500); } }, speed);
+  }
+  function burstAt(el, { count = 18 } = {}) {
+    if (!el || reduced()) return; const r = el.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2;
+    for (let i = 0; i < count; i++) {
+      const p = document.createElement('i'); p.className = 'mk-particle';
+      const a = (Math.PI * 2 * i) / count + Math.random() * .4, d = 50 + Math.random() * 60;
+      p.style.left = x + 'px'; p.style.top = y + 'px';
+      p.style.setProperty('--dx', Math.cos(a) * d + 'px'); p.style.setProperty('--dy', Math.sin(a) * d + 'px'); p.style.setProperty('--rot', Math.random() * 360 + 'deg');
+      document.body.appendChild(p); p.addEventListener('animationend', () => p.remove(), { once: true });
+    }
+  }
+  function countUp(el, to, { duration = 700 } = {}) {
+    if (!el) return; if (reduced()) { el.textContent = to; return; }
+    const start = performance.now(), ease = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    (function f(now) { const p = Math.min(1, (now - start) / duration); el.textContent = Math.round(to * ease(p)); if (p < 1) requestAnimationFrame(f); })(start);
+  }
+  function ripple(root = document, selector = '.btn') {
+    root.addEventListener('pointerdown', e => {
+      const host = e.target.closest(selector); if (!host || reduced()) return;
+      const r = host.getBoundingClientRect(), d = Math.max(r.width, r.height) * 2, s = document.createElement('span'); s.className = 'mk-ripple';
+      Object.assign(s.style, { width: d + 'px', height: d + 'px', left: (e.clientX - r.left - d / 2) + 'px', top: (e.clientY - r.top - d / 2) + 'px' });
+      host.appendChild(s); s.addEventListener('animationend', () => s.remove(), { once: true });
+    });
+  }
+  return { reduced, play, stagger, typewriter, burstAt, countUp, ripple };
+})();
 const shuffle = (a) => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 
 /* ---- 저장 ---- */
@@ -497,6 +563,7 @@ function showTab(name) {
   $$('.tab').forEach(t => { const on = t.id === 't-' + name; t.setAttribute('aria-selected', on); t.tabIndex = on ? 0 : -1; });
   $$('.panel').forEach(p => p.classList.toggle('hidden', p.id !== 'p-' + name));
   if (name === 'sheet') renderSheetPick();
+  MK.play($('#p-' + name), 'mk-slide-up');
 }
 
 /* ---- 머리 띠 ---- */
@@ -515,7 +582,7 @@ function renderDict() {
       </div>
     </section>`).join('');
 }
-$('#dictFilter').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; dictCat = b.dataset.cat; renderDict(); });
+$('#dictFilter').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; dictCat = b.dataset.cat; renderDict(); MK.stagger($('#dictList')); });
 
 /* ---- 라벨 해독 ---- */
 let current = {};
@@ -527,7 +594,12 @@ function renderPicks() {
       ${CONFIG.symbols.filter(s => s.cat === c.id).map(s => `<div class="opt"><input type="radio" name="pk-${c.id}" id="pk-${s.id}" value="${s.id}" ${current[c.id] === s.id ? 'checked' : ''}><label for="pk-${s.id}" title="${esc(s.name)}">${drawSym(s.id)}</label></div>`).join('')}
     </div></fieldset>`).join('');
 }
-$('#picks').addEventListener('change', (e) => { const cat = e.target.name.slice(3); current[cat] = e.target.value || undefined; renderTag(); });
+$('#picks').addEventListener('change', (e) => {
+  const cat = e.target.name.slice(3); current[cat] = e.target.value || undefined; renderTag();
+  // 고른 기호의 해독 문장만 한 글자씩(라벨에 박음질하듯)
+  const s = current[cat] && symById(current[cat]), i = sentences(current).indexOf(s);
+  if (s && i >= 0) MK.typewriter($$('#tagOut ol > li')[i], s.say);
+});
 $('#gName').addEventListener('input', renderTag);
 $('#gFiber').addEventListener('change', renderTag);
 
@@ -557,15 +629,15 @@ function renderSaved() {
 }
 $('#savedBox').addEventListener('click', (e) => {
   const b = e.target.closest('button'); if (!b) return;
-  if (b.dataset.load != null) { const l = store.saved[+b.dataset.load]; current = Object.assign({}, l.syms); $('#gName').value = l.name || ''; $('#gFiber').value = l.fiber || ''; renderPicks(); renderTag(); }
-  if (b.dataset.del != null) { const [gone] = store.saved.splice(+b.dataset.del, 1); persist(); renderSaved(); toast(`'${gone.name || '이름 없는 옷'}' 라벨을 지웠어요.`); }
+  if (b.dataset.load != null) { const l = store.saved[+b.dataset.load]; current = Object.assign({}, l.syms); $('#gName').value = l.name || ''; $('#gFiber').value = l.fiber || ''; renderPicks(); renderTag(); MK.play($('#tagOut'), 'mk-scale-in'); }
+  if (b.dataset.del != null) { if (!confirm(`'${store.saved[+b.dataset.del].name || '이름 없는 옷'}' 라벨을 지울까요?`)) return; const [gone] = store.saved.splice(+b.dataset.del, 1); persist(); renderSaved(); toast(`'${gone.name || '이름 없는 옷'}' 라벨을 지웠어요.`); }
 });
 $('#saveLabel').addEventListener('click', () => {
-  if (!sentences(current).length) { toast('기호를 하나 이상 골라야 저장할 수 있어요.'); return; }
+  if (!sentences(current).length) { MK.play($('#tagOut'), 'mk-wiggle'); toast('기호를 하나 이상 골라야 저장할 수 있어요.'); return; }
   const item = { name: $('#gName').value.trim(), fiber: $('#gFiber').value, syms: Object.assign({}, current) };
   const i = store.saved.findIndex(l => l.name && l.name === item.name);
   if (i >= 0) store.saved[i] = item; else { if (store.saved.length >= CONFIG.maxSaved) { toast(`라벨은 ${CONFIG.maxSaved}개까지 저장돼요. 하나를 지운 뒤 저장하세요.`); return; } store.saved.push(item); }
-  persist(); renderSaved();
+  persist(); renderSaved(); MK.play($$('#savedBox li')[i >= 0 ? i : store.saved.length - 1], 'mk-pulse'); toast(i >= 0 ? `'${item.name}' 라벨을 고쳐 저장했어요.` : '라벨을 저장했어요. 활동지에 넣을 수 있어요.');
 });
 $('#resetLabel').addEventListener('click', () => { current = {}; $('#gName').value = ''; $('#gFiber').value = ''; renderPicks(); renderTag(); });
 
@@ -577,11 +649,14 @@ function renderQuiz() {
   if (qz.i >= qz.order.length) {
     if (store.best == null || qz.score > store.best) { store.best = qz.score; persist(); }
     box.innerHTML = `<div class="qbar"><span>결과</span><span class="num">최고 기록 ${store.best} / ${CONFIG.quiz.length}</span></div>
-      <p class="result-score num">${qz.score} / ${qz.order.length}점</p>
+      <p class="result-score num"><span id="qScore">${qz.score}</span> / ${qz.order.length}점</p>
       <p class="muted">판단과 이유를 모두 맞힌 문제만 점수로 셌어요.</p>
       <ul class="review">${qz.log.map(l => `<li><span class="mk ${l.ok ? 'o' : 'x'}">${l.ok ? '맞음' : '다시'}</span>${esc(l.q.garment)} — ${esc(l.q.q)}${l.ok ? '' : `<br><span class="muted">${esc(l.q.exp)}</span>`}</li>`).join('')}</ul>
       <button class="btn" type="button" id="qAgain">다시 하기 (순서 섞기)</button>`;
-    $('#qAgain').addEventListener('click', startQuiz); return;
+    $('#qAgain').addEventListener('click', startQuiz);
+    MK.countUp($('#qScore'), qz.score); MK.stagger($('.review', box));
+    if (qz.score === qz.order.length) setTimeout(() => MK.burstAt($('.result-score', box)), 700);   // 전부 맞힘: 한 번만
+    return;
   }
   const q = CONFIG.quiz[qz.order[qz.i]];
   const rs = shuffle(q.reasons.map((t, i) => ({ t, ok: i === 0 })));
@@ -593,9 +668,10 @@ function renderQuiz() {
     <fieldset class="step"><legend>2. 그렇게 판단한 이유</legend>${rs.map((r, i) => `<label class="choice"><input type="radio" name="reason" value="${i}" data-ok="${r.ok}">${esc(r.t)}</label>`).join('')}</fieldset>
     <div class="row" style="margin-top:var(--space-4)"><button class="btn" type="button" id="qCheck">확인</button></div>
     <div id="qFb"></div>`;
+  MK.typewriter($('.scene', box), q.q);   // 문제 문장만(정답·해설은 글자로 흘리지 않음)
   $('#qCheck').addEventListener('click', () => {
     const j = $('input[name=judge]:checked', box), r = $('input[name=reason]:checked', box);
-    if (!j || !r) { toast('판단과 이유를 모두 골라 주세요.'); return; }
+    if (!j || !r) { $$('.step', box).forEach(f => { if (!$('input:checked', f)) MK.play(f, 'mk-wiggle'); }); toast('판단과 이유를 모두 골라 주세요.'); return; }
     const jOk = j.value === q.ans, rOk = r.dataset.ok === 'true', ok = jOk && rOk;
     $$('input', box).forEach(inp => {
       inp.disabled = true; const lab = inp.closest('.choice');
@@ -609,6 +685,7 @@ function renderQuiz() {
     $('#qFb').innerHTML = `<div class="feedback"><p class="verdict ${ok ? 'ok' : 'no'}">${ok ? '정답 +1' : '오답'} — 정답: ${esc(CONFIG.judgeText[q.ans])}</p><p class="muted">${why}</p><p style="margin-top:var(--space-2)">${esc(q.exp)}</p>
       <div class="row" style="margin-top:var(--space-4)"><button class="btn" type="button" id="qNext">${qz.i + 1 < qz.order.length ? '다음 문제' : '결과 보기'}</button></div></div>`;
     $('#qCheck').remove();
+    if (ok) MK.play($('#qFb .verdict'), 'mk-bounce'); else $$('.choice.wrong', box).forEach(l => MK.play(l, 'mk-wiggle'));
     $('#qNext').addEventListener('click', () => { qz.i++; renderQuiz(); $('#quizBox').scrollIntoView({ block: 'start' }); });
     $('#qNext').focus({ preventScroll: true });
   });
@@ -636,7 +713,7 @@ function renderSheet() {
       <div class="slot-label"><div class="cap">라벨 ${k + 1} · 기호를 옮겨 그리세요</div>
         ${l ? `<div class="syms">${syms.map(s => drawSym(s.id)).join('')}</div>` : ''}</div>
       <div class="slot-body">
-        <div class="ln"><b>옷 이름·섬유:</b> ${l ? esc(l.name || '') : ''}</div>
+        <div class="ln"><b>옷 이름·섬유:</b> ${l ? esc([l.name, (CONFIG.fibers.find(f => f.id === l.fiber) || {}).name].filter(Boolean).join(' · ')) : ''}</div>
         <div class="ln"><b>세탁:</b></div>
         <div class="ln"><b>표백·건조:</b></div>
         <div class="ln"><b>다림질·전문 관리:</b></div>
@@ -653,6 +730,7 @@ window.addEventListener('beforeprint', () => { if ($('#p-sheet').classList.conta
 
 /* ---- 시작 ---- */
 renderDict(); renderPicks(); renderTag(); renderSaved(); startQuiz(); renderSheet();
+MK.ripple(document, '.btn');
 </script>
 </body>
 </html>

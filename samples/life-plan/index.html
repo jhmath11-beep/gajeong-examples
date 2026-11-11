@@ -134,6 +134,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .card:hover { background: var(--color-paper); }
 .card.sel { outline: 2px solid var(--color-accent); outline-offset: 1px; background: var(--color-accent-soft); }
 .card.dragging { opacity: .35; }
+@media (pointer: coarse) { .card { touch-action: pan-y; } }   /* 휴대폰: 위아래로 밀면 화면이 스크롤되고, 카드는 탭-선택으로 옮김 */
 .card.ok { border-color: var(--color-ok); background: var(--color-ok-soft); padding-left: 2.2em; }
 .card.no { border-color: var(--color-accent); background: var(--color-accent-soft); padding-left: 2.2em; }
 .card.ok::before, .card.no::before { position: absolute; left: var(--sp-2); top: var(--sp-2); font-size: var(--fs-lg); line-height: 1; }
@@ -250,9 +251,43 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .foot { padding-block: var(--sp-6) var(--sp-12); color: var(--color-muted); font-size: var(--fs-xs); display: flex; flex-wrap: wrap; gap: var(--sp-2) var(--sp-6); justify-content: space-between; }
 .status { position: fixed; z-index: 20; right: var(--sp-4); bottom: var(--sp-4); background: var(--color-ink); color: var(--color-on-ink); padding: var(--sp-2) var(--sp-4); font-size: var(--fs-sm); opacity: 0; transform: translateY(8px); transition: opacity 300ms var(--ease-out), transform 300ms var(--ease-out); pointer-events: none; max-width: calc(100% - 2 * var(--sp-4)); }
 .status.on { opacity: 1; transform: none; }
+.status.on.act { pointer-events: auto; display: flex; gap: var(--sp-4); align-items: center; }
+.status button { background: none; border: 0; color: inherit; text-decoration: underline; cursor: pointer; min-height: 40px; padding: 0; }
 
 #printSheet { display: none; }
 @media (prefers-reduced-motion: reduce) { * { transition-duration: 1ms !important; } }
+
+/* ── 모션 (motion-effects kit에서 필요한 블록만) ───────────────────────── */
+:root { --mk-accent: var(--color-accent); --mk-ease-out: cubic-bezier(.22,1,.36,1); --mk-ease-in-out: cubic-bezier(.65,0,.35,1); --mk-base: 280ms; --mk-slow: 520ms; --mk-stagger: 45ms; }
+@keyframes mk-slide-up { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes mk-scale-in { from { opacity: 0; transform: scale(.92); } to { opacity: 1; transform: none; } }
+@keyframes mk-wipe-in { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+.mk-slide-up { animation: mk-slide-up var(--mk-base) var(--mk-ease-out) both; }
+.mk-scale-in { animation: mk-scale-in var(--mk-base) var(--mk-ease-out) both; }
+.mk-wipe-in { animation: mk-wipe-in var(--mk-slow) var(--mk-ease-in-out) both; }
+.mk-stagger > * { animation: mk-slide-up var(--mk-base) var(--mk-ease-out) both; animation-delay: calc(var(--i, 0) * var(--mk-stagger)); }
+@keyframes mk-squash { 0% { transform: none; } 30% { transform: scale(1.12,.86); } 55% { transform: scale(.94,1.08); } 75% { transform: scale(1.03,.98); } 100% { transform: none; } }
+@keyframes mk-bounce { 0%,100% { transform: translateY(0); } 35% { transform: translateY(-14px); } 55% { transform: translateY(0); } 70% { transform: translateY(-5px); } 85% { transform: translateY(0); } }
+@keyframes mk-wiggle { 0%,100% { transform: translateX(0); } 20% { transform: translateX(-6px); } 40% { transform: translateX(5px); } 60% { transform: translateX(-3px); } 80% { transform: translateX(2px); } }
+.mk-squash { animation: mk-squash 520ms var(--mk-ease-out); transform-origin: 50% 100%; }
+.mk-bounce { animation: mk-bounce 700ms var(--mk-ease-out); }
+.mk-wiggle { animation: mk-wiggle 380ms var(--mk-ease-out); }
+/* 채점 순차 공개: 공개 전에는 ○/✕·색·해설을 잠시 숨김 */
+.card.mk-hold { background: var(--color-sheet); border-color: var(--color-ink-2); }
+.card.mk-hold::before, .card.mk-hold .why { opacity: 0; }
+/* 16 리플 */
+.btn { position: relative; overflow: hidden; isolation: isolate; }
+.mk-ripple { position: absolute; border-radius: 50%; pointer-events: none; background: currentColor; opacity: .18; transform: scale(0); animation: mk-ripple 520ms var(--mk-ease-out) forwards; z-index: -1; }
+@keyframes mk-ripple { to { transform: scale(1); opacity: 0; } }
+/* 11 타이프라이터 커서 / 13 파티클 */
+.mk-caret::after { content: ""; display: inline-block; width: .08em; height: 1em; margin-left: .06em; background: currentColor; vertical-align: -.12em; animation: mk-blink 1s steps(1) infinite; }
+@keyframes mk-blink { 50% { opacity: 0; } }
+.mk-particle { position: fixed; width: 7px; height: 7px; border-radius: 2px; pointer-events: none; z-index: 9999; background: var(--mk-accent); animation: mk-particle 800ms var(--mk-ease-out) forwards; }
+@keyframes mk-particle { to { transform: translate(var(--dx), var(--dy)) rotate(var(--rot)); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important; scroll-behavior: auto !important; }
+}
+@media print { * { animation: none !important; transition: none !important; } }
 
 /* ── 인쇄: A4 활동지 ───────────────────────── */
 @media print {
@@ -483,6 +518,40 @@ const CONFIG = {
 };
 /* ===== CONFIG 끝 ===== */
 
+/* ── 모션 도우미 (motion-effects kit에서 필요한 함수만). 동작 줄이기 설정이면 바로 최종 상태 ── */
+const MK = (() => {
+  const reduced = () => window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function play(el, cls) { if (!el || reduced()) return; el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); el.addEventListener('animationend', () => el.classList.remove(cls), { once: true }); }
+  function stagger(parent, { max = 20 } = {}) { if (!parent || reduced()) return; [...parent.children].forEach((c, i) => c.style.setProperty('--i', Math.min(i, max))); parent.classList.remove('mk-stagger'); void parent.offsetWidth; parent.classList.add('mk-stagger'); }
+  function typewriter(el, text, { speed = 45 } = {}) {
+    if (!el) return; if (reduced()) { el.textContent = text; return; }
+    el.textContent = ''; el.classList.add('mk-caret'); const chars = [...text]; let i = 0;
+    const t = setInterval(() => { el.textContent += chars[i++] ?? ''; if (i >= chars.length) { clearInterval(t); setTimeout(() => el.classList.remove('mk-caret'), 600); } }, speed);
+  }
+  function ripple(root, selector) {
+    root.addEventListener('pointerdown', (e) => {
+      const host = e.target.closest(selector); if (!host || reduced()) return;
+      const r = host.getBoundingClientRect(), d = Math.max(r.width, r.height) * 2, s = document.createElement('span'); s.className = 'mk-ripple';
+      Object.assign(s.style, { width: d + 'px', height: d + 'px', left: (e.clientX - r.left - d / 2) + 'px', top: (e.clientY - r.top - d / 2) + 'px' });
+      host.appendChild(s); s.addEventListener('animationend', () => s.remove(), { once: true });
+    });
+  }
+  function burstAt(el, { count = 18 } = {}) {
+    if (!el || reduced()) return; const r = el.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2;
+    for (let i = 0; i < count; i++) {
+      const p = document.createElement('i'); p.className = 'mk-particle'; const a = (Math.PI * 2 * i) / count + Math.random() * .4, dist = 50 + Math.random() * 60;
+      p.style.left = x + 'px'; p.style.top = y + 'px'; p.style.setProperty('--dx', Math.cos(a) * dist + 'px'); p.style.setProperty('--dy', Math.sin(a) * dist + 'px'); p.style.setProperty('--rot', (Math.random() * 360) + 'deg');
+      document.body.appendChild(p); p.addEventListener('animationend', () => p.remove(), { once: true });
+    }
+  }
+  function countUp(el, to, { duration = 700 } = {}) {
+    if (!el) return; if (reduced()) { el.textContent = to; return; }
+    const start = performance.now(), ease = (t) => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    (function f(now) { const p = Math.min(1, (now - start) / duration); el.textContent = Math.round(to * ease(p)); if (p < 1) requestAnimationFrame(f); })(start);
+  }
+  return { reduced, play, stagger, typewriter, ripple, burstAt, countUp };
+})();
+
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -497,18 +566,42 @@ function blank() {
     self: { ans: {}, interests: [] }, plan: { age: CONFIG.defaultAge, goals: [] } };
 }
 let S;
+// 저장본·불러온 파일을 지금 CONFIG에 맞게 다시 만든다(모양이 틀리면 null). 화면에 넣을 값은 모두 검사한다.
+function normalize(d) {
+  if (!d || !d.plan || !Array.isArray(d.plan.goals)) return null;
+  const b = blank(), ids = TASKS.map((t) => t.id), m = d.match || {};
+  const order = (Array.isArray(m.order) ? m.order : []).filter((id) => ids.includes(id));
+  ids.forEach((id) => { if (!order.includes(id)) order.push(id); });   // CONFIG에 새로 넣은 카드도 보이게
+  const place = {}; Object.entries(m.place || {}).forEach(([k, v]) => { if (ids.includes(k) && STAGE[v]) place[k] = v; });
+  const self = d.self || {}, ans = {};
+  Object.entries(self.ans || {}).forEach(([k, v]) => { if (/^\d+-\d+$/.test(k) && [1, 2, 3].includes(Number(v))) ans[k] = Number(v); });
+  const age = Math.round(Number(d.plan.age));
+  const goals = d.plan.goals.filter((g) => g && g.text && g.step).slice(0, 100).map((g, i) => ({
+    id: /^[\w-]{1,30}$/.test(g.id) ? g.id : 'g' + Date.now().toString(36) + i,
+    age: Math.min(100, Math.max(0, Math.round(Number(g.age)) || 0)), cat: CONFIG.categories.includes(g.cat) ? g.cat : CONFIG.categories[0],
+    text: String(g.text).slice(0, 60), step: String(g.step).slice(0, 80) }));
+  return { tab: $$('.tab').some((t) => t.id === d.tab) ? d.tab : b.tab, stage: STAGE[d.stage] ? d.stage : b.stage,
+    match: { order, place, graded: !!m.graded },
+    self: { ans, interests: (Array.isArray(self.interests) ? self.interests : []).filter((x) => CONFIG.interests.includes(x)) },
+    plan: { age: age >= 10 && age <= 19 ? age : CONFIG.defaultAge, goals } };
+}
 function load() {
-  try { const d = JSON.parse(localStorage.getItem(CONFIG.storageKey) || 'null'); if (d && d.plan && d.match) return { ...blank(), ...d }; } catch (e) {}
+  try { const d = normalize(JSON.parse(localStorage.getItem(CONFIG.storageKey) || 'null')); if (d) return d; } catch (e) {}
   return blank();
 }
 function save() { try { localStorage.setItem(CONFIG.storageKey, JSON.stringify(S)); } catch (e) { say('브라우저 저장이 막혀 있어요. 파일로 저장을 이용하세요.'); } }
 let sayT;
-function say(msg) { const el = $('#status'); el.textContent = msg; el.classList.add('on'); clearTimeout(sayT); sayT = setTimeout(() => el.classList.remove('on'), 2600); }
+function say(msg, undo) {
+  const el = $('#status'); el.textContent = msg; el.classList.toggle('act', !!undo);
+  if (undo) { const b = document.createElement('button'); b.type = 'button'; b.textContent = '되돌리기'; b.onclick = () => { undo(); }; el.appendChild(b); }
+  el.classList.add('on'); clearTimeout(sayT); sayT = setTimeout(() => el.classList.remove('on'), undo ? 7000 : 2600);
+}
 function shuffle(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
 
 /* ── 탭 ── */
 function showTab(id, focus) {
-  $$('.tab').forEach((t) => { const on = t.id === id; t.setAttribute('aria-selected', on); t.tabIndex = on ? 0 : -1; $('#' + t.getAttribute('aria-controls')).classList.toggle('hidden', !on); if (on && focus) t.focus(); });
+  const changed = S.tab !== id;
+  $$('.tab').forEach((t) => { const on = t.id === id; t.setAttribute('aria-selected', on); t.tabIndex = on ? 0 : -1; const p = $('#' + t.getAttribute('aria-controls')); p.classList.toggle('hidden', !on); if (on && changed) MK.play(p, 'mk-slide-up'); if (on && focus) t.focus(); });
   S.tab = id; save();
 }
 $('.tabs').addEventListener('click', (e) => { const t = e.target.closest('.tab'); if (t) showTab(t.id); });
@@ -533,7 +626,7 @@ function renderBand() {
     <div><p class="muted" style="font-size:var(--fs-sm);margin-bottom:var(--sp-1)">이 시기의 발달과업</p>
     <ol class="tasklist">${s.tasks.map((t) => `<li>${esc(t.text)}</li>`).join('')}</ol></div>`;
 }
-$('#band').addEventListener('click', (e) => { const b = e.target.closest('.seg'); if (!b) return; S.stage = b.dataset.id; save(); renderBand(); });
+$('#band').addEventListener('click', (e) => { const b = e.target.closest('.seg'); if (!b) return; S.stage = b.dataset.id; save(); renderBand(); MK.stagger($('#stageDetail')); });
 
 /* ── 2. 매칭 연습: 끌어놓기 + 탭-선택 ── */
 let selCard = null;
@@ -560,20 +653,36 @@ function renderMatch() {
   if (S.match.graded) {
     const placed = TASKS.filter((t) => S.match.place[t.id]);
     const right = placed.filter((t) => S.match.place[t.id] === t.stage).length;
-    $('#scoreBox').innerHTML = `<div class="score"><span class="num">${right} / ${TASKS.length}</span><span>${right === TASKS.length ? '모두 맞았어요. 생애주기를 잘 이해하고 있어요.' : '✕ 표시 카드의 해설을 읽고, 옮겨 놓은 뒤 다시 채점해 보세요.'}</span></div>`;
+    $('#scoreBox').innerHTML = `<div class="score"><span class="num"><span id="scoreN">${right}</span> / ${TASKS.length}</span><span>${right === TASKS.length ? '모두 맞았어요. 생애주기를 잘 이해하고 있어요.' : '✕ 표시 카드의 해설을 읽고, 옮겨 놓은 뒤 다시 채점해 보세요.'}</span></div>`;
   } else $('#scoreBox').innerHTML = '';
 }
 function place(cardId, stageId) {
   S.match.place[cardId] = stageId || undefined;
   if (!stageId) delete S.match.place[cardId];
   S.match.graded = false; selCard = null; save(); renderMatch();
+  MK.play($(`[data-card="${cardId}"]`), 'mk-scale-in');
 }
 $('#gradeBtn').addEventListener('click', () => {
   const left = TASKS.length - Object.keys(S.match.place).length;
   S.match.graded = true; selCard = null; save(); renderMatch();
   if (left) say(`아직 놓지 않은 카드 ${left}장은 점수에서 빠졌어요.`);
+  revealGrades();
 });
-$('#shuffleBtn').addEventListener('click', () => { S.match = { order: shuffle(TASKS.map((t) => t.id)), place: {}, graded: false }; selCard = null; save(); renderMatch(); });
+// 채점 결과 순차 공개: 카드마다 ○면 스쿼시, ✕면 흔들림 → 마지막에 점수 와이프 + 숫자 올라가기(모두 맞으면 파티클 1회)
+function revealGrades() {
+  if (MK.reduced()) return;
+  const cards = $$('#slots .card.ok, #slots .card.no'), box = $('#scoreBox .score');
+  cards.forEach((c) => c.classList.add('mk-hold'));
+  if (box) box.style.opacity = '0';
+  cards.forEach((c, i) => setTimeout(() => { c.classList.remove('mk-hold'); MK.play(c, c.classList.contains('ok') ? 'mk-squash' : 'mk-wiggle'); }, 120 + i * 140));
+  setTimeout(() => {
+    if (!box || !box.isConnected) return;
+    box.style.opacity = ''; MK.play(box, 'mk-wipe-in');
+    const n = $('#scoreN'), right = Number(n.textContent); MK.countUp(n, right);
+    if (right === TASKS.length) setTimeout(() => MK.burstAt(box), 520);
+  }, 200 + cards.length * 140);
+}
+$('#shuffleBtn').addEventListener('click', () => { S.match = { order: shuffle(TASKS.map((t) => t.id)), place: {}, graded: false }; selCard = null; save(); renderMatch(); MK.stagger($('#pool')); });
 
 // 포인터 끌기 (마우스·터치 공통). 6px 넘게 움직이면 끌기, 아니면 탭-선택.
 let drag = null;
@@ -658,7 +767,12 @@ function renderSelfSummary() {
       ${R.done ? '' : '<p class="muted" style="font-size:var(--fs-sm)">남은 문항을 마저 고르면 결과가 더 정확해져요.</p>'}
     </div>`;
 }
-$('#checkBody').addEventListener('change', (e) => { const r = e.target; if (r.type !== 'radio') return; S.self.ans[r.name.slice(1)] = Number(r.value); save(); renderSelfSummary(); });
+$('#checkBody').addEventListener('change', (e) => {
+  const r = e.target; if (r.type !== 'radio') return;
+  const wasDone = selfResult().done;
+  S.self.ans[r.name.slice(1)] = Number(r.value); save(); renderSelfSummary();
+  if (!wasDone && selfResult().done) { MK.stagger($('#selfSummary .bars')); MK.play($('#selfSummary .verdict'), 'mk-wipe-in'); }   // 마지막 문항을 고른 순간 결과 공개
+});
 $('#interests').addEventListener('change', () => { S.self.interests = $$('#interests input:checked').map((i) => i.value); save(); renderSelfSummary(); });
 
 /* ── 4. 생애 설계 ── */
@@ -690,7 +804,7 @@ function timelineHtml(goals, age) {
 }
 $('#ageNow').addEventListener('change', (e) => {
   const v = Math.round(Number(e.target.value));
-  if (!v || v < 10 || v > 19) { e.target.value = S.plan.age; say('나이는 10~19 사이로 적어 주세요.'); return; }
+  if (!v || v < 10 || v > 19) { e.target.value = S.plan.age; say('나이는 10~19 사이로 적어 주세요.'); MK.play(e.target, 'mk-wiggle'); return; }
   S.plan.age = v; save(); renderPlan();
 });
 $('#gCat').innerHTML = CONFIG.categories.map((c) => `<option>${c}</option>`).join('');
@@ -702,26 +816,27 @@ $('#goalForm').addEventListener('submit', (e) => {
   else if (!text) msg = '목표를 적어 주세요.';
   else if (!step) msg = '지금 할 수 있는 한 걸음도 꼭 적어 주세요. 목표를 오늘과 이어 주는 칸이에요.';
   $('#gErr').textContent = msg;
-  if (msg) { (!age || age < S.plan.age || age > 100 ? $('#gAge') : !text ? $('#gText') : $('#gStep')).focus(); return; }
-  S.plan.goals.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 5), age, cat: $('#gCat').value, text, step });
+  if (msg) { const f = !age || age < S.plan.age || age > 100 ? $('#gAge') : !text ? $('#gText') : $('#gStep'); f.focus(); MK.play(f, 'mk-wiggle'); return; }
+  const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+  S.plan.goals.push({ id, age, cat: $('#gCat').value, text, step });
   save(); renderPlan(); $('#gText').value = ''; $('#gStep').value = ''; $('#gAge').value = ''; $('#gAge').focus();
+  const li = $(`[data-del="${id}"]`); if (li) MK.play(li.closest('li').querySelector('.age'), 'mk-bounce');   // 연표에 들어간 목표 나이가 통 튀어 위치를 알려 줌
 });
 let lastDeleted = null;
 $('#goalList').addEventListener('click', (e) => {
   const b = e.target.closest('[data-del]'); if (!b) return;
   const i = S.plan.goals.findIndex((g) => g.id === b.dataset.del); if (i < 0) return;
   lastDeleted = S.plan.goals.splice(i, 1)[0]; save(); renderPlan();
-  say('목표를 지웠어요. 되돌리려면 Ctrl+Z');
+  say('목표를 지웠어요.', undoDelete);
 });
+function undoDelete() { if (!lastDeleted) return; S.plan.goals.push(lastDeleted); lastDeleted = null; save(); renderPlan(); say('되돌렸어요.'); }
 document.addEventListener('keydown', (e) => {
-  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && lastDeleted && !/INPUT|TEXTAREA/.test(document.activeElement.tagName)) {
-    S.plan.goals.push(lastDeleted); lastDeleted = null; save(); renderPlan(); say('되돌렸어요.');
-  }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && lastDeleted && !/INPUT|TEXTAREA/.test(document.activeElement.tagName)) undoDelete();
 });
 $('#exampleBtn').addEventListener('click', () => {
   if (S.plan.goals.length && !confirm('지금 적은 목표 뒤에 예시를 덧붙일까요?')) return;
   CONFIG.example.forEach((g, i) => { if (g.age >= S.plan.age) S.plan.goals.push({ ...g, id: 'ex' + Date.now().toString(36) + i }); });
-  save(); renderPlan();
+  save(); renderPlan(); MK.stagger($('#goalList'));
 });
 
 /* ── 인쇄 ── */
@@ -756,7 +871,7 @@ $('#exportBtn').addEventListener('click', () => {
 $('#importBtn').addEventListener('click', () => $('#importFile').click());
 $('#importFile').addEventListener('change', async (e) => {
   const f = e.target.files[0]; if (!f) return;
-  try { const d = JSON.parse(await f.text()); if (!d.plan || !Array.isArray(d.plan.goals)) throw 0; S = { ...blank(), ...d }; save(); renderAll(); say('불러왔어요.'); }
+  try { const d = normalize(JSON.parse(await f.text())); if (!d) throw 0; S = d; selCard = null; save(); renderAll(); say('불러왔어요.'); }
   catch (err) { say('이 앱에서 저장한 파일이 아니에요.'); }
   e.target.value = '';
 });
@@ -767,6 +882,8 @@ $('#resetBtn').addEventListener('click', () => {
 
 function renderAll() { renderBand(); renderMatch(); renderSelfForm(); renderSelfSummary(); renderPlan(); showTab(S.tab); }
 S = load(); renderAll();
+MK.ripple(document, '.btn');
+MK.typewriter($('.mast h1'), $('.mast h1').textContent);
 </script>
 </body>
 </html>

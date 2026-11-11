@@ -8,7 +8,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>청소년 한 끼 식단 균형 분석기</title>
+<title>청소년 하루 식단 균형 분석기</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gothic+A1:wght@400;700;900&display=swap">
@@ -159,7 +159,7 @@ main { padding: var(--space-lg) 0 var(--space-2xl); }
 .barrow .val { font-size: var(--text-sm); font-variant-numeric: tabular-nums; color: var(--color-ink-2); display: flex; gap: var(--space-2xs); align-items: center; white-space: nowrap; }
 .barrow .val b { color: var(--color-ink); font-size: var(--text-md); font-weight: 900; }
 .track { grid-column: 1 / -1; position: relative; height: 14px; background: var(--color-paper-2); border: var(--rule-thin) solid var(--color-ink); overflow: hidden; }
-.track > i { position: absolute; inset: 0 auto 0 0; width: 0; transition: width 300ms var(--ease-out); }
+.track > i { position: absolute; inset: 0 auto 0 0; width: 100%; clip-path: inset(0 100% 0 0); transition: clip-path var(--mk-slow) var(--mk-ease-in-out); } /* 막대 길이 = clip-path (무늬가 늘어나지 않게) */
 .track > s { position: absolute; top: -2px; bottom: -2px; left: 50%; width: 2px; background: var(--color-ink); }
 .st { font-size: var(--text-xs); font-weight: 900; padding: 1px var(--space-2xs); border: 1.5px solid currentColor; white-space: nowrap; min-width: 3.4em; text-align: center; }
 .st-low { color: var(--color-low-ink); background: var(--color-low-soft); }
@@ -238,7 +238,28 @@ table.edit input.w-portion { min-width: 110px; }
 }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 
+/* ===== 모션 (motion-effects 키트에서 필요한 것만) ===== */
+:root { --mk-accent: var(--color-accent); --mk-ease-out: cubic-bezier(.22,1,.36,1); --mk-ease-in-out: cubic-bezier(.65,0,.35,1); --mk-base: 280ms; --mk-slow: 520ms; --mk-stagger: 30ms; }
+@keyframes mk-scale-in { from { opacity: 0; transform: scale(.92); } to { opacity: 1; transform: none; } }
+@keyframes mk-slide-up { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes mk-wipe-in { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes mk-pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.04); } }
+@keyframes mk-wiggle { 0%,100% { transform: translateX(0); } 20% { transform: translateX(-6px); } 40% { transform: translateX(5px); } 60% { transform: translateX(-3px); } 80% { transform: translateX(2px); } }
+@keyframes mk-ripple { to { transform: scale(1); opacity: 0; } }
+@keyframes mk-particle { to { transform: translate(var(--dx),var(--dy)) rotate(var(--rot)); opacity: 0; } }
+@keyframes mk-wheel { from { transform: scale(var(--from, 0)); } } /* 자전거 바퀴 칸: 이전 크기 → 새 크기 */
+.mk-scale-in { animation: mk-scale-in var(--mk-base) var(--mk-ease-out) both; }
+.mk-wipe-in { animation: mk-wipe-in var(--mk-slow) var(--mk-ease-in-out) both; }
+.mk-stagger > * { animation: mk-slide-up var(--mk-base) var(--mk-ease-out) both; animation-delay: calc(var(--i,0) * var(--mk-stagger)); }
+.mk-pulse { animation: mk-pulse 1s var(--mk-ease-in-out) 2; }
+.mk-wiggle { animation: mk-wiggle 380ms var(--mk-ease-out); }
+.mk-fill { transform-box: view-box; transform-origin: 120px 150px; animation: mk-wheel var(--mk-slow) var(--mk-ease-in-out) both; }
+.btn, .fchip { position: relative; overflow: hidden; isolation: isolate; }
+.mk-ripple { position: absolute; border-radius: 50%; pointer-events: none; background: currentColor; opacity: .18; transform: scale(0); animation: mk-ripple 520ms var(--mk-ease-out) forwards; z-index: -1; }
+.mk-particle { position: fixed; width: 7px; height: 7px; border-radius: 2px; pointer-events: none; z-index: 9999; background: var(--mk-accent); animation: mk-particle 800ms var(--mk-ease-out) forwards; }
+
 @media print {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
   @page { size: A4; margin: 10mm 12mm; }
   html.big { font-size: 100%; }
   body { background: var(--color-paper); padding: 0; font-size: 10pt; line-height: 1.45; }
@@ -267,7 +288,7 @@ table.edit input.w-portion { min-width: 110px; }
 <header class="topbar">
   <div class="wrap">
     <div class="brand">
-      <h1>청소년 한 끼 식단 균형 분석기</h1>
+      <h1>청소년 하루 식단 균형 분석기</h1>
       <p>식품구성자전거 6개 식품군으로 보는 내 하루 식단</p>
     </div>
     <div class="top-actions">
@@ -364,6 +385,35 @@ table.edit input.w-portion { min-width: 110px; }
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script>
+/* ===== 모션 도우미 (motion-effects 키트에서 필요한 함수만, 동작 줄이기면 즉시 끝) ===== */
+const MK = (() => {
+  const reduced = () => window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function play(el, cls) { if (!el || reduced()) return; el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); el.addEventListener('animationend', () => el.classList.remove(cls), { once: true }); }
+  function stagger(parent, { max = 20 } = {}) { if (!parent || reduced()) return; [...parent.children].forEach((c, i) => c.style.setProperty('--i', Math.min(i, max))); parent.classList.remove('mk-stagger'); void parent.offsetWidth; parent.classList.add('mk-stagger'); clearTimeout(parent._mkT); parent._mkT = setTimeout(() => parent.classList.remove('mk-stagger'), 400 + 45 * Math.min(parent.children.length, max)); } /* 끝나면 클래스 제거: 다시 그릴 때 또 움직이지 않게 */
+  function ripple(root, selector) {
+    root.addEventListener('pointerdown', e => { const host = e.target.closest(selector); if (!host || host.disabled || reduced()) return;
+      const r = host.getBoundingClientRect(), d = Math.max(r.width, r.height) * 2, s = document.createElement('span'); s.className = 'mk-ripple';
+      Object.assign(s.style, { width: d + 'px', height: d + 'px', left: (e.clientX - r.left - d / 2) + 'px', top: (e.clientY - r.top - d / 2) + 'px' });
+      host.appendChild(s); s.addEventListener('animationend', () => s.remove(), { once: true }); });
+  }
+  function burstAt(el, { count = 18, colors } = {}) {
+    if (!el || reduced()) return; const r = el.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2;
+    for (let i = 0; i < count; i++) { const p = document.createElement('i'); p.className = 'mk-particle';
+      const a = (Math.PI * 2 * i) / count + Math.random() * .4, dist = 50 + Math.random() * 60;
+      p.style.left = x + 'px'; p.style.top = y + 'px'; p.style.setProperty('--dx', Math.cos(a) * dist + 'px'); p.style.setProperty('--dy', Math.sin(a) * dist + 'px'); p.style.setProperty('--rot', (Math.random() * 360) + 'deg');
+      if (colors) p.style.background = colors[i % colors.length];
+      document.body.appendChild(p); p.addEventListener('animationend', () => p.remove(), { once: true }); }
+  }
+  function countUp(el, to, { duration = 700, format = n => Math.round(n).toLocaleString('ko-KR') } = {}) {
+    if (!el) return; const from = parseFloat(el.dataset.mkVal || 0) || 0; el.dataset.mkVal = to;
+    if (reduced() || from === to) { el.textContent = format(to); return; }
+    const start = performance.now(), ease = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    (function f(now) { const p = Math.min(1, (now - start) / duration); el.textContent = format(from + (to - from) * ease(p)); if (p < 1) requestAnimationFrame(f); })(start);
+  }
+  return { reduced, play, stagger, ripple, burstAt, countUp };
+})();
+MK.ripple(document, '.btn, .fchip');
+
 /* ===== 설정: 식품군 (kcal = 1인 1회 분량 에너지, 예시값) ===== */
 const GROUPS = [
   { key: 'grain', name: '곡류', icon: '곡류', kcal: 300 },
@@ -525,7 +575,7 @@ function renderFoods() {
       <span class="fm">${f.s.map((v, i) => v > 0 ? `<i class="dot bg-g${i}" title="${GROUPS[i].name} ${v}회"></i>` : '').join('')}<span class="k">${Math.round(foodKcal(f))}kcal</span></span>
     </button>`).join('') : `<div class="no-result">‘${esc(query)}’에 맞는 음식이 없어요. 다른 이름으로 찾거나 [설정]에서 음식을 추가하세요.</div>`;
 }
-$('#filters').addEventListener('click', e => { const b = e.target.closest('[data-f]'); if (b) { filter = +b.dataset.f; renderFilters(); renderFoods(); } });
+$('#filters').addEventListener('click', e => { const b = e.target.closest('[data-f]'); if (b) { filter = +b.dataset.f; renderFilters(); renderFoods(); MK.stagger($('#foodGrid')); } }); // 식품군 고르기 → 음식 카드 순차 등장
 $('#search').addEventListener('input', e => { query = e.target.value; renderFoods(); });
 $('#foodGrid').addEventListener('click', e => {
   const b = e.target.closest('[data-food]'); if (!b) return;
@@ -537,7 +587,7 @@ $('#foodGrid').addEventListener('click', e => {
 });
 
 /* ===== 결과: 자전거 SVG ===== */
-function bikeSVG(sum, target) {
+function bikeSVG(sum, target, prev) {  // prev: 직전 칸 비율(화면용) — 바뀐 칸만 이전 크기에서 이즈로 채움
   const cx = 120, cy = 150, R = 92, r0 = 20, n = GROUPS.length;
   const pt = (a, r, x = cx, y = cy) => [x + r * Math.cos(a), y + r * Math.sin(a)];
   const sector = (a0, a1, r) => { const [x0, y0] = pt(a0, r0), [x1, y1] = pt(a0, r), [x2, y2] = pt(a1, r), [x3, y3] = pt(a1, r0);
@@ -548,8 +598,10 @@ function bikeSVG(sum, target) {
     const ratio = target[i] ? Math.min(1, sum[i] / target[i]) : (sum[i] > 0 ? 1 : 0);
     const over = status(sum[i], target[i]) === 'high';
     s += `<path d="${sector(a0, a1, R)}" fill="var(--g${i})" fill-opacity=".14"/>`;
-    if (ratio > 0) s += `<path d="${sector(a0, a1, r0 + (R - r0) * ratio)}" fill="var(--g${i})" fill-opacity=".85"/>`;
-    if (over) s += `<path d="${sector(a0, a1, R)}" fill="none" stroke="var(--danger)" stroke-width="3" stroke-dasharray="6 4"/>`;
+    const grow = prev && prev[i] !== ratio ? ` class="mk-fill" style="--from:${((r0 + (R - r0) * prev[i]) / (r0 + (R - r0) * ratio)).toFixed(3)}"` : '';
+    if (ratio > 0) s += `<path d="${sector(a0, a1, r0 + (R - r0) * ratio)}" fill="var(--g${i})" fill-opacity=".85"${grow}/>`;
+    if (prev) prev[i] = ratio;
+    if (over) s += `<path d="${sector(a0, a1, R)}" fill="none" stroke="var(--color-high)" stroke-width="3" stroke-dasharray="6 4"/>`;
     const [lx, ly] = pt((a0 + a1) / 2, R * 0.66);
     s += `<text x="${lx}" y="${ly}" text-anchor="middle" dominant-baseline="central" font-size="15" font-weight="900" fill="var(--color-ink)" paint-order="stroke" stroke="var(--color-paper)" stroke-width="4">${g.icon}</text>`;
   });
@@ -569,24 +621,30 @@ function bikeSVG(sum, target) {
 /* ===== 결과: 막대·조언 ===== */
 function renderResult(t) {
   const p = pattern(), tk = patKcal(p), empty = t.kcal === 0;
-  $('#kcal').textContent = Math.round(t.kcal).toLocaleString('ko-KR');
-  $('#kcalOf').textContent = `/ 권장 약 ${Math.round(tk).toLocaleString('ko-KR')} kcal (${esc(p.label)})`;
+  MK.countUp($('#kcal'), Math.round(t.kcal));                       // 총 열량 → 숫자 올라가기
+  $('#kcalOf').textContent = `/ 권장 약 ${Math.round(tk).toLocaleString('ko-KR')} kcal (${p.label})`;
   $('#patLabel').textContent = '';
-  $('#bike').innerHTML = bikeSVG(t.sum, p.s);
+  $('#bike').innerHTML = bikeSVG(t.sum, p.s, bikePrev);               // 자전거 칸 → 이전 크기에서 이즈로 채움
+  const prevW = $$('#bars .track > i').map(x => +x.dataset.w || 0);
   $('#bars').innerHTML = GROUPS.map((g, i) => {
     const v = t.sum[i], target = p.s[i], st = empty ? 'none' : status(v, target);
     const w = target ? Math.min(100, v / (target * 2) * 100) : (v ? 100 : 0);
     return `<div class="barrow">
       <span class="lbl"><i class="dot bg-g${i}"></i>${esc(g.name)}</span>
       <span class="val"><span><b>${fmt(v)}</b> / ${fmt(target)}회</span><span class="st st-${st}">${ST_TEXT[st]}</span></span>
-      <span class="track" role="img" aria-label="${esc(g.name)} ${fmt(v)}회, 권장 ${fmt(target)}회, ${ST_TEXT[st]}"><i class="fill-${st === 'none' ? 'ok' : st}" style="width:${w}%"></i><s></s></span>
+      <span class="track" role="img" aria-label="${esc(g.name)} ${fmt(v)}회, 권장 ${fmt(target)}회, ${ST_TEXT[st]}"><i class="fill-${st === 'none' ? 'ok' : st}" data-w="${w}" style="clip-path:inset(0 ${100 - (prevW[i] || 0)}% 0 0)"></i><s></s></span>
     </div>`;
   }).join('');
+  const fills = $$('#bars .track > i'); void $('#bars').offsetWidth;   // 막대 → 이전 길이에서 이즈 성장
+  fills.forEach(x => { x.style.clipPath = `inset(0 ${100 - x.dataset.w}% 0 0)`; });
   const { one, list } = advice(t, p);
-  $('#adviceOne').textContent = one;
+  if ($('#adviceOne').textContent !== one) { $('#adviceOne').textContent = one; MK.play($('#adviceOne'), 'mk-wipe-in'); } // 조언 바뀜 → 와이프
+  const allOk = !empty && GROUPS.every((g, i) => status(t.sum[i], p.s[i]) === 'ok');
+  if (allOk && !allOkShown && booted) { allOkShown = true; MK.burstAt($('#bike')); }   // 6개 식품군 모두 적정 → 파티클 1회
   $('#adviceList').innerHTML = list.map(x => `<li>${esc(x)}</li>`).join('');
   $('#mbarText').textContent = empty ? '아직 담은 음식이 없어요' : `${Math.round(t.kcal).toLocaleString('ko-KR')} kcal · 부족 ${GROUPS.filter((g, i) => status(t.sum[i], p.s[i]) === 'low').length}개 · 과다 ${GROUPS.filter((g, i) => status(t.sum[i], p.s[i]) === 'high').length}개`;
 }
+const bikePrev = [0, 0, 0, 0, 0, 0]; let allOkShown = false, booted = false; // 파티클은 사용자가 맞췄을 때 한 번만
 function advice(t, p) {
   if (t.kcal === 0) return { one: '먼저 어제(또는 오늘) 먹은 음식을 끼니별로 담아 보세요.', list: ['끼니 칸을 누르고 → 음식을 누르면 담겨요. 같은 음식을 두 번 누르면 2인분이에요.'] };
   const low = [], high = [];
@@ -619,12 +677,13 @@ function renderSaved() {
     : '<li class="muted small">저장한 식단이 없어요. 이름을 쓰고 [저장]을 누르세요.</li>';
 }
 $('#btnSave').addEventListener('click', () => {
-  if (totals().kcal === 0) { toast('담은 음식이 없어요. 먼저 음식을 담으세요'); return; }
+  if (totals().kcal === 0) { toast('담은 음식이 없어요. 먼저 음식을 담으세요'); MK.play($('#btnSave'), 'mk-wiggle'); return; }
   const name = $('#saveName').value.trim() || `내 식단 ${saved.length + 1}`;
   const data = { name, date: new Date().toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' }), sex: diet.sex, meals: JSON.parse(JSON.stringify(diet.meals)) };
   const i = saved.findIndex(s => s.name === name);
   if (i >= 0) { if (!confirm(`‘${name}’ 식단을 덮어쓸까요?`)) return; saved[i] = data; } else saved.unshift(data);
   save(K_SAVED, saved); $('#saveName').value = ''; renderSaved(); toast(`‘${name}’ 저장됨`);
+  MK.play($('#savedList li:nth-child(' + ((i >= 0 ? i : 0) + 1) + ')'), 'mk-pulse');   // 저장됨 → 펄스
 });
 $('#savedList').addEventListener('click', e => {
   const l = e.target.closest('[data-load]'), d = e.target.closest('[data-delsaved]');
@@ -676,7 +735,7 @@ $('#btnAddFood').addEventListener('click', () => {
   draft.foods.push({ id: 'u' + Date.now().toString(36), name: '', portion: '1인분', s: [0, 0, 0, 0, 0, 0] });
   renderSettings(); const inp = $$('#tblFoods [data-fn]').pop(); inp.scrollIntoView({ block: 'center' }); inp.focus();
 });
-$('#btnSettings').addEventListener('click', () => { draft = JSON.parse(JSON.stringify(set)); renderSettings(); dlg.showModal(); });
+$('#btnSettings').addEventListener('click', () => { draft = JSON.parse(JSON.stringify(set)); renderSettings(); dlg.showModal(); MK.play(dlg, 'mk-scale-in'); });
 $('#btnSaveSet').addEventListener('click', () => {
   draft.foods = draft.foods.filter(f => f.name.trim());
   draft.foods.forEach(f => { f.name = f.name.trim(); });
@@ -721,11 +780,11 @@ $('#btnToResult').addEventListener('click', () => $('#result').scrollIntoView({ 
 
 function renderAll() {
   const t = totals();
-  $$('[data-sex]').forEach(b => { b.setAttribute('aria-pressed', b.dataset.sex === diet.sex); b.textContent = set.pat[b.dataset.sex].label.replace(/\s*예시$/, ''); });
+  $$('[data-sex]').forEach(b => { b.setAttribute('aria-pressed', b.dataset.sex === diet.sex); b.textContent = set.pat[b.dataset.sex].label.replace(/\s*예시$/, '') || (b.dataset.sex === 'm' ? '패턴 1' : '패턴 2'); });
   renderSlots(t); renderFoods(); renderResult(t);
 }
 setBig(load('mealBalance.big', false));
-renderFilters(); renderSaved(); renderAll();
+renderFilters(); renderSaved(); renderAll(); booted = true;
 </script>
 </body>
 </html>

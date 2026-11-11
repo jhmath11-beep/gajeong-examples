@@ -234,7 +234,39 @@ dialog[open] { animation: rise 260ms var(--ease-out); }
   .col:first-child { border-left: 0; padding-left: 0; }
   .blocks { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+/* ── 모션 (motion-effects kit에서 필요한 것만) ── */
+:root {
+  --mk-accent: var(--color-thread);
+  --mk-ease-out: cubic-bezier(.22,1,.36,1); --mk-ease-in-out: cubic-bezier(.65,0,.35,1);
+  --mk-fast: 160ms; --mk-base: 280ms; --mk-slow: 520ms; --mk-stagger: 45ms;
+}
+@keyframes mk-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes mk-slide-up { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes mk-slide-right { from { opacity: 0; transform: translateX(-40px); } to { opacity: 1; transform: none; } }
+@keyframes mk-scale-in { from { opacity: 0; transform: scale(.92); } to { opacity: 1; transform: none; } }
+@keyframes mk-squash { 0% { transform: none; } 30% { transform: scale(1.12, .86); } 55% { transform: scale(.94, 1.08); } 75% { transform: scale(1.03, .98); } 100% { transform: none; } }
+@keyframes mk-wiggle { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-6px); } 40% { transform: translateX(5px); } 60% { transform: translateX(-3px); } 80% { transform: translateX(2px); } }
+@keyframes mk-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+@keyframes mk-wave { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+@keyframes mk-blink { 50% { opacity: 0; } }
+@keyframes mk-particle { to { transform: translate(var(--dx), var(--dy)) rotate(var(--rot)); opacity: 0; } }
+@keyframes mk-ripple { to { transform: scale(1); opacity: 0; } }
+.mk-fade-in { animation: mk-fade-in var(--mk-base) var(--mk-ease-out) both; }
+.mk-slide-up { animation: mk-slide-up var(--mk-base) var(--mk-ease-out) both; }
+.mk-slide-right { animation: mk-slide-right var(--mk-slow) var(--mk-ease-out) both; }   /* 카드가 다음 단계 칸으로 옮겨 옴 */
+.mk-scale-in { animation: mk-scale-in var(--mk-base) var(--mk-ease-out) both; }
+.mk-stagger > * { animation: mk-slide-up var(--mk-base) var(--mk-ease-out) both; animation-delay: calc(var(--i, 0) * var(--mk-stagger)); }
+.mk-squash { animation: mk-squash 520ms var(--mk-ease-out); transform-origin: 50% 100%; }
+.mk-wiggle { animation: mk-wiggle 380ms var(--mk-ease-out); }
+.mk-pulse { animation: mk-pulse 1s var(--mk-ease-in-out) 2; }
+.mk-wave { display: inline-flex; gap: 3px; margin-left: 6px; }
+.mk-wave > i { width: 5px; height: 5px; border-radius: 50%; background: currentColor; animation: mk-wave 900ms var(--mk-ease-in-out) infinite; animation-delay: calc(var(--i, 0) * 90ms); }
+.mk-caret::after { content: ""; display: inline-block; width: .08em; height: 1em; margin-left: .06em; background: currentColor; vertical-align: -.12em; animation: mk-blink 1s steps(1) infinite; }
+.mk-particle { position: fixed; width: 7px; height: 7px; border-radius: 2px; pointer-events: none; z-index: 9999; background: var(--mk-accent); animation: mk-particle 800ms var(--mk-ease-out) forwards; }
+.btn { position: relative; overflow: hidden; isolation: isolate; }
+.mk-ripple { position: absolute; border-radius: 50%; pointer-events: none; background: currentColor; opacity: .18; transform: scale(0); animation: mk-ripple var(--mk-slow) var(--mk-ease-out) forwards; z-index: -1; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+@media print { * { animation: none !important; transition: none !important; } }
 </style>
 </head>
 <body>
@@ -469,6 +501,42 @@ function demoFill() {
 /* ======================= 공통 도우미 ======================= */
 const $ = s => document.querySelector(s);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+/* ======================= 모션 도우미 (motion-effects kit 일부) — 동작 줄이기면 움직이지 않음 ======================= */
+const MK = (() => {
+  const reduced = () => window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function play(el, cls) { if (!el || reduced()) return; el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); el.addEventListener('animationend', () => el.classList.remove(cls), { once: true }); }
+  function stagger(parent, { max = 20 } = {}) { if (!parent || reduced()) return; [...parent.children].forEach((c, i) => c.style.setProperty('--i', Math.min(i, max))); parent.classList.remove('mk-stagger'); void parent.offsetWidth; parent.classList.add('mk-stagger'); }
+  function typewriter(el, text, { speed = 45 } = {}) {
+    if (!el) return; if (reduced()) { el.textContent = text; return; }
+    clearInterval(el._mkT); el.textContent = ''; el.classList.add('mk-caret');
+    const chars = [...text]; let i = 0;
+    el._mkT = setInterval(() => { el.textContent += chars[i++] ?? ''; if (i >= chars.length) { clearInterval(el._mkT); setTimeout(() => el.classList.remove('mk-caret'), 500); } }, speed);
+  }
+  function burstAt(el, { count = 18 } = {}) {
+    if (!el || reduced()) return; const r = el.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2;
+    for (let i = 0; i < count; i++) {
+      const p = document.createElement('i'); p.className = 'mk-particle';
+      const a = (Math.PI * 2 * i) / count + Math.random() * .4, d = 50 + Math.random() * 60;
+      p.style.left = x + 'px'; p.style.top = y + 'px';
+      p.style.setProperty('--dx', Math.cos(a) * d + 'px'); p.style.setProperty('--dy', Math.sin(a) * d + 'px'); p.style.setProperty('--rot', Math.random() * 360 + 'deg');
+      document.body.appendChild(p); p.addEventListener('animationend', () => p.remove(), { once: true });
+    }
+  }
+  function countUp(el, to, { duration = 700 } = {}) {
+    if (!el) return; if (reduced()) { el.textContent = to; return; }
+    const start = performance.now(), ease = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    (function f(now) { const p = Math.min(1, (now - start) / duration); el.textContent = Math.round(to * ease(p)); if (p < 1) requestAnimationFrame(f); })(start);
+  }
+  function ripple(root = document, selector = '.btn') {
+    root.addEventListener('pointerdown', e => {
+      const host = e.target.closest(selector); if (!host || reduced()) return;
+      const r = host.getBoundingClientRect(), d = Math.max(r.width, r.height) * 2, s = document.createElement('span'); s.className = 'mk-ripple';
+      Object.assign(s.style, { width: d + 'px', height: d + 'px', left: (e.clientX - r.left - d / 2) + 'px', top: (e.clientY - r.top - d / 2) + 'px' });
+      host.appendChild(s); s.addEventListener('animationend', () => s.remove(), { once: true });
+    });
+  }
+  return { reduced, play, stagger, typewriter, burstAt, countUp, ripple };
+})();
 const md = iso => { const d = new Date(iso); return isNaN(d) ? '' : `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
 let toastTimer;
 function toast(msg, isErr) {
@@ -477,7 +545,8 @@ function toast(msg, isErr) {
 }
 async function busy(btn, label, fn) {
   const old = btn.textContent; btn.disabled = true; btn.textContent = label;
-  try { return await fn(); } catch (e) { toast(e.message || '잠시 뒤 다시 시도해 주세요.', true); } finally { btn.disabled = false; btn.textContent = old; }
+  btn.insertAdjacentHTML('beforeend', '<span class="mk-wave" aria-hidden="true"><i style="--i:0"></i><i style="--i:1"></i><i style="--i:2"></i></span>');   // 기다리는 중
+  try { return await fn(); } catch (e) { toast(e.message || '잠시 뒤 다시 시도해 주세요.', true); MK.play(btn.closest('form, .fb-row') || btn, 'mk-wiggle'); } finally { btn.disabled = false; btn.textContent = old; }
 }
 function downloadCsv(filename, rows) {
   const csv = '﻿' + rows.map(r => r.map(v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"').join(',')).join('\r\n');
@@ -490,6 +559,7 @@ document.querySelectorAll('.tab').forEach(btn => btn.addEventListener('click', (
   const t = btn.dataset.tab;
   $('#tab-group').hidden = t !== 'group'; $('#tab-teacher').hidden = t !== 'teacher';
   document.body.classList.toggle('wide', t === 'teacher' && !$('#dash').hidden);
+  MK.play($('#tab-' + t), 'mk-slide-up');
 }));
 document.addEventListener('input', e => { const c = e.target.id && $(`.counter[data-for="${e.target.id}"]`); if (c) c.textContent = `${e.target.value.length}/${e.target.maxLength}`; });
 
@@ -511,7 +581,7 @@ $('#loginForm').addEventListener('submit', e => {
     const res = await api('openGroup', who);
     WHO = who; G = res.group; $('#gPw').value = '';
     $('#loginForm').hidden = true; $('#boardForm').hidden = false;
-    renderGroup(res.isNew); window.scrollTo(0, 0);
+    renderGroup(res.isNew); window.scrollTo(0, 0); MK.play($('#boardForm'), 'mk-scale-in');
   });
 });
 function readChecks() {
@@ -520,6 +590,7 @@ function readChecks() {
 function setDirty(on) { DIRTY = on; $('#dirty').textContent = on ? '저장 안 한 변경 있음' : '저장됨'; $('#dirty').classList.toggle('on', on); }
 function renderLine() {
   const g = { checks: readChecks() }, P = progress(g, CONFIG);
+  $('#line').style.gridTemplateColumns = `repeat(${CONFIG.stages.length}, minmax(0, 1fr))`;   // 단계 수를 바꿔도 한 줄
   $('#line').innerHTML = CONFIG.stages.map((s, i) => `<li class="st ${i < P.stage ? 'is-done' : i === P.stage ? 'is-now' : ''}"><b>${i + 1}</b>${esc(s.name)}<br><span class="num">${P.per[i]}/${s.checks.length}</span></li>`).join('');
   document.querySelectorAll('.stage').forEach((d, i) => {
     d.classList.toggle('is-done', i < P.stage); d.classList.toggle('is-now', i === P.stage);
@@ -534,6 +605,7 @@ function renderGroup(isNew) {
     : G.pwReset ? '선생님이 비밀번호를 초기화했어요. 이번에 저장할 때 쓴 번호가 새 비밀번호가 돼요.'
     : `마지막 저장 ${md(G.updatedAt)} · 모둠원 누구나 고칠 수 있어요`;
   $('#tMemo').hidden = !G.feedback; $('#tMemoText').textContent = G.feedback;
+  if (G.feedback) setTimeout(() => MK.typewriter($('#tMemoText'), G.feedback), 300);   // 선생님이 방금 적어 준 것처럼
   const P0 = progress(G, CONFIG);
   $('#stages').innerHTML = CONFIG.stages.map((s, i) => `<details class="stage" ${i === P0.stage ? 'open' : ''}>
     <summary><span class="k">${i + 1}</span><h3>${esc(s.name)}</h3><span class="cnt num"></span><span class="spacer"></span></summary>
@@ -549,6 +621,8 @@ $('#stages').addEventListener('change', e => {
   const before = progress({ checks: G.checks }, CONFIG).stage, P = renderLine();
   const next = document.querySelectorAll('.stage')[P.stage];   // 한 단계를 다 채우면 다음 단계를 펼쳐 줌
   if (next && P.stage > before) next.open = true;
+  if (P.stage >= CONFIG.stages.length && before < CONFIG.stages.length) MK.burstAt($('#hStage'));   // 모든 단계 완료: 한 번만
+  else if (P.stage > before) MK.play(document.querySelectorAll('#line .st b')[before], 'mk-squash');   // 한 단계 끝
   G = { ...G, checks: readChecks() };
 });
 $('#boardForm').addEventListener('submit', e => {
@@ -557,7 +631,7 @@ $('#boardForm').addEventListener('submit', e => {
     const res = await api('saveGroup', { ...WHO, checks: readChecks(), memo: $('#fMemo').value, next: $('#fNext').value, blocker: $('#fBlock').value, base: G.updatedAt });
     G = { ...G, checks: readChecks(), memo: $('#fMemo').value.trim(), next: $('#fNext').value.trim(), blocker: $('#fBlock').value.trim(), updatedAt: res.updatedAt, pwReset: false };
     $('#hSaved').textContent = `마지막 저장 ${md(G.updatedAt)} · 모둠원 누구나 고칠 수 있어요`;
-    setDirty(false);
+    setDirty(false); MK.play($('#dirty'), 'mk-pulse'); toast('작업표를 저장했어요.');
   });
 });
 $('#reloadG').addEventListener('click', e => {
@@ -584,14 +658,14 @@ $('#pinForm').addEventListener('submit', e => {
 });
 const reloadT = async () => { DATA = await api('getTeacherData', PIN); renderDash(); };
 $('#refresh').addEventListener('click', e => busy(e.currentTarget, '불러오는 중…', reloadT));
-$('#logout').addEventListener('click', () => { PIN = ''; DATA = null; $('#dash').hidden = true; $('#pinForm').hidden = false; setTv(false); document.body.classList.remove('wide', 'hide-private'); });
+$('#logout').addEventListener('click', () => { PIN = ''; DATA = null; prevCol = null; $('#dash').hidden = true; $('#pinForm').hidden = false; setTv(false); document.body.classList.remove('wide', 'hide-private'); });
 function setHide(on) { document.body.classList.toggle('hide-private', on); ['#hideBtn', '#tvHide2'].forEach(s => $(s).setAttribute('aria-pressed', on)); }
 function setTv(on) { document.body.classList.toggle('tv', on); $('#tvBtn').setAttribute('aria-pressed', on); $('#tvExit').hidden = !on; if (on) { setHide(true); view.v = 'board'; renderDash(); } }
 $('#tvBtn').addEventListener('click', () => setTv(!document.body.classList.contains('tv')));
 $('#tvOff').addEventListener('click', () => setTv(false));
 $('#hideBtn').addEventListener('click', () => setHide(!document.body.classList.contains('hide-private')));
 $('#tvHide2').addEventListener('click', () => setHide(!document.body.classList.contains('hide-private')));
-document.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => { view.v = b.dataset.view; renderDash(); }));
+document.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => { view.v = b.dataset.view; renderDash(); MK.play($('#v' + view.v[0].toUpperCase() + view.v.slice(1)), 'mk-fade-in'); }));
 $('#clsSeg').addEventListener('click', e => { const b = e.target.closest('button'); if (b) { view.cls = b.dataset.c; renderDash(); } });
 
 const daysSince = (iso, now) => iso ? (new Date(now) - new Date(iso)) / 86400000 : Infinity;
@@ -599,7 +673,7 @@ function ago(iso, now) { const d = daysSince(iso, now); if (d < 1 / 24) return '
 const key = g => g.cls + '|' + g.group;
 function cardHTML(g, C, showCls) {
   const P = progress(g, C), stale = daysSince(g.updatedAt, DATA.now) > C.staleDays && P.stage < C.stages.length;
-  return `<article class="card ${stale ? 'is-stale' : ''}">
+  return `<article class="card ${stale ? 'is-stale' : ''}" data-k="${esc(key(g))}">
     <div class="card__top"><div class="card__no">${showCls ? `<span><small>${esc(g.cls)}</small>${g.group}</span>` : g.group}</div>
       <div class="card__meta"><span class="num">${P.done}/${P.total}</span><span>${ago(g.updatedAt, DATA.now)}</span>
         <div class="pips" aria-label="단계 진행">${C.stages.map((s, i) => `<i class="${i < P.stage ? 'f' : i === P.stage && P.per[i] ? 'h' : ''}"></i>`).join('')}</div></div></div>
@@ -656,7 +730,17 @@ function renderDash() {
       <td class="private">${esc(g.blocker)}</td><td>${esc(g.feedback)}</td>
       <td><button class="btn btn--line btn--sm" data-reset="${esc(key(g))}">초기화</button></td></tr>`; }).join('')}</tbody></table></div>`
     : '<p class="empty">아직 저장한 모둠이 없어요. 학생들에게 웹 앱 주소를 알려 주세요.</p>';
+
+  const colOf = Object.fromEntries(DATA.groups.map(g => [key(g), progress(g, C).stage]));
+  if (!prevCol) {   // 현황판을 처음 열 때: 칸 순차 등장 + 숫자 올라가기
+    if (view.v === 'board') MK.stagger($('#vBoard .kanban'));
+    document.querySelectorAll('#facts b').forEach(b => MK.countUp(b, Number(b.textContent)));
+  } else if (view.v === 'board') {   // 새로고침: 단계가 바뀐(또는 새로 생긴) 모둠 카드만 옆으로 밀려 들어옴
+    document.querySelectorAll('#vBoard .card[data-k]').forEach(c => { if (prevCol[c.dataset.k] !== colOf[c.dataset.k]) MK.play(c, 'mk-slide-right'); });
+  }
+  prevCol = colOf;
 }
+let prevCol = null;
 const findG = k => DATA.groups.find(g => key(g) === k);
 let FB = null;
 document.getElementById('dash').addEventListener('click', e => {
@@ -700,9 +784,10 @@ async function init() {
   $('#gCls').innerHTML = '<option value="">반 고르기</option>' + CONFIG.classes.map(c => `<option>${esc(c)}</option>`).join('');
   $('#gNo').innerHTML = '<option value="">모둠 고르기</option>' + opts(CONFIG.groups, n => n + '모둠');
 }
-$('#demoFill').addEventListener('click', () => { demoFill(); toast('1반·2반 샘플 모둠 11개를 넣었어요. 현황판(PIN 1234)에서 보세요.'); if (DATA) reloadT(); });
+$('#demoFill').addEventListener('click', () => { if (DEMO.load().length && !confirm('지금 체험 데이터를 지우고 샘플 11개로 바꿀까요?')) return; demoFill(); toast('1반·2반 샘플 모둠 11개를 넣었어요. 현황판(PIN 1234)에서 보세요.'); if (DATA) reloadT(); });
 $('#demoClear').addEventListener('click', () => { if (!confirm('체험 데이터를 모두 지울까요?')) return; localStorage.removeItem(DEMO_KEY); toast('체험 데이터를 지웠어요.'); if (DATA) reloadT(); });
 init();
+MK.ripple(document, '.btn');
 </script>
 </body>
 </html>

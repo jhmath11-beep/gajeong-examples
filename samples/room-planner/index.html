@@ -234,7 +234,34 @@ footer { color: var(--color-muted); font-size: var(--fs-xs); padding: var(--sp-4
   textarea.input { display: none; }
   .memo-print { display: block; border: 1px solid var(--color-rule-strong); min-height: 40pt; padding: 4pt 6pt; white-space: pre-wrap; }
 }
+/* ── 모션 (motion-effects kit에서 필요한 것만) ── */
+:root {
+  --mk-accent: var(--color-blue);
+  --mk-ease-out: cubic-bezier(.22,1,.36,1); --mk-ease-in: cubic-bezier(.55,0,1,.45); --mk-ease-in-out: cubic-bezier(.65,0,.35,1);
+  --mk-fast: 160ms; --mk-base: 280ms; --mk-slow: 520ms; --mk-stagger: 45ms;
+}
+@keyframes mk-slide-up { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes mk-fade-out { from { opacity: 1; } to { opacity: 0; } }
+@keyframes mk-squash { 0% { transform: none; } 30% { transform: scale(1.07, .92); } 55% { transform: scale(.97, 1.04); } 75% { transform: scale(1.01, .99); } 100% { transform: none; } }  /* 가구 놓기: 작게 */
+@keyframes mk-wiggle { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-6px); } 40% { transform: translateX(5px); } 60% { transform: translateX(-3px); } 80% { transform: translateX(2px); } }
+@keyframes mk-turn-in { from { transform: rotate(-90deg); } to { transform: none; } }
+@keyframes mk-stamp { from { opacity: 0; transform: scale(1.5); } to { opacity: 1; transform: none; } }
+@keyframes mk-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.06); } }
+@keyframes mk-ripple { to { transform: scale(1); opacity: 0; } }
+.mk-stagger > * { animation: mk-slide-up var(--mk-base) var(--mk-ease-out) both; animation-delay: calc(var(--i, 0) * var(--mk-stagger)); }
+.mk-squash { animation: mk-squash 420ms var(--mk-ease-out); transform-origin: 50% 100%; }
+.mk-wiggle { animation: mk-wiggle 380ms var(--mk-ease-out); }
+.mk-turn { animation: mk-turn-in var(--mk-base) var(--mk-ease-in-out); }
+.mk-stamp { animation: mk-stamp var(--mk-fast) var(--mk-ease-out); }
+.mk-pulse { animation: mk-pulse 1s var(--mk-ease-in-out) 2; }
+#plan g[data-id] { transform-box: fill-box; transform-origin: 50% 50%; }
+.plan-wrap { position: relative; }
+.mk-ghost { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; animation: mk-fade-out var(--mk-slow) var(--mk-ease-in-out) both; }  /* 14 디졸브: 이전 평면도가 사라짐 */
+.occ-bar .fill, .zones .track div { transform-origin: 0 50%; }
+.btn { position: relative; overflow: hidden; isolation: isolate; }
+.mk-ripple { position: absolute; border-radius: 50%; pointer-events: none; background: currentColor; opacity: .18; transform: scale(0); animation: mk-ripple var(--mk-slow) var(--mk-ease-out) forwards; z-index: -1; }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+@media print { * { animation: none !important; transition: none !important; } .mk-ghost { display: none; } }
 </style>
 </head>
 <body>
@@ -376,6 +403,8 @@ function load() {
   try {
     const d = JSON.parse(localStorage.getItem(KEY) || 'null');
     if (d && d.current && d.current.room) { S = Object.assign(DEF(), d.current); slots = Object.assign(slots, d.slots || {}); curSlot = d.curSlot || ''; ui.zones = !!d.zones; }
+    // CONFIG에서 지운 가구가 저장돼 있으면 빼고 연다(그대로 두면 화면이 멈춤)
+    [S, ...Object.values(slots).filter(Boolean).map(s => s.data)].forEach(x => { x.items = (x.items || []).filter(i => FUR[i.t]); });
   } catch (e) { toast('저장된 배치를 읽지 못했어요. 새로 시작합니다.'); }
 }
 function persist() {
@@ -392,6 +421,21 @@ const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 
 const snap = (v) => Math.round(v / CONFIG.grid) * CONFIG.grid;
 const clone = (o) => JSON.parse(JSON.stringify(o));
 const josa = (w, a, b) => { const c = w.charCodeAt(w.length - 1) - 0xac00; return (c >= 0 && c <= 11171 && c % 28) ? w + a : w + b; };
+/* ===== 모션 도우미 (motion-effects kit 일부) — 동작 줄이기 설정이면 움직이지 않음 ===== */
+const MK = (() => {
+  const reduced = () => window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function play(el, cls) { if (!el || reduced()) return; el.classList.remove(cls); void el.getBoundingClientRect(); el.classList.add(cls); el.addEventListener('animationend', () => el.classList.remove(cls), { once: true }); }
+  function stagger(parent, { max = 20 } = {}) { if (!parent || reduced()) return; [...parent.children].forEach((c, i) => c.style.setProperty('--i', Math.min(i, max))); parent.classList.remove('mk-stagger'); void parent.offsetWidth; parent.classList.add('mk-stagger'); }
+  function ripple(root = document, selector = '.btn') {
+    root.addEventListener('pointerdown', e => {
+      const host = e.target.closest(selector); if (!host || reduced()) return;
+      const r = host.getBoundingClientRect(), d = Math.max(r.width, r.height) * 2, s = document.createElement('span'); s.className = 'mk-ripple';
+      Object.assign(s.style, { width: d + 'px', height: d + 'px', left: (e.clientX - r.left - d / 2) + 'px', top: (e.clientY - r.top - d / 2) + 'px' });
+      host.appendChild(s); s.addEventListener('animationend', () => s.remove(), { once: true });
+    });
+  }
+  return { reduced, play, stagger, ripple };
+})();
 let toastTimer;
 function toast(m) { const t = $('#toast'); t.textContent = m; t.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2400); }
 
@@ -564,6 +608,8 @@ function renderStats(A) {
     <div class="occ-cap"><span>가구 점유율 ${Math.round(A.occ)}%</span><span>참고 기준 ${CONFIG.comfortMax}% (설정에서 변경)</span></div>`;
   const zs = Object.entries(CONFIG.zones);
   $('#zones').innerHTML = zs.map(([k, z]) => { const v = A.zoneArea[k] || 0; return `<div class="z"><b>${z.name}</b><div class="track"><div style="width:${A.total ? v / A.total * 100 : 0}%;background:${z.color}"></div></div><span>${v.toFixed(2)}㎡</span></div>`; }).join('');
+  growBar($('#occ .fill'), 'occ', Math.min(100, A.occ));
+  document.querySelectorAll('#zones .track div').forEach((d, i) => growBar(d, zs[i][0], A.total ? (A.zoneArea[zs[i][0]] || 0) / A.total * 100 : 0));
   const list = A.warns.length ? A.warns : [['ok', S.items.length ? '겹침·벽 밖·문 가림 문제가 없어요.' : '아직 가구가 없어요. 오른쪽(휴대폰은 아래) 가구 목록에서 눌러 추가해 보세요.']];
   $('#warns').innerHTML = list.map(w => `<li class="${w[0]}">${esc(w[1])}</li>`).join('');
 }
@@ -611,13 +657,34 @@ function renderChecklist() {
   $('#mGood').value = S.good || ''; $('#mFix').value = S.fix || '';
   $('#pGood').textContent = S.good || ''; $('#pFix').textContent = S.fix || '';
 }
-function renderBoard() { const A = analyze(); renderPlan(A); renderStats(A); renderSel(); }
+function renderBoard() { const A = analyze(); renderPlan(A); renderStats(A); renderSel(); return A; }
 function renderAll() {
   $('#roomW').value = (S.room.w / 100).toFixed(1); $('#roomH').value = (S.room.h / 100).toFixed(1);
   $('#tZones').checked = ui.zones; $('#tDoor').checked = ui.door;
-  renderBoard(); renderLegend(); renderOpenings(); renderSlots(); renderChecklist();
+  lastBad = renderBoard().bad; renderLegend(); renderOpenings(); renderSlots(); renderChecklist();
 }
-function commit() { persist(); renderBoard(); }
+// fx: 방금 한 일에 붙일 모션('mk-squash' 놓기, 'mk-turn' 회전). 새로 생긴 겹침·벽 밖이 있으면 그 가구를 흔드는 게 먼저.
+function commit(fx) {
+  persist(); const A = renderBoard();
+  const fresh = [...A.bad].filter(id => !lastBad.has(id)); lastBad = A.bad;
+  const g = (id) => svg.querySelector(`g[data-id="${id}"]`);
+  if (fresh.length) fresh.forEach(id => MK.play(g(id), 'mk-wiggle'));
+  else if (fx && ui.sel) MK.play(g(ui.sel), fx);
+}
+let lastBad = new Set();
+// 결과 막대: 직전 길이에서 새 길이로 자람(transform만). 끄는 중·첫 그림에는 움직이지 않음
+const barPrev = {};
+function growBar(el, key, pct) {
+  const from = barPrev[key]; barPrev[key] = pct;
+  if (!el || drag || from == null || Math.abs(from - pct) < 0.5 || pct <= 0 || MK.reduced()) return;
+  el.animate([{ transform: `scaleX(${from / pct})` }, { transform: 'none' }], { duration: 420, easing: 'cubic-bezier(.65,0,.35,1)' });
+}
+// 배치안 불러오기·예시: 이전 평면도를 겹쳐 두고 서서히 사라지게(디졸브)
+function dissolvePlan(old) {
+  if (MK.reduced()) return;
+  old.removeAttribute('id'); old.removeAttribute('role'); old.setAttribute('aria-hidden', 'true'); old.classList.add('mk-ghost');
+  $('.plan-wrap').appendChild(old); old.addEventListener('animationend', () => old.remove(), { once: true });
+}
 
 /* ===== 가구 추가·조작 ===== */
 function freeSpot(t, rot = 0) {
@@ -636,12 +703,12 @@ function rotateSel() {
   const a = fp(it), cx = a.x + a.w / 2, cy = a.y + a.h / 2;
   it.rot = (it.rot + 90) % 360;
   const b = fp(it); it.x = snap(cx - b.w / 2); it.y = snap(cy - b.h / 2);
-  commit();
+  commit('mk-turn');
 }
 function dupSel() {
   const it = S.items.find(i => i.id === ui.sel); if (!it) return;
   const f = FUR[it.t], p = freeSpot(it.t, it.rot);
-  const n = { id: uid(), t: it.t, x: p.x, y: p.y, rot: it.rot }; S.items.push(n); ui.sel = n.id; commit(); toast(`${josa(f.name, '을', '를')} 하나 더 놓았어요.`);
+  const n = { id: uid(), t: it.t, x: p.x, y: p.y, rot: it.rot }; S.items.push(n); ui.sel = n.id; commit('mk-squash'); toast(`${josa(f.name, '을', '를')} 하나 더 놓았어요.`);
 }
 function delSel() { const it = S.items.find(i => i.id === ui.sel); if (!it) return; S.items = S.items.filter(i => i !== it); ui.sel = null; commit(); toast(`${josa(FUR[it.t].name, '을', '를')} 치웠어요.`); }
 $('#selbar').addEventListener('click', (e) => { const b = e.target.closest('[data-act]'); if (!b) return; ({ rot: rotateSel, dup: dupSel, del: delSel })[b.dataset.act](); });
@@ -693,13 +760,13 @@ function endDrag(e) {
     const r = svg.getBoundingClientRect();
     if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) { S.items = S.items.filter(i => i.id !== d.id); ui.sel = null; toast('평면도 위에 놓아야 추가돼요.'); }
   }
-  commit();
+  commit(d.moved ? 'mk-squash' : undefined);
 }
 window.addEventListener('pointerup', endDrag);
 window.addEventListener('pointercancel', endDrag);
 $('#palette').addEventListener('click', (e) => {
   const b = e.target.closest('[data-t]'); if (!b || suppressClick) return;
-  addItem(b.dataset.t); commit(); toast(`${josa(FUR[b.dataset.t].name, '을', '를')} 놓았어요. 끌어서 옮기세요.`);
+  addItem(b.dataset.t); commit('mk-squash'); toast(`${josa(FUR[b.dataset.t].name, '을', '를')} 놓았어요. 끌어서 옮기세요.`);
 });
 svg.addEventListener('focusin', (e) => { const g = e.target.closest('g[data-id]'); if (g && ui.sel !== g.dataset.id) { ui.sel = g.dataset.id; renderSel(); } });
 svg.addEventListener('keydown', (e) => {
@@ -717,7 +784,7 @@ function setRoom() {
   const w = Number($('#roomW').value), h = Number($('#roomH').value);
   const ok = (v) => v >= 1.5 && v <= 12;
   $('#roomW').classList.toggle('invalid', !ok(w)); $('#roomH').classList.toggle('invalid', !ok(h));
-  if (!ok(w) || !ok(h)) { $('#roomErr').style.color = 'var(--danger)'; return; }
+  if (!ok(w) || !ok(h)) { $('#roomErr').style.color = 'var(--color-red)'; return; }
   $('#roomErr').style.color = '';
   S.room.w = Math.round(w * 10) * 10; S.room.h = Math.round(h * 10) * 10;
   S.openings.forEach(fixOpening);
@@ -760,12 +827,13 @@ $('#slots').addEventListener('click', (e) => {
     if (slots[k] && curSlot !== k && !confirm(`${k}안에 이미 저장된 배치가 있어요. 지금 배치로 덮어쓸까요?`)) return;
     const d = new Date();
     slots[k] = { time: `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`, data: clone(S) };
-    curSlot = k; persist(); renderSlots(); toast(`${k}안으로 저장했어요.`);
+    curSlot = k; persist(); renderSlots(); MK.play(document.querySelector('.slot.cur .badge'), 'mk-pulse'); toast(`${k}안으로 저장했어요.`);
   }
   if (ld) {
     const k = ld.dataset.load; if (!slots[k]) return;
     if (!confirm(`${k}안을 불러올까요? 지금 화면의 배치는 저장하지 않으면 사라져요.`)) return;
-    S = Object.assign(DEF(), clone(slots[k].data)); curSlot = k; ui.sel = null; persist(); renderAll(); toast(`${k}안을 불러왔어요.`);
+    const old = svg.cloneNode(true);
+    S = Object.assign(DEF(), clone(slots[k].data)); curSlot = k; ui.sel = null; persist(); renderAll(); dissolvePlan(old); toast(`${k}안을 불러왔어요.`);
   }
 });
 $('#btnClear').addEventListener('click', () => {
@@ -775,13 +843,14 @@ $('#btnClear').addEventListener('click', () => {
 });
 $('#btnSample').addEventListener('click', () => {
   if (S.items.length && !confirm('지금 배치를 예시 배치로 바꿀까요? 저장하지 않은 배치는 사라져요.')) return;
+  const old = svg.cloneNode(true);
   S = Object.assign(DEF(), {
     room: { w: 360, h: 300 },
     openings: [ { id: 'o1', type: 'door', wall: 'bottom', pos: 260, width: 90, hinge: 'end' }, { id: 'o2', type: 'window', wall: 'top', pos: 90, width: 180 } ],
     items: [ { id: uid(), t: 'bed1', x: 0, y: 100, rot: 0 }, { id: uid(), t: 'side', x: 100, y: 100, rot: 0 }, { id: uid(), t: 'desk', x: 140, y: 0, rot: 0 },
       { id: uid(), t: 'chair', x: 175, y: 50, rot: 180 }, { id: uid(), t: 'ward', x: 300, y: 60, rot: 90 }, { id: uid(), t: 'shelf', x: 0, y: 0, rot: 0 } ]
   });
-  curSlot = ''; ui.sel = null; persist(); renderAll(); toast('예시 배치를 불러왔어요. 가구를 끌어 바꿔 보세요.');
+  curSlot = ''; ui.sel = null; persist(); renderAll(); dissolvePlan(old); toast('예시 배치를 불러왔어요. 가구를 끌어 바꿔 보세요.');
 });
 
 /* ===== 체크리스트 ===== */
@@ -789,6 +858,7 @@ $('#checklist').addEventListener('click', (e) => {
   const b = e.target.closest('[data-ci]'); if (!b) return;
   const i = b.dataset.ci; S.check[i] = S.check[i] === b.dataset.v ? undefined : b.dataset.v;
   persist(); renderChecklist();
+  if (S.check[i]) MK.play(document.querySelector(`#checklist [data-ci="${i}"][aria-pressed="true"]`), 'mk-stamp');
 });
 $('#mGood').addEventListener('input', (e) => { S.good = e.target.value; $('#pGood').textContent = S.good; persist(); });
 $('#mFix').addEventListener('input', (e) => { S.fix = e.target.value; $('#pFix').textContent = S.fix; persist(); });
@@ -820,6 +890,8 @@ $('#btnPrint').addEventListener('click', () => { ui.sel = null; renderBoard(); w
 /* ===== 시작 ===== */
 load();
 renderAll();
+MK.stagger($('#palette'));   // 가구 목록 순차 등장(첫 화면 한 번)
+MK.ripple(document, '.btn');
 </script>
 </body>
 </html>

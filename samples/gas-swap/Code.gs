@@ -151,7 +151,7 @@ function respondRequest(p) {
     }
     if (target.done || target.hidden) fail_('이 물건은 이미 교환됐거나 숨겨졌어요.');
     const offer = q.offer ? find_(items, q.offer) : null;
-    if (q.offer && (!offer || offer.done || offer.hidden)) fail_('상대가 내놓은 물건이 이미 다른 친구와 교환됐어요. 이 신청은 거절해 주세요.');
+    if (q.offer && (!offer || offer.done || offer.hidden)) fail_('상대가 내놓은 물건이 이미 교환됐거나 게시판에서 내려갔어요. 이 신청은 거절해 주세요.');
     const itemSheet = getSheet_(SHEET_ITEMS, ITEM_HEADERS);
     [target, offer].forEach(function (it) { if (it) itemSheet.getRange(it.row, I.deal + 1).setValue(DONE); });
     [target, offer].forEach(function (it) { if (it) itemSheet.getRange(it.row, I.doneAt + 1).setValue(now); });
@@ -288,10 +288,11 @@ function validateItem_(p) {
 
 function isMe_(it, who) { return it.cls === who.cls && it.alias === who.alias; }
 function find_(list, id) { return list.filter(function (x) { return x.id === id; })[0] || null; }
-function newId_() { return Utilities.getUuid().replace(/-/g, '').slice(0, 10); }
+// 'x'로 시작해야 시트가 숫자(예: 0123…, 1e5…)로 바꿔 저장하지 않아요
+function newId_() { return 'x' + Utilities.getUuid().replace(/-/g, '').slice(0, 10); }
 function cleanId_(v) {
   const s = String(v == null ? '' : v);
-  if (!/^[0-9a-f]{6,32}$/i.test(s)) fail_('잘못된 요청이에요. 새로고침해 보세요.');
+  if (!/^x?[0-9a-f]{6,32}$/i.test(s)) fail_('잘못된 요청이에요. 새로고침해 보세요.');
   return s;
 }
 /** 시트에 넣을 때 붙인 수식 방지용 ' 를 화면에 보낼 때 뗍니다. */
@@ -306,6 +307,10 @@ function getSheet_(name, headers) {
     sheet = ss.insertSheet(name);
     sheet.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold');
     sheet.setFrozenRows(1);
+    // 시각(1열)·완료시각 말고는 글자 그대로 저장: 별칭 '0012'·물건 '1/2' 같은 글이 숫자·날짜로 바뀌지 않게
+    sheet.getRange(1, 2, sheet.getMaxRows(), headers.length - 1).setNumberFormat('@');
+    if (name === SHEET_ITEMS) sheet.getRange(1, I.doneAt + 1, sheet.getMaxRows(), 1).setNumberFormat('yyyy-mm-dd hh:mm');
+    if (name === SHEET_REQS) sheet.getRange(1, R.doneAt + 1, sheet.getMaxRows(), 1).setNumberFormat('yyyy-mm-dd hh:mm');
   }
   return sheet;
 }

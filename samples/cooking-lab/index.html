@@ -155,8 +155,6 @@ table.ing tr:last-child td { border-bottom: 0; }
 .role-list .who { font-family: var(--font-display); font-weight: 800; font-size: var(--text-lg); overflow-wrap: anywhere; }
 .role-list .what b { display: block; }
 .role-list .what span { font-size: var(--text-sm); color: var(--color-ink-2); }
-.role-list.shuffling li { animation: settle 220ms var(--ease-out); }
-@keyframes settle { from { opacity: .3; } to { opacity: 1; } }
 #roleBtns { margin-top: var(--space-sm); }
 
 /* 3. 타이머 */
@@ -283,7 +281,37 @@ dialog::backdrop { background: var(--color-scrim); }
 }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 
+/* ===== 모션 (motion-effects 키트에서 필요한 것만) ===== */
+:root { --mk-accent: var(--color-accent); --mk-ease-out: cubic-bezier(.22,1,.36,1); --mk-ease-in-out: cubic-bezier(.65,0,.35,1); --mk-base: 280ms; --mk-slow: 520ms; --mk-stagger: 45ms; }
+@keyframes mk-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes mk-scale-in { from { opacity: 0; transform: scale(.92); } to { opacity: 1; transform: none; } }
+@keyframes mk-slide-up { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes mk-slide-left { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: none; } }
+@keyframes mk-wipe-in { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes mk-squash { 0% { transform: none; } 30% { transform: scale(1.12,.86); } 55% { transform: scale(.94,1.08); } 75% { transform: scale(1.03,.98); } 100% { transform: none; } }
+@keyframes mk-glitch { 0%,100% { transform: none; text-shadow: none; } 20% { transform: translate(-2px,1px); text-shadow: 2px 0 rgba(255,0,60,.6),-2px 0 rgba(0,200,255,.6); } 40% { transform: translate(2px,-1px); } 60% { transform: translate(-1px,0); text-shadow: -2px 0 rgba(255,0,60,.6),2px 0 rgba(0,200,255,.6); } 80% { transform: translate(1px,1px); } }
+@keyframes mk-pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.06); } }
+@keyframes mk-wiggle { 0%,100% { transform: translateX(0); } 20% { transform: translateX(-6px); } 40% { transform: translateX(5px); } 60% { transform: translateX(-3px); } 80% { transform: translateX(2px); } }
+@keyframes mk-ripple { to { transform: scale(1); opacity: 0; } }
+@keyframes mk-particle { to { transform: translate(var(--dx),var(--dy)) rotate(var(--rot)); opacity: 0; } }
+.mk-fade-in { animation: mk-fade-in var(--mk-base) var(--mk-ease-out) both; }
+.mk-scale-in { animation: mk-scale-in var(--mk-base) var(--mk-ease-out) both; }
+.mk-slide-up { animation: mk-slide-up var(--mk-base) var(--mk-ease-out) both; }
+.mk-slide-left { animation: mk-slide-left var(--mk-base) var(--mk-ease-out) both; }
+.mk-wipe-in { animation: mk-wipe-in var(--mk-slow) var(--mk-ease-in-out) both; }
+.mk-stagger > * { animation: mk-slide-up var(--mk-base) var(--mk-ease-out) both; animation-delay: calc(var(--i,0) * var(--mk-stagger)); }
+.mk-squash { animation: mk-squash 520ms var(--mk-ease-out); transform-origin: 50% 100%; }
+.mk-glitch { animation: mk-glitch 360ms steps(2,end) 1; }
+.mk-wiggle { animation: mk-wiggle 380ms var(--mk-ease-out); }
+.mk-pulse-loop { animation: mk-pulse 1s var(--mk-ease-in-out) infinite; }
+.timer-card .clock { transform-origin: left center; }
+.btn { position: relative; overflow: hidden; isolation: isolate; }
+.mk-ripple { position: absolute; border-radius: 50%; pointer-events: none; background: currentColor; opacity: .18; transform: scale(0); animation: mk-ripple 520ms var(--mk-ease-out) forwards; z-index: -1; }
+.mk-particle { position: fixed; width: 7px; height: 7px; border-radius: 2px; pointer-events: none; z-index: 9999; background: var(--mk-accent); animation: mk-particle 800ms var(--mk-ease-out) forwards; }
+@media (prefers-reduced-motion: reduce) { .mk-pulse-loop { animation: none !important; } }
+
 @media print {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
   @page { size: A4; margin: 14mm; }
   html.big { font-size: 100%; }
   body { background: var(--color-card); font-size: 11pt; }
@@ -519,22 +547,52 @@ dialog::backdrop { background: var(--color-scrim); }
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script>
+/* ===== 모션 도우미 (motion-effects 키트에서 필요한 함수만, 동작 줄이기면 즉시 끝) ===== */
+const MK = (() => {
+  const reduced = () => window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function play(el, cls) { if (!el || reduced()) return; el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); el.addEventListener('animationend', () => el.classList.remove(cls), { once: true }); }
+  function stagger(parent, { max = 20 } = {}) { if (!parent || reduced()) return; [...parent.children].forEach((c, i) => c.style.setProperty('--i', Math.min(i, max))); parent.classList.remove('mk-stagger'); void parent.offsetWidth; parent.classList.add('mk-stagger'); clearTimeout(parent._mkT); parent._mkT = setTimeout(() => parent.classList.remove('mk-stagger'), 400 + 45 * Math.min(parent.children.length, max)); } /* 끝나면 클래스 제거: 다시 그릴 때 또 움직이지 않게 */
+  function scramble(el, text, { duration = 700, pool = '가나다라마바사아자차카타파하조리손질위생정리기록' } = {}) {
+    if (!el) return; if (reduced()) { el.textContent = text; return; }
+    const chars = [...text], start = performance.now(), P = [...pool];
+    (function frame(now) { const p = Math.min(1, (now - start) / duration), fixed = Math.floor(p * chars.length);
+      el.textContent = chars.map((c, i) => i < fixed || c === ' ' || c === '+' ? c : P[(Math.random() * P.length) | 0]).join('');
+      p < 1 ? requestAnimationFrame(frame) : (el.textContent = text); })(start);
+  }
+  function ripple(root, selector) {
+    root.addEventListener('pointerdown', e => { const host = e.target.closest(selector); if (!host || host.disabled || reduced()) return;
+      const r = host.getBoundingClientRect(), d = Math.max(r.width, r.height) * 2, s = document.createElement('span'); s.className = 'mk-ripple';
+      Object.assign(s.style, { width: d + 'px', height: d + 'px', left: (e.clientX - r.left - d / 2) + 'px', top: (e.clientY - r.top - d / 2) + 'px' });
+      host.appendChild(s); s.addEventListener('animationend', () => s.remove(), { once: true }); });
+  }
+  function burstAt(el, { count = 18, colors } = {}) {
+    if (!el || reduced()) return; const r = el.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2;
+    for (let i = 0; i < count; i++) { const p = document.createElement('i'); p.className = 'mk-particle';
+      const a = (Math.PI * 2 * i) / count + Math.random() * .4, dist = 50 + Math.random() * 60;
+      p.style.left = x + 'px'; p.style.top = y + 'px'; p.style.setProperty('--dx', Math.cos(a) * dist + 'px'); p.style.setProperty('--dy', Math.sin(a) * dist + 'px'); p.style.setProperty('--rot', (Math.random() * 360) + 'deg');
+      if (colors) p.style.background = colors[i % colors.length];
+      document.body.appendChild(p); p.addEventListener('animationend', () => p.remove(), { once: true }); }
+  }
+  return { reduced, play, stagger, scramble, ripple, burstAt };
+})();
+MK.ripple(document, '.btn');
+
 /* ===== 설정: 기본 레시피 (양은 1인분 기준) ===== */
 const DEFAULT_RECIPES = [
-  { id: 'kimchi-rice', emoji: '🍳', name: '김치볶음밥', desc: '썰기·볶기 기본기를 한 번에', allergy: '달걀, 돼지고기(햄), 대두, 밀',
+  { id: 'kimchi-rice', emoji: '🍳', name: '김치볶음밥', desc: '썰기·볶기 기본기를 한 번에', allergy: '달걀, 돼지고기(햄), 대두, 밀, 새우(김치 젓갈)',
     ings: [['밥', 210, 'g'], ['배추김치', 60, 'g'], ['햄(또는 참치)', 30, 'g'], ['양파', 0.25, '개'], ['대파', 10, 'g'], ['달걀', 1, '개'], ['식용유', 1, '큰술'], ['참기름', 0.5, '작은술'], ['김가루', null, '약간']],
     steps: [
       ['손을 씻고 양파·대파를 씻어 준비한다', 3, ''],
       ['김치·양파·햄은 사방 1cm로, 대파는 송송 썬다', 7, '칼질은 고양이 손! 칼끝은 아래로, 칼을 들고 돌아다니지 않아요'],
       ['팬에 식용유를 두르고 대파를 볶아 파기름을 낸다', 2, '기름이 튈 수 있어요. 팬 손잡이가 조리대 밖으로 나오지 않게'],
-      ['양파·햄·김치를 넣고 김치가 투명해질 때까지 볶는다', 4, '불 앞을 비우지 말기 — 자리를 뜰 땐 불을 끄고'],
+      ['양파·햄·김치를 넣고 양파가 투명해질 때까지 볶는다', 4, '불 앞을 비우지 말기 — 자리를 뜰 땐 불을 끄고'],
       ['밥을 넣고 고루 섞어 볶은 뒤 참기름으로 마무리한다', 4, ''],
       ['달걀프라이를 올리고 김가루를 뿌려 담는다', 4, '다 쓴 화구는 바로 끄고 중간 밸브까지 잠그기']],
     safety: ['칼은 사용 후 바로 칼꽂이에', '뜨거운 팬은 맨손으로 잡지 않기', '가스 냄새가 나면 즉시 선생님께'] },
   { id: 'sandwich', emoji: '🥪', name: '달걀 샌드위치', desc: '불 사용이 적은 첫 실습용', allergy: '달걀, 밀, 우유, 돼지고기(햄), 대두, 토마토',
     ings: [['식빵', 2, '장'], ['달걀', 1, '개'], ['슬라이스 햄', 1, '장'], ['슬라이스 치즈', 1, '장'], ['양상추', 2, '장'], ['토마토', 0.25, '개'], ['오이', 0.25, '개'], ['마요네즈', 1, '큰술'], ['소금·후추', null, '약간']],
     steps: [
-      ['냄비에 달걀이 잠길 만큼 물을 붓고 12분 삶는다', 12, '끓는 물에 달걀은 국자로 살살 넣기 — 화상 주의'],
+      ['물이 끓으면 달걀을 넣고 12분 삶는다', 12, '끓는 물에 달걀은 국자로 살살 넣기 — 화상 주의'],
       ['그동안 양상추·토마토·오이를 씻어 물기를 뺀다', 4, ''],
       ['토마토·오이를 얇게 썬다', 5, '둥근 채소는 반으로 갈라 평평한 면을 도마에 대고 썰기'],
       ['삶은 달걀을 찬물에 식혀 껍질을 까고 으깬 뒤 마요네즈·소금·후추와 섞는다', 4, ''],
@@ -626,6 +684,8 @@ function goTab(name) {
   $('.tab[aria-selected="true"]').scrollIntoView({ inline: 'center', block: 'nearest' });
   $$('.panel').forEach(p => p.classList.toggle('active', p.id === 'panel-' + name));
   render();
+  MK.play($('#panel-' + name), 'mk-slide-up');                 // 탭 전환 → 슬라이드 인
+  if (name === 'recipe') MK.stagger($('#recipeGrid'));          // 레시피 카드 → 순차 등장
   window.scrollTo({ top: 0 });
 }
 $('#tabs').addEventListener('click', e => { const t = e.target.closest('.tab'); if (t) goTab(t.dataset.tab); });
@@ -646,7 +706,7 @@ function renderRecipes() {
 }
 $('#recipeGrid').addEventListener('click', e => {
   const c = e.target.closest('.recipe-card'); if (!c) return;
-  if (st.recipeId !== c.dataset.id) { st.recipeId = c.dataset.id; st.step = 0; st.remain = null; stopTimer(); }
+  if (st.recipeId !== c.dataset.id) { stopTimer(); ended = false; st.recipeId = c.dataset.id; st.step = 0; st.remain = null; persist(); }
   goTab('prep');
 });
 
@@ -676,7 +736,7 @@ function renderRoles(anim) {
   const names = members();
   list.innerHTML = st.roles.map((rs, i) => `<li><span class="who">${esc(names[i])}</span><span class="what"><b>${esc(rs.map(r => r[0]).join(' + '))}</b><span>${esc(rs.map(r => r[1]).join(' / '))}</span></span></li>`).join('');
   $('#btnRoll').textContent = '다시 뽑기';
-  if (anim) { list.classList.remove('shuffling'); void list.offsetWidth; list.classList.add('shuffling'); }
+  if (anim) $$('.what b', list).forEach(b => MK.scramble(b, b.textContent)); // 역할 뽑기 → 스크램블
 }
 function rollRoles() {
   const n = st.people, order = [...Array(n).keys()];
@@ -687,7 +747,7 @@ function rollRoles() {
   st.roles = out; persist(); renderRoles(true);
 }
 $('#btnRoll').addEventListener('click', rollRoles);
-function setPeople(n) { st.people = Math.min(12, Math.max(1, n)); persist(); renderPrep(); }
+function setPeople(n) { st.people = Math.min(12, Math.max(1, n)); persist(); renderPrep(); $$('#ingBody td.scaled').forEach(td => MK.play(td, 'mk-fade-in')); }
 $('#pMinus').addEventListener('click', () => setPeople(st.people - 1));
 $('#pPlus').addEventListener('click', () => setPeople(st.people + 1));
 $('#inClass').addEventListener('input', e => { st.cls = e.target.value; persist(); });
@@ -701,10 +761,10 @@ function remain() { return running ? endAt - Date.now() : (st.remain ?? stepMs(s
 function startTimer() {
   try { audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)(); audioCtx.resume(); } catch (e) { /* 소리 없이 진행 */ }
   if (remain() <= 0) st.remain = stepMs(st.step);
-  endAt = Date.now() + remain(); ended = false; running = true;
+  endAt = Date.now() + remain(); ended = false; running = true; st.endAt = endAt; persist();
   tick = setInterval(onTick, 250); renderTimer();
 }
-function stopTimer() { if (running) { st.remain = Math.max(0, endAt - Date.now()); persist(); } running = false; clearInterval(tick); }
+function stopTimer() { if (running) { st.remain = Math.max(0, endAt - Date.now()); } st.endAt = null; persist(); running = false; clearInterval(tick); }
 function onTick() {
   if (endAt - Date.now() <= 0) { stopTimer(); st.remain = 0; persist(); ended = true; alarm(); }
   renderTimer();
@@ -712,6 +772,8 @@ function onTick() {
 function gotoStep(i) {
   const r = recipe(); stopTimer(); ended = false;
   st.step = Math.max(0, Math.min(r.steps.length - 1, i)); st.remain = null; persist(); renderTimer();
+  ['#tText', '#boText'].forEach(s => MK.play($(s), 'mk-slide-left'));   // 단계 바뀜 → 슬라이드 인
+  setTimeout(() => ['#tCaution', '#boCaution'].forEach(s => { if (!$(s).hidden) MK.play($(s), 'mk-glitch'); }), 300); // 안전 주의 → 글리치 1회(슬라이드 뒤에)
 }
 function alarm() {
   try {
@@ -741,6 +803,7 @@ function renderTimer() {
   $('#boTitle').textContent = r.name + (st.group ? ` · ${st.group}모둠` : '');
   [['#tClock', '#tSub'], ['#boClock', '#boSub']].forEach(([c, s]) => {
     $(c).textContent = mmss(left); $(c).classList.toggle('ended', ended);
+    $(c).classList.toggle('mk-pulse-loop', running && left > 0 && left <= 10000); // 마지막 10초 → 펄스 반복, 끝나면 멈추고 기존 깜빡임만
     $(s).textContent = sub; $(s).classList.toggle('ended', ended);
   });
   $('#tBar').style.width = (total ? Math.min(100, (1 - left / total) * 100) : 0) + '%';
@@ -763,7 +826,7 @@ document.addEventListener('click', e => {
 $('#stepList').addEventListener('click', e => { const b = e.target.closest('[data-step]'); if (b) gotoStep(+b.dataset.step); });
 function closeBig() { $('#bigOverlay').classList.remove('open'); try { if (document.fullscreenElement) document.exitFullscreen(); } catch (e) {} }
 $('#btnTv').addEventListener('click', () => {
-  $('#bigOverlay').classList.add('open'); renderTimer();
+  $('#bigOverlay').classList.add('open'); renderTimer(); MK.play($('#bigOverlay'), 'mk-fade-in');
   try { const p = document.documentElement.requestFullscreen?.(); p && p.catch(() => {}); } catch (e) {}
 });
 $('#boClose').addEventListener('click', closeBig);
@@ -775,6 +838,7 @@ document.addEventListener('keydown', e => {
 
 /* ===== 4. 체크리스트 ===== */
 const allItems = () => CHECKLIST.flatMap(([, items]) => items);
+let checkBurst = false; // 파티클은 한 화면 한 번
 function renderChecks() {
   $('#checkWrap').innerHTML = CHECKLIST.map(([g, items]) => `<div class="check-group"><h4>${esc(g)}</h4>${items.map(it =>
     `<label class="check ${st.checks[it] ? 'on' : ''}"><input type="checkbox" data-item="${esc(it)}" ${st.checks[it] ? 'checked' : ''}><span>${esc(it)}</span></label>`).join('')}</div>`).join('');
@@ -795,8 +859,11 @@ $('#checkWrap').addEventListener('change', e => {
   if (!e.target.checked) st.completedAt = null;
   e.target.closest('.check').classList.toggle('on', e.target.checked);
   persist(); updateCheckProgress();
+  const all = allItems();
+  if (e.target.checked && all.every(i => st.checks[i]) && !checkBurst) { checkBurst = true; MK.burstAt($('#btnComplete')); } // 12항목 모두 → 파티클 1회
+  else if (e.target.checked) MK.play(e.target, 'mk-squash');                             // 한 항목 체크 → 스쿼시
 });
-$('#btnComplete').addEventListener('click', () => { st.completedAt = Date.now(); persist(); updateCheckProgress(); toast('실습 완료! 기록지로 이동해요'); setTimeout(() => goTab('sheet'), 900); });
+$('#btnComplete').addEventListener('click', () => { st.completedAt = Date.now(); persist(); updateCheckProgress(); MK.play($('#doneMsg'), 'mk-wipe-in'); toast('실습 완료! 기록지로 이동해요'); setTimeout(() => goTab('sheet'), 900); });
 
 /* ===== 5. 기록지 ===== */
 function renderSheet() {
@@ -861,7 +928,7 @@ $('#editView').addEventListener('submit', e => {
   e.preventDefault(); const f = e.target;
   const ings = lines(f.ings.value).map(l => { const [n, v, u] = l.split('|').map(x => (x || '').trim()); const num = parseFloat(v); return [n, isNaN(num) ? null : num, u || (isNaN(num) ? '적당량' : '')]; }).filter(x => x[0]);
   const steps = lines(f.steps.value).map(l => { const [t, m, c] = l.split('|').map(x => (x || '').trim()); return [t, Math.max(0.5, parseFloat(m) || 3), c || '']; }).filter(x => x[0]);
-  if (!steps.length) { toast('조리 단계를 한 줄 이상 적어 주세요'); f.steps.focus(); return; }
+  if (!steps.length) { toast('조리 단계를 한 줄 이상 적어 주세요'); f.steps.focus(); MK.play(f.steps, 'mk-wiggle'); return; }
   const data = { id: editingId || 'r' + Date.now().toString(36), name: f.name.value.trim(), emoji: f.emoji.value.trim() || '🍽️', desc: f.desc.value.trim(), allergy: f.allergy.value.trim(), ings, steps, safety: lines(f.safety.value) };
   const i = recipes.findIndex(x => x.id === data.id);
   i >= 0 ? recipes[i] = data : recipes.push(data);
@@ -869,7 +936,7 @@ $('#editView').addEventListener('submit', e => {
   save(KEY_RECIPES, recipes); renderManage(); render(); toast('레시피를 저장했어요');
 });
 $('#btnCancelEdit').addEventListener('click', renderManage);
-$('#btnManage').addEventListener('click', () => { renderManage(); dlg.showModal(); });
+$('#btnManage').addEventListener('click', () => { renderManage(); dlg.showModal(); MK.play(dlg, 'mk-scale-in'); });
 dlg.addEventListener('click', e => {
   if (e.target === dlg || e.target.closest('[data-close]')) dlg.close();
   const ed = e.target.closest('[data-edit]'); if (ed) openEdit(ed.dataset.edit);
@@ -878,7 +945,7 @@ dlg.addEventListener('click', e => {
     const r = recipes.find(x => x.id === del.dataset.del);
     if (!confirm(`‘${r.name}’ 레시피를 삭제할까요?`)) return;
     recipes = recipes.filter(x => x !== r); save(KEY_RECIPES, recipes);
-    if (st.recipeId === r.id) { st.recipeId = null; persist(); }
+    if (st.recipeId === r.id) { stopTimer(); st.recipeId = null; persist(); }
     renderManage(); render();
   }
 });
@@ -893,17 +960,17 @@ $('#fileImport').addEventListener('change', async e => {
   const file = e.target.files[0]; e.target.value = ''; if (!file) return;
   try {
     const data = JSON.parse(await file.text());
-    if (!Array.isArray(data) || !data.every(r => r && r.name && Array.isArray(r.ings) && Array.isArray(r.steps))) throw new Error('형식');
+    if (!Array.isArray(data) || !data.every(r => r && r.name && Array.isArray(r.ings) && Array.isArray(r.steps) && r.ings.every(Array.isArray) && r.steps.every(Array.isArray))) throw new Error('형식');
     if (!confirm(`레시피 ${data.length}개를 불러와 지금 목록을 바꿀까요?`)) return;
     recipes = data.map(r => Object.assign({ id: 'r' + Math.random().toString(36).slice(2, 8), emoji: '🍽️', desc: '', safety: [], allergy: '' }, r));
-    if (!recipes.some(r => r.id === st.recipeId)) { st.recipeId = null; persist(); }
+    if (!recipes.some(r => r.id === st.recipeId)) { stopTimer(); st.recipeId = null; persist(); }
     save(KEY_RECIPES, recipes); renderManage(); render(); toast('레시피를 불러왔어요');
   } catch (err) { toast('이 파일은 레시피 JSON이 아니에요. [JSON 내보내기]로 만든 파일을 고르세요'); }
 });
 $('#btnResetRecipes').addEventListener('click', () => {
   if (!confirm('직접 추가·수정한 레시피가 모두 사라지고 기본 4개로 돌아갑니다. 계속할까요?')) return;
   recipes = clone(DEFAULT_RECIPES); save(KEY_RECIPES, recipes);
-  if (!recipe()) { st.recipeId = null; persist(); }
+  if (!recipe()) { stopTimer(); st.recipeId = null; persist(); }
   renderManage(); render(); toast('기본 레시피로 되돌렸어요');
 });
 
@@ -924,6 +991,11 @@ function render() {
 }
 window.addEventListener('beforeprint', () => { if (recipe()) renderSheet(); });
 setBig(load('cookingLab.big', false));
+/* 새로고침해도 돌던 타이머 이어 가기 (소리는 브라우저 정책상 다시 [시작]을 눌러야 날 수 있음) */
+if (st.endAt && recipe()) {
+  if (st.endAt > Date.now()) { endAt = st.endAt; running = true; tick = setInterval(onTick, 250); }
+  else { st.remain = 0; st.endAt = null; ended = true; persist(); }
+}
 goTab(recipe() ? st.tab : 'recipe');
 </script>
 </body>

@@ -243,6 +243,34 @@ table.tot .act .sw { width: 14px; height: 14px; border: 1px solid var(--color-in
 .print-only { display: none; }
 @media (prefers-reduced-motion: reduce) { * { transition-duration: 1ms !important; } }
 
+/* ── 모션 (motion-effects kit에서 필요한 것만) ── */
+:root { --mk-accent: var(--color-accent); --mk-ease-out: cubic-bezier(.22,1,.36,1); --mk-ease-in-out: cubic-bezier(.65,0,.35,1); --mk-base: 280ms; --mk-slow: 520ms; --mk-stagger: 45ms; }
+@keyframes mk-fade-in { from { opacity: 0 } to { opacity: 1 } }
+@keyframes mk-slide-up { from { opacity: 0; transform: translateY(14px) } to { opacity: 1; transform: none } }
+@keyframes mk-scale-in { from { opacity: 0; transform: scale(.92) } to { opacity: 1; transform: none } }
+@keyframes mk-wiggle { 0%,100% { transform: translateX(0) } 20% { transform: translateX(-6px) } 40% { transform: translateX(5px) } 60% { transform: translateX(-3px) } 80% { transform: translateX(2px) } }
+@keyframes mk-glitch { 0%,100% { transform: none; text-shadow: none } 20% { transform: translate(-2px,1px); text-shadow: 2px 0 rgba(255,0,60,.6),-2px 0 rgba(0,200,255,.6) } 40% { transform: translate(2px,-1px) } 60% { transform: translate(-1px,0); text-shadow: -2px 0 rgba(255,0,60,.6),2px 0 rgba(0,200,255,.6) } 80% { transform: translate(1px,1px) } }
+@keyframes mk-squash { 0% { transform: none } 30% { transform: scale(1.12,.86) } 55% { transform: scale(.94,1.08) } 75% { transform: scale(1.03,.98) } 100% { transform: none } }
+@keyframes mk-ripple { to { transform: scale(1); opacity: 0 } }
+@keyframes mk-grow-x { from { transform: scaleX(0) } to { transform: none } }
+@keyframes mk-grow-y { from { transform: scaleY(0) } to { transform: none } }
+.mk-fade-in { animation: mk-fade-in var(--mk-base) var(--mk-ease-out) both; }
+.mk-slide-up { animation: mk-slide-up var(--mk-base) var(--mk-ease-out) both; }
+.mk-scale-in { animation: mk-scale-in var(--mk-base) var(--mk-ease-out) both; }
+.mk-wiggle { animation: mk-wiggle 380ms var(--mk-ease-out); }
+.mk-glitch { animation: mk-glitch 360ms steps(2,end) 1; }
+.mk-squash { animation: mk-squash 520ms var(--mk-ease-out); transform-origin: 50% 100%; }
+.mk-stagger > * { animation: mk-slide-up var(--mk-base) var(--mk-ease-out) both; animation-delay: calc(var(--i,0) * var(--mk-stagger)); }
+.btn, .pal, .seg button { position: relative; overflow: hidden; isolation: isolate; }
+.mk-ripple { position: absolute; border-radius: 50%; pointer-events: none; background: currentColor; opacity: .18; transform: scale(0); animation: mk-ripple 520ms var(--mk-ease-out) forwards; z-index: -1; }
+/* 시트를 바꾸거나 샘플을 불러올 때만: 활동 막대(가로) → 수면 막대(세로)가 차례로 자라남 */
+.ana.mk-grow .hbar i { transform-origin: 0 50%; animation: mk-grow-x var(--mk-slow) var(--mk-ease-out) both; animation-delay: calc(var(--i,0) * 40ms); }
+.ana.mk-grow .sleep-days .b { transform-origin: 50% 100%; animation: mk-grow-y var(--mk-slow) var(--mk-ease-out) both; animation-delay: calc(var(--i,0) * 60ms + .35s); }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; animation-delay: 0s !important; }
+}
+@media print { * { animation: none !important; transition: none !important; } }
+
 /* ── 인쇄: A4 ─────────────── */
 @media print {
   @page { size: A4 portrait; margin: 10mm; }
@@ -454,8 +482,19 @@ const swatch = (a) => `<span class="sw pt-${a.pattern}" style="--act: var(${a.co
 /* ── 상태·저장 ── */
 const blank = () => ({ view: 'actual', brush: CONFIG.activities[0].id, locked: false, plan: Array(N).fill(''), actual: Array(N).fill(''), todos: [], goals: ['', '', ''] });
 let S;
+// 저장본·불러온 파일 검사: 시간표 두 장이 칸 수와 맞아야 하고, 할 일·목표는 모양을 맞춰 둬요
+function normalize(d) {
+  if (!d || !Array.isArray(d.plan) || d.plan.length !== N) return null;
+  const sheet = (a) => (Array.isArray(a) && a.length === N ? a.map((v) => (ACT[v] ? v : '')) : Array(N).fill(''));
+  const b = blank();
+  return { ...b, ...d, plan: sheet(d.plan), actual: sheet(d.actual),
+    view: ['plan', 'actual', 'compare'].includes(d.view) ? d.view : b.view,
+    brush: d.brush === '' || ACT[d.brush] ? d.brush : b.brush,
+    todos: Array.isArray(d.todos) ? d.todos.filter((t) => t && t.text && [1, 2, 3, 4].includes(+t.q)).map((t, i) => ({ id: String(t.id || 'f' + i), text: String(t.text).slice(0, 40), q: +t.q })) : [],
+    goals: [0, 1, 2].map((i) => (Array.isArray(d.goals) ? String(d.goals[i] ?? '').slice(0, 60) : '')) };
+}
 function load() {
-  try { const d = JSON.parse(localStorage.getItem(CONFIG.storageKey) || 'null'); if (d && d.plan && d.plan.length === N) return { ...blank(), ...d }; } catch (e) {}
+  try { const d = normalize(JSON.parse(localStorage.getItem(CONFIG.storageKey) || 'null')); if (d) return d; } catch (e) {}
   return blank();
 }
 function save() { try { localStorage.setItem(CONFIG.storageKey, JSON.stringify(S)); } catch (e) { say('브라우저 저장이 막혀 있어요. 파일로 저장을 이용하세요.'); } }
@@ -466,6 +505,49 @@ function say(msg, undo) {
   el.classList.add('on'); clearTimeout(sayT); sayT = setTimeout(() => el.classList.remove('on'), undo ? 6000 : 2600);
 }
 const paintSheet = () => (S.view === 'plan' ? 'plan' : 'actual');   // 비교 화면에서는 실제를 칠해요
+
+/* ── 모션 도우미 (motion-effects kit에서 필요한 것만) — 동작 줄이기 설정이면 바로 끝 상태 ── */
+const MK = (() => {
+  const reduced = () => window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function play(el, cls) {
+    if (!el || reduced()) return;
+    el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls);
+    const done = (e) => { if (e.target !== el) return; el.classList.remove(cls); el.removeEventListener('animationend', done); };
+    el.addEventListener('animationend', done);
+  }
+  // 순차 등장 — 끝나면 클래스를 떼서 다음 렌더 때 다시 움직이지 않게
+  function stagger(parent, { max = 20 } = {}) {
+    if (!parent || reduced()) return;
+    const kids = [...parent.children]; kids.forEach((c, i) => c.style.setProperty('--i', Math.min(i, max)));
+    parent.classList.remove('mk-stagger'); void parent.offsetWidth; parent.classList.add('mk-stagger');
+    setTimeout(() => parent.classList.remove('mk-stagger'), Math.min(kids.length, max) * 45 + 400);
+  }
+  function ripple(root = document, selector = '.btn, .pal, .seg button') {
+    root.addEventListener('pointerdown', (e) => {
+      const host = e.target.closest(selector); if (!host || reduced()) return;
+      const r = host.getBoundingClientRect(), d = Math.max(r.width, r.height) * 2;
+      const s = document.createElement('span'); s.className = 'mk-ripple';
+      Object.assign(s.style, { width: d + 'px', height: d + 'px', left: (e.clientX - r.left - d / 2) + 'px', top: (e.clientY - r.top - d / 2) + 'px' });
+      host.appendChild(s); s.addEventListener('animationend', () => s.remove(), { once: true });
+    });
+  }
+  function countUp(el, to, { from = 0, duration = 700, format = (n) => Math.round(n) } = {}) {
+    if (!el) return;
+    if (reduced() || from === to) { el.textContent = format(to); return; }
+    const start = performance.now(), ease = (t) => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    (function f(now) { if (!el.isConnected) return; const p = Math.min(1, (now - start) / duration); el.textContent = format(from + (to - from) * ease(p)); if (p < 1) requestAnimationFrame(f); })(start);
+  }
+  return { reduced, play, stagger, ripple, countUp };
+})();
+MK.ripple();
+let growNext = false, statPrev = [], wasLow = false;
+// 큰 변화(시트 바꾸기·샘플·불러오기) 다음 분석 렌더에서만 막대를 자라게
+function growAnalysis() {
+  const ana = $('.ana'); if (MK.reduced()) return;
+  ana.classList.remove('mk-grow'); void ana.offsetWidth; ana.classList.add('mk-grow');
+  clearTimeout(growAnalysis.t); growAnalysis.t = setTimeout(() => ana.classList.remove('mk-grow'), 1600);
+  MK.stagger($('#notes'));
+}
 
 /* ── 격자 ── */
 function buildGrid() {
@@ -502,7 +584,7 @@ function renderPalette() {
   $('#qAct').innerHTML = CONFIG.activities.map((a) => `<option value="${a.id}">${a.name}</option>`).join('') + '<option value="">지우기</option>';
   $('#qDays').innerHTML = CONFIG.days.map((d, i) => `<label><input type="checkbox" value="${i}" ${i < 5 ? 'checked' : ''}>${d}</label>`).join('');
 }
-$('#palette').addEventListener('click', (e) => { const b = e.target.closest('.pal'); if (!b) return; S.brush = b.dataset.act; $('#qAct').value = S.brush; save(); $$('.pal').forEach((p) => p.setAttribute('aria-pressed', p === b)); });
+$('#palette').addEventListener('click', (e) => { const b = e.target.closest('.pal'); if (!b) return; S.brush = b.dataset.act; $('#qAct').value = S.brush; save(); $$('.pal').forEach((p) => p.setAttribute('aria-pressed', p === b)); MK.play($('.sw', b), 'mk-squash'); });
 
 // 끌어서 네모 범위 칠하기 (마우스·터치·펜 공통)
 let drag = null;
@@ -540,15 +622,16 @@ $('#quickForm').addEventListener('submit', (e) => {
   else if (!f || !t) msg = '시작과 끝 시각을 넣으세요.';
   else if (rowOf(f) % 1 || rowOf(t) % 1) msg = '시각은 30분 단위(예: 22:30)로 넣어 주세요.';
   else if (f === t) msg = '시작과 끝이 같아요.';
-  $('#qErr').textContent = msg; if (msg) return;
+  $('#qErr').textContent = msg; if (msg) { MK.play($('#qErr'), 'mk-wiggle'); return; }
   const a = rowOf(f), b = rowOf(t) || ROWS;
-  if (b <= a) { $('#qErr').textContent = `하루는 ${timeOf(0)}에 시작해요. ${timeOf(0)}을 넘는 범위는 두 번에 나눠 칠해 주세요.`; return; }
+  if (b <= a) { $('#qErr').textContent = `하루는 ${timeOf(0)}에 시작해요. ${timeOf(0)}을 넘는 범위는 두 번에 나눠 칠해 주세요.`; MK.play($('#qErr'), 'mk-wiggle'); return; }
   const list = []; days.forEach((d) => { for (let r = a; r < b; r++) list.push(idx(d, r)); });
   const undo = commit(list, $('#qAct').value);
   say(`${days.map((d) => CONFIG.days[d]).join('·')} ${f}~${t} 칠했어요.`, undo);
 });
 
-$('.seg').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; S.view = b.dataset.sheet; save(); renderAll(); });
+$('.seg').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; S.view = b.dataset.sheet; save(); renderAll();
+  MK.play($('#tgrid'), 'mk-fade-in'); growAnalysis(); });   // 시트 전환: 시간표 페이드 + 분석 막대 다시 자라기
 $('#lockBtn').addEventListener('click', () => { S.locked = !S.locked; save(); renderGrid(); });
 $('#clearBtn').addEventListener('click', () => {
   const key = paintSheet(), before = S[key].slice();
@@ -589,20 +672,27 @@ function renderAnalysis() {
     match = both ? Math.round(same / both * 100) : 0;
   }
   $('#stats').innerHTML = `
-    <div class="stat${low ? ' warn' : ''}"><span class="k">하루 평균 수면</span><span class="v">${fmtH(A.sleepAvg)}<small>시간</small></span></div>
-    <div class="stat"><span class="k">미디어 비중</span><span class="v">${Math.round(A.mediaShare * 100)}<small>% · 깨어 있는 시간 중</small></span></div>
-    <div class="stat"><span class="k">하루 평균 미디어</span><span class="v">${fmtH(h(A.media) / A.days)}<small>시간</small></span></div>
-    ${cmp ? `<div class="stat"><span class="k">계획과 같은 칸</span><span class="v">${match}<small>%</small></span></div>`
-          : `<div class="stat"><span class="k">기록한 시간</span><span class="v">${fmtH(h(A.filled))}<small>/ 168시간</small></span></div>`}`;
+    <div class="stat${low ? ' warn' : ''}"><span class="k">하루 평균 수면</span><span class="v"><span data-n="${A.sleepAvg}" data-h>${fmtH(A.sleepAvg)}</span><small>시간</small></span></div>
+    <div class="stat"><span class="k">미디어 비중</span><span class="v"><span data-n="${Math.round(A.mediaShare * 100)}">${Math.round(A.mediaShare * 100)}</span><small>% · 깨어 있는 시간 중</small></span></div>
+    <div class="stat"><span class="k">하루 평균 미디어</span><span class="v"><span data-n="${h(A.media) / A.days}" data-h>${fmtH(h(A.media) / A.days)}</span><small>시간</small></span></div>
+    ${cmp ? `<div class="stat"><span class="k">계획과 같은 칸</span><span class="v"><span data-n="${match}">${match}</span><small>%</small></span></div>`
+          : `<div class="stat"><span class="k">기록한 시간</span><span class="v"><span data-n="${h(A.filled)}" data-h>${fmtH(h(A.filled))}</span><small>/ 168시간</small></span></div>`}`;
+  // 숫자는 직전 값에서 올라가거나 내려가며 바뀜(countUp)
+  const nums = $$('#stats [data-n]');
+  nums.forEach((el, k) => { const to = +el.dataset.n; MK.countUp(el, to, { from: statPrev[k] ?? 0, format: el.hasAttribute('data-h') ? fmtH : Math.round }); });
+  statPrev = nums.map((el) => +el.dataset.n);
+  // 권장보다 적게 자게 된 순간에만 경고 글리치 1회
+  if (low && !wasLow) MK.play($('#stats .stat.warn .v'), 'mk-glitch');
+  wasLow = low;
 
   // 활동별 합계
   const max = Math.max(1, ...CONFIG.activities.map((a) => Math.max(A.tot[a.id], cmp ? P.tot[a.id] : 0)));
   $('#totSub').textContent = cmp ? '막대 = 실제 · 테두리 = 계획' : `${A.days}일 기록 기준 하루 평균`;
   $('#totTable').innerHTML = `<thead><tr><th>활동</th><th style="width:40%"><span class="${cmp ? '' : 'hidden'}">실제 / 계획</span></th><th class="n">주간</th><th class="n">${cmp ? '차이' : '하루 평균'}</th></tr></thead><tbody>` +
-    CONFIG.activities.filter((a) => A.tot[a.id] || (cmp && P.tot[a.id])).sort((x, y) => A.tot[y.id] - A.tot[x.id]).map((a) => {
+    CONFIG.activities.filter((a) => A.tot[a.id] || (cmp && P.tot[a.id])).sort((x, y) => A.tot[y.id] - A.tot[x.id]).map((a, k) => {
       const w = A.tot[a.id] / max * 100, pw = P.tot[a.id] / max * 100, diff = h(A.tot[a.id] - P.tot[a.id]);
       return `<tr><td><span class="act">${swatch(a)}${a.name}</span></td>
-        <td><div class="hbar" role="img" aria-label="${a.name} ${fmtH(h(A.tot[a.id]))}시간${cmp ? `, 계획 ${fmtH(h(P.tot[a.id]))}시간` : ''}"><i style="width:${w}%"></i>${cmp ? `<i class="plan" style="width:${pw}%"></i>` : ''}</div></td>
+        <td><div class="hbar" role="img" aria-label="${a.name} ${fmtH(h(A.tot[a.id]))}시간${cmp ? `, 계획 ${fmtH(h(P.tot[a.id]))}시간` : ''}"><i style="width:${w}%;--i:${k}"></i>${cmp ? `<i class="plan" style="width:${pw}%;--i:${k}"></i>` : ''}</div></td>
         <td class="n">${fmtH(h(A.tot[a.id]))}시간</td>
         <td class="n">${cmp ? `<span class="${diff > 0 ? 'pos' : diff < 0 ? 'neg' : ''}">${diff > 0 ? '+' : ''}${fmtH(diff)}</span>` : fmtH(h(A.tot[a.id]) / A.days)}</td></tr>`;
     }).join('') + '</tbody>';
@@ -613,9 +703,9 @@ function renderAnalysis() {
   $('#sleepDays').setAttribute('aria-label', A.sleepDays.map((x) => `${CONFIG.days[x.d]} ${x.recorded ? fmtH(x.hours) + '시간' : '기록 없음'}`).join(', '));
   const band = `<div class="band" style="bottom:${pct(CONFIG.sleepMin)}%;height:${pct(CONFIG.sleepMax) - pct(CONFIG.sleepMin)}%"></div>`;
   $('#sleepDays').innerHTML = A.sleepDays.map((x) => { const v = x.recorded ? pct(x.hours) : 0;
-    return `<div class="col${x.recorded && x.hours < CONFIG.sleepMin ? ' low' : ''}"><div class="track">${band}<div class="b" style="height:${v}%"></div><span class="val" style="bottom:${Math.min(v, 84)}%">${x.recorded ? fmtH(x.hours) : '–'}</span></div><span class="lb">${CONFIG.days[x.d]}</span></div>`; }).join('');
+    return `<div class="col${x.recorded && x.hours < CONFIG.sleepMin ? ' low' : ''}"><div class="track">${band}<div class="b" style="height:${v}%;--i:${x.d}"></div><span class="val" style="bottom:${Math.min(v, 84)}%">${x.recorded ? fmtH(x.hours) : '–'}</span></div><span class="lb">${CONFIG.days[x.d]}</span></div>`; }).join('');
   const lows = A.sleepDays.filter((x) => x.recorded && x.hours < CONFIG.sleepMin);
-  $('#sleepCap').textContent = `점선 띠 = 권장 범위(예시값, CONFIG에서 수정). 빗금 막대 = 권장보다 적게 잔 날${lows.length ? ` — ${lows.map((x) => CONFIG.days[x.d]).join('·')}` : ' 없음'}. 하루는 06:00~다음 날 06:00로 셉니다.`;
+  $('#sleepCap').textContent = `점선 띠 = 권장 범위(예시값). 빗금 막대 = 권장보다 적게 잔 날${lows.length ? ` — ${lows.map((x) => CONFIG.days[x.d]).join('·')}` : ' 없음'}. 하루는 06:00~다음 날 06:00로 셉니다.`;
 
   // 짚어 볼 점 (규칙 기반)
   const notes = [];
@@ -642,11 +732,14 @@ function renderMatrix() {
 }
 $('#mxForm').addEventListener('submit', (e) => {
   e.preventDefault(); const t = $('#mxText').value.trim();
-  if (!t) { $('#mxText').focus(); say('할 일을 적어 주세요.'); return; }
-  S.todos.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 5), text: t, q: +$('#mxQ').value });
+  if (!t) { $('#mxText').focus(); say('할 일을 적어 주세요.'); MK.play($('#mxText'), 'mk-wiggle'); return; }
+  const q = +$('#mxQ').value;
+  S.todos.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 5), text: t, q });
   $('#mxText').value = ''; save(); renderMatrix(); $('#mxText').focus();
+  MK.play($(`#mx .q${q} li:last-child`), 'mk-slide-up');   // 새 할 일이 칸에 쓱 들어옴
 });
-$('#mx').addEventListener('change', (e) => { const s = e.target.closest('[data-move]'); if (!s) return; const t = S.todos.find((x) => x.id === s.dataset.move); t.q = +s.value; save(); renderMatrix(); });
+$('#mx').addEventListener('change', (e) => { const s = e.target.closest('[data-move]'); if (!s) return; const t = S.todos.find((x) => x.id === s.dataset.move); t.q = +s.value; save(); renderMatrix();
+  const moved = $(`#mx [data-move="${t.id}"]`); if (moved) MK.play(moved.closest('li'), 'mk-scale-in'); });   // 옮긴 칸에서 커지며 나타남
 $('#mx').addEventListener('click', (e) => {
   const b = e.target.closest('[data-del]'); if (!b) return;
   const i = S.todos.findIndex((x) => x.id === b.dataset.del), t = S.todos.splice(i, 1)[0]; save(); renderMatrix();
@@ -665,7 +758,7 @@ $('#suggestBtn').addEventListener('click', () => {
   CONFIG.activities.forEach((a) => { const d = h(A.tot[a.id] - P.tot[a.id]); if (d <= -2 && a.id !== CONFIG.sleepId) ideas.push(`${a.name} 계획 시간 지키기 (이번 주 ${fmtH(-d)}시간 부족)`); });
   if (!ideas.length) { say('실제 기록을 더 칠하면 제안이 나와요.'); return; }
   let k = 0; S.goals = S.goals.map((g) => g.trim() ? g : (ideas[k++] || ''));
-  save(); renderGoals(); if (!k) say('목표 칸이 이미 다 차 있어요.');
+  save(); renderGoals(); if (!k) say('목표 칸이 이미 다 차 있어요.'); else MK.stagger($('#goals'));   // 제안이 차례로 채워짐
 });
 
 /* ── 샘플·파일·인쇄 ── */
@@ -678,6 +771,7 @@ $('#sampleBtn').addEventListener('click', () => {
   if ((S.plan.some(Boolean) || S.actual.some(Boolean)) && !confirm('지금 칠한 시간표를 샘플로 바꿀까요? (파일로 저장해 두면 다시 불러올 수 있어요)')) return;
   S.plan = fillSample(CONFIG.sample.plan); S.actual = fillSample(CONFIG.sample.actual);
   S.todos = CONFIG.sample.todos.map((t, i) => ({ ...t, id: 's' + i })); S.view = 'compare'; save(); renderAll();
+  MK.play($('#tgrid'), 'mk-fade-in'); growAnalysis();
 });
 $('#exportBtn').addEventListener('click', () => {
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(S)], { type: 'application/json' }));
@@ -686,14 +780,15 @@ $('#exportBtn').addEventListener('click', () => {
 $('#importBtn').addEventListener('click', () => $('#importFile').click());
 $('#importFile').addEventListener('change', async (e) => {
   const f = e.target.files[0]; if (!f) return;
-  try { const d = JSON.parse(await f.text()); if (!Array.isArray(d.plan) || d.plan.length !== N) throw 0; S = { ...blank(), ...d }; save(); renderAll(); say('불러왔어요.'); }
+  if ((S.plan.some(Boolean) || S.actual.some(Boolean)) && !confirm('지금 칠한 시간표를 불러온 파일 내용으로 바꿀까요?')) { e.target.value = ''; return; }
+  try { const d = normalize(JSON.parse(await f.text())); if (!d) throw 0; S = d; save(); renderPalette(); renderAll(); say('불러왔어요.'); growAnalysis(); }
   catch (err) { say('이 앱에서 저장한 파일이 아니에요.'); }
   e.target.value = '';
 });
 $('#printBtn').addEventListener('click', () => window.print());
 
 function renderAll() { renderGrid(); renderAnalysis(); renderMatrix(); renderGoals(); }
-S = load(); buildGrid(); renderPalette(); renderAll();
+S = load(); buildGrid(); renderPalette(); renderAll(); growAnalysis();
 </script>
 </body>
 </html>

@@ -5,7 +5,7 @@
  * 교사 화면에서 반별 제출 현황·장보기 목록(품목별 합계)·모둠별 신청서를 봅니다.
  * 설치 순서는 같은 폴더의 '설치방법.md'를 보세요.
  *
- * 시트 3개를 자동으로 만듭니다.
+ * 시트 2개를 자동으로 만듭니다.
  *   - 품목 : 신청할 수 있는 재료 표(품목·단위·1인분량·분류). 시트에서 직접 고치면 바로 반영됩니다.
  *   - 신청 : 모둠이 낸 신청(품목 1개 = 1줄). 같은 반·모둠이 다시 내면 덮어씁니다.
  */
@@ -56,11 +56,17 @@ function doGet() {
 
 /** 시트를 미리 만들어 둡니다. (편집기 위쪽에서 setup 고르고 ▶실행 — 안 해도 첫 사용 때 자동 생성) */
 function setup() {
-  getSheet_(SHEET_ORDERS, ORDER_HEADERS);
-  const items = getSheet_(SHEET_ITEMS, ITEM_HEADERS);
-  if (items.getLastRow() < 2) {
-    items.getRange(2, 1, DEFAULT_ITEMS.length, ITEM_HEADERS.length).setValues(DEFAULT_ITEMS);
-  }
+  const ss = SpreadsheetApp.getActive();
+  const ready = ss.getSheetByName(SHEET_ORDERS) && ss.getSheetByName(SHEET_ITEMS) && ss.getSheetByName(SHEET_ITEMS).getLastRow() >= 2;
+  if (ready) return;
+  // 첫 사용 때 여러 모둠이 동시에 열어도 시트·예시 재료가 두 번 만들어지지 않게 잠그고 만듭니다.
+  withLock_(function () {
+    getSheet_(SHEET_ORDERS, ORDER_HEADERS);
+    const items = getSheet_(SHEET_ITEMS, ITEM_HEADERS);
+    if (items.getLastRow() < 2) {
+      items.getRange(2, 1, DEFAULT_ITEMS.length, ITEM_HEADERS.length).setValues(DEFAULT_ITEMS);
+    }
+  });
 }
 
 // ---------------- 학생(모둠) 화면에서 부르는 함수 ----------------
@@ -104,7 +110,10 @@ function submitOrder(order) {
     const rows = o.items.map(function (it) {
       return [now, o.cls, o.group, o.menu, o.people, it.name, it.qty, it.unit, it.bring ? 'O' : '', o.note];
     });
-    sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, ORDER_HEADERS.length).setValues(rows);
+    const start = sheet.getLastRow() + 1;
+    // 반('2-1')·메뉴('1/2') 같은 글자가 날짜·숫자로 바뀌지 않게 글자 칸은 '일반 텍스트' 서식으로
+    [2, 4, 6, 8, 9, 10].forEach(function (c) { sheet.getRange(start, c, rows.length, 1).setNumberFormat('@'); });
+    sheet.getRange(start, 1, rows.length, ORDER_HEADERS.length).setValues(rows);
     return { ok: true, replaced: replaced, savedAt: now.toISOString() };
   });
 }
@@ -176,7 +185,7 @@ function validateOrder_(order, items) {
   return { cls: cls, group: group, menu: menu, people: people, note: note, items: list };
 }
 
-// ---- 세 샘플 공통 도우미 ----
+// ---- 공통 도우미 ----
 
 function getSheet_(name, headers) {
   const ss = SpreadsheetApp.getActive();

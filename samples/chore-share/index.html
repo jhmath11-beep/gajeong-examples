@@ -156,6 +156,7 @@ label.lab { display: block; color: var(--color-muted); font-size: var(--text-sm)
 .kpi .k { color: var(--color-muted); font-size: var(--text-sm); }
 .kpi .v { font-family: var(--font-display); font-size: 1.75rem; line-height: 1.2; white-space: nowrap; }
 .kpi .v.warn { color: var(--color-stamp); }
+.kpi .v:not(.num) { white-space: normal; overflow-wrap: anywhere; }
 @media (min-width: 48rem) { .kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); } .kpi { border-bottom: 0; } .kpi:nth-child(2n) { border-right: 1px solid var(--color-rule); } .kpi:last-child { border-right: 0; } }
 .charts { display: grid; gap: var(--space-6); margin-top: var(--space-4); }
 @media (min-width: 52rem) { .charts { grid-template-columns: minmax(0, 15rem) minmax(0, 1fr); align-items: start; } }
@@ -182,7 +183,7 @@ label.lab { display: block; color: var(--color-muted); font-size: var(--text-sm)
 .reading li.note::before { content: "※"; }
 .empty { padding: var(--space-6) var(--space-4); text-align: left; }
 .chore-bars .bar-row { grid-template-columns: minmax(0, 8rem) minmax(0, 1fr) 3.5rem; }
-.chore-bars .who { font-size: var(--text-sm); color: var(--color-muted); text-align: right; }
+.chore-bars .who { font-size: var(--text-sm); color: var(--color-muted); text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* 바꿔 보기 */
 .move-form { display: grid; gap: var(--space-2); grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: end; }
@@ -217,6 +218,41 @@ footer { padding-block: var(--space-6); color: var(--color-muted); font-size: va
 
 @media (prefers-reduced-motion: reduce) { * { transition-duration: 0.01ms !important; } }
 
+/* ── 모션 (motion-effects kit에서 필요한 것만) ── */
+:root { --mk-accent: var(--color-stamp); --mk-ease-out: cubic-bezier(.22,1,.36,1); --mk-ease-in-out: cubic-bezier(.65,0,.35,1); --mk-base: 280ms; --mk-slow: 520ms; --mk-stagger: 45ms; }
+@keyframes mk-fade-in { from { opacity: 0 } to { opacity: 1 } }
+@keyframes mk-scale-in { from { opacity: 0; transform: scale(.92) } to { opacity: 1; transform: none } }
+@keyframes mk-slide-up { from { opacity: 0; transform: translateY(14px) } to { opacity: 1; transform: none } }
+@keyframes mk-slide-left { from { opacity: 0; transform: translateX(24px) } to { opacity: 1; transform: none } }
+@keyframes mk-wipe-in { from { clip-path: inset(0 100% 0 0) } to { clip-path: inset(0 0 0 0) } }
+@keyframes mk-wiggle { 0%,100% { transform: translateX(0) } 20% { transform: translateX(-6px) } 40% { transform: translateX(5px) } 60% { transform: translateX(-3px) } 80% { transform: translateX(2px) } }
+@keyframes mk-glitch { 0%,100% { transform: none; text-shadow: none } 20% { transform: translate(-2px,1px); text-shadow: 2px 0 rgba(255,0,60,.6),-2px 0 rgba(0,200,255,.6) } 40% { transform: translate(2px,-1px) } 60% { transform: translate(-1px,0); text-shadow: -2px 0 rgba(255,0,60,.6),2px 0 rgba(0,200,255,.6) } 80% { transform: translate(1px,1px) } }
+@keyframes mk-ripple { to { transform: scale(1); opacity: 0 } }
+@keyframes mk-particle { to { transform: translate(var(--dx),var(--dy)) rotate(var(--rot)); opacity: 0 } }
+@keyframes mk-donut { from { opacity: 0; transform: rotate(-90deg) scale(.6) } to { opacity: 1; transform: none } }
+.mk-scale-in { animation: mk-scale-in var(--mk-base) var(--mk-ease-out) both; }
+.mk-slide-up { animation: mk-slide-up var(--mk-base) var(--mk-ease-out) both; }
+.mk-slide-left { animation: mk-slide-left var(--mk-base) var(--mk-ease-out) both; }
+.mk-wiggle { animation: mk-wiggle 380ms var(--mk-ease-out); }
+.mk-glitch { animation: mk-glitch 360ms steps(2,end) 1; }
+.mk-stagger > * { animation: mk-slide-up var(--mk-base) var(--mk-ease-out) both; animation-delay: calc(var(--i,0) * var(--mk-stagger)); }
+.btn { position: relative; overflow: hidden; isolation: isolate; }
+.mk-ripple { position: absolute; border-radius: 50%; pointer-events: none; background: currentColor; opacity: .18; transform: scale(0); animation: mk-ripple 520ms var(--mk-ease-out) forwards; z-index: -1; }
+.mk-particle { position: fixed; width: 7px; height: 7px; border-radius: 2px; pointer-events: none; z-index: 9999; background: var(--mk-accent); animation: mk-particle 800ms var(--mk-ease-out) forwards; }
+/* 분석 탭을 열 때: 도넛 → 구성원 막대 → 가사별 막대가 차례로 */
+#analysis .donut { animation: mk-donut var(--mk-slow) var(--mk-ease-out) both; }
+#analysis .bar-row .bar { animation: mk-wipe-in var(--mk-slow) var(--mk-ease-in-out) both; animation-delay: calc(var(--i,0) * 60ms + .25s); }
+#analysis .chore-bars .bar-row .bar { animation-delay: calc(var(--i,0) * 40ms + .6s); }
+/* 바꿔 보기 전 → 후: 디졸브(두 장면 겹쳐 전환) */
+.mk-dissolve { display: grid; }
+.mk-dissolve > * { grid-area: 1/1; opacity: 0; transition: opacity var(--mk-slow) var(--mk-ease-in-out); pointer-events: none; }
+.mk-dissolve > .is-on { opacity: 1; pointer-events: auto; }
+.toast:not(.hidden) { animation: mk-fade-in var(--mk-base) var(--mk-ease-out); }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; animation-delay: 0s !important; }
+}
+@media print { * { animation: none !important; transition: none !important; } }
+
 @media print {
   @page { size: A4; margin: 12mm; }
   body { background: none; font-size: 15pt; }
@@ -239,7 +275,7 @@ footer { padding-block: var(--space-6); color: var(--color-muted); font-size: va
       </div>
       <span class="stamp" aria-hidden="true">한 주<br>기록</span>
     </div>
-    <div class="fields"><span>이름 대신 호칭만 적어요 (엄마·아빠·나·형 …)</span><span class="muted">저장: 이 기기 브라우저에만</span></div>
+    <div class="fields"><span>이름 대신 호칭만 적어요 (엄마·할머니·나·형 …)</span><span class="muted">저장: 이 기기 브라우저에만</span></div>
   </div>
 </header>
 
@@ -390,9 +426,22 @@ function fromSample() {
   const s = CONFIG.sample; const members = s.members.map(name => ({ id: uid(), name }));
   return { members, me: members[s.me].id, chores: s.chores.map(c => ({ id: uid(), name: c.name, min: c.min, hidden: !!c.hidden, c: Object.fromEntries(members.map((m, i) => [m.id, c.c[i] || 0])) })), moves: [] };
 }
-function valid(d) { return d && Array.isArray(d.members) && Array.isArray(d.chores) && d.members.length && d.members.every(m => m.id && typeof m.name === 'string'); }
+// 저장본·불러온 파일을 깨끗한 상태로 다시 만든다(모양이 틀리면 null). id는 영문·숫자만 받아 HTML 주입을 막는다.
+function normalize(d) {
+  if (!d || !Array.isArray(d.members) || !Array.isArray(d.chores)) return null;
+  const okId = (v) => typeof v === 'string' && /^[\w-]{1,24}$/.test(v);
+  const members = d.members.filter(m => m && okId(m.id)).slice(0, CONFIG.maxMembers).map(m => ({ id: m.id, name: String(m.name ?? '').slice(0, 8) || '이름없음' }));
+  if (!members.length) return null;
+  const mids = new Set(members.map(m => m.id));
+  const chores = d.chores.filter(c => c && okId(c.id)).map(c => ({ id: c.id, name: String(c.name ?? '').slice(0, 20), min: clampN(c.min, 600), hidden: !!c.hidden,
+    c: Object.fromEntries(members.map(m => [m.id, clampN((c.c || {})[m.id], CONFIG.maxCount)]).filter(([, v]) => v)) }));
+  const cids = new Set(chores.map(c => c.id));
+  const moves = (Array.isArray(d.moves) ? d.moves : []).filter(mv => mv && cids.has(mv.chore) && mids.has(mv.from) && mids.has(mv.to) && mv.from !== mv.to)
+    .map(mv => ({ chore: mv.chore, from: mv.from, to: mv.to, n: clampN(mv.n, CONFIG.maxCount) })).filter(mv => mv.n);
+  return { members, me: mids.has(d.me) ? d.me : members[0].id, chores, moves };
+}
 let S;
-try { const d = JSON.parse(localStorage.getItem(CONFIG.storageKey) || 'null'); S = valid(d) ? Object.assign({ moves: [] }, d) : blank(); } catch (e) { S = blank(); }
+try { S = normalize(JSON.parse(localStorage.getItem(CONFIG.storageKey) || 'null')) || blank(); } catch (e) { S = blank(); }
 let saveWarned = false;
 function persist() { try { localStorage.setItem(CONFIG.storageKey, JSON.stringify(S)); } catch (e) { if (!saveWarned) { toast('이 브라우저에서는 자동 저장이 안 돼요. "파일로 저장"을 쓰세요.'); saveWarned = true; } } }
 
@@ -403,6 +452,55 @@ function toast(msg, undo) {
   if (undo) t.querySelector('button').onclick = () => { undo(); t.classList.add('hidden'); };
   toastTimer = setTimeout(() => t.classList.add('hidden'), undo ? 7000 : 3500);
 }
+
+/* ---- 모션 도우미 (motion-effects kit에서 필요한 것만) — 동작 줄이기 설정이면 바로 끝 상태 ---- */
+const MK = (() => {
+  const reduced = () => window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function play(el, cls) {
+    if (!el || reduced()) return;
+    el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls);
+    const done = (e) => { if (e.target !== el) return; el.classList.remove(cls); el.removeEventListener('animationend', done); };
+    el.addEventListener('animationend', done);
+  }
+  // 순차 등장 — 끝나면 클래스를 떼서 입력할 때마다 다시 움직이지 않게
+  function stagger(parent, { max = 20 } = {}) {
+    if (!parent || reduced()) return;
+    const kids = [...parent.children]; kids.forEach((c, i) => c.style.setProperty('--i', Math.min(i, max)));
+    parent.classList.remove('mk-stagger'); void parent.offsetWidth; parent.classList.add('mk-stagger');
+    clearTimeout(parent._mkT); parent._mkT = setTimeout(() => parent.classList.remove('mk-stagger'), Math.min(kids.length, max) * 45 + 400);
+  }
+  function ripple(root = document, selector = '.btn') {
+    root.addEventListener('pointerdown', (e) => {
+      const host = e.target.closest(selector); if (!host || host.disabled || reduced()) return;
+      const r = host.getBoundingClientRect(), d = Math.max(r.width, r.height) * 2;
+      const s = document.createElement('span'); s.className = 'mk-ripple';
+      Object.assign(s.style, { width: d + 'px', height: d + 'px', left: (e.clientX - r.left - d / 2) + 'px', top: (e.clientY - r.top - d / 2) + 'px' });
+      host.appendChild(s); s.addEventListener('animationend', () => s.remove(), { once: true });
+    });
+  }
+  // 파티클 — 바꿔 보기로 '비교적 고르게'가 된 순간 한 번만
+  function burstAt(el, { count = 18 } = {}) {
+    if (!el || reduced()) return;
+    const r = el.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2;
+    for (let i = 0; i < count; i++) {
+      const p = document.createElement('i'); p.className = 'mk-particle';
+      const a = (Math.PI * 2 * i) / count + Math.random() * .4, dist = 50 + Math.random() * 60;
+      p.style.left = x + 'px'; p.style.top = y + 'px';
+      p.style.setProperty('--dx', Math.cos(a) * dist + 'px'); p.style.setProperty('--dy', Math.sin(a) * dist + 'px'); p.style.setProperty('--rot', (Math.random() * 360) + 'deg');
+      document.body.appendChild(p); p.addEventListener('animationend', () => p.remove(), { once: true });
+    }
+  }
+  function countUp(el, to, { duration = 700, format = (n) => Math.round(n) } = {}) {
+    if (!el) return;
+    if (reduced() || !to) { el.textContent = format(to); return; }
+    const start = performance.now(), ease = (t) => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    (function f(now) { if (!el.isConnected) return; const p = Math.min(1, (now - start) / duration); el.textContent = format(to * ease(p)); if (p < 1) requestAnimationFrame(f); })(start);
+  }
+  const dissolveTo = (parent, child) => { if (parent) [...parent.children].forEach((c) => c.classList.toggle('is-on', c === child)); };
+  return { reduced, play, stagger, ripple, burstAt, countUp, dissolveTo };
+})();
+MK.ripple();
+let celebrated = false;
 
 /* ---- 계산 ---- */
 function compute(chores) {
@@ -455,7 +553,7 @@ function donut(R) {
 }
 function memberBars(R) {
   const max = Math.max(...R.per.map(p => p.min), 1);
-  return `<div class="bars">${R.per.map((p, i) => `<div class="bar-row"><span class="nm">${esc(p.m.name)}</span>
+  return `<div class="bars">${R.per.map((p, i) => `<div class="bar-row" style="--i:${i}"><span class="nm">${esc(p.m.name)}</span>
     <div class="bar" role="img" aria-label="${esc(p.m.name)} ${p.min}분, 보이지 않는 가사 ${p.hid}분"><i style="width:${(p.min - p.hid) / max * 100}%;background:${mcolor(i)}"></i><i class="inv" style="width:${p.hid / max * 100}%;background-color:${mcolor(i)}"></i></div></div>`).join('')}</div>
     <div class="key"><span><i class="vis"></i>보이는 가사</span><span><i class="inv"></i>보이지 않는 가사(빗금)</span></div>`;
 }
@@ -497,7 +595,7 @@ $('#members').addEventListener('click', (e) => {
   if (S.me === id) S.me = S.members[0].id;
   persist(); renderAll(); toast(`${m.name} 칸을 뺐어요.`, () => { S = JSON.parse(snap); persist(); renderAll(); });
 });
-$('#addMember').addEventListener('click', () => { if (S.members.length >= CONFIG.maxMembers) return; S.members.push({ id: uid(), name: '가족' + (S.members.length + 1) }); persist(); renderAll(); const ins = $$('#members input[data-mem]'); ins[ins.length - 1].select(); });
+$('#addMember').addEventListener('click', () => { if (S.members.length >= CONFIG.maxMembers) return; S.members.push({ id: uid(), name: '가족' + (S.members.length + 1) }); persist(); renderAll(); const ins = $$('#members input[data-mem]'); ins[ins.length - 1].select(); MK.play($('#members .mem:last-child'), 'mk-scale-in'); });
 $('#grid').addEventListener('input', (e) => {
   const row = e.target.closest('.crow'); if (!row) return; const ch = S.chores.find(c => c.id === row.dataset.ch);
   if (e.target.dataset.m) ch.c[e.target.dataset.m] = clampN(e.target.value, CONFIG.maxCount);
@@ -508,7 +606,7 @@ $('#grid').addEventListener('input', (e) => {
 $('#grid').addEventListener('change', (e) => {
   const row = e.target.closest('.crow'); if (!row) return; const ch = S.chores.find(c => c.id === row.dataset.ch);
   if (e.target.dataset.f === 'hidden') { ch.hidden = e.target.checked; persist(); renderGrid(); }
-  if (e.target.type === 'number' && e.target.value !== '') { const v = e.target.dataset.m ? (ch.c[e.target.dataset.m] || 0) : ch.min; if (String(v) !== e.target.value) { e.target.value = v; toast(e.target.dataset.m ? `한 칸은 0~${CONFIG.maxCount}회로 적어요.` : '1회 시간은 0~600분으로 적어요.'); } }
+  if (e.target.type === 'number' && e.target.value !== '') { const v = e.target.dataset.m ? (ch.c[e.target.dataset.m] || 0) : ch.min; if (String(v) !== e.target.value) { e.target.value = v; MK.play(e.target, 'mk-wiggle'); toast(e.target.dataset.m ? `한 칸은 0~${CONFIG.maxCount}회로 적어요.` : '1회 시간은 0~600분으로 적어요.'); } }
 });
 function updateTotals() {
   const R = compute(S.chores);
@@ -521,10 +619,10 @@ $('#grid').addEventListener('click', (e) => {
   S.chores = S.chores.filter(c => c.id !== id); S.moves = S.moves.filter(mv => mv.chore !== id); persist(); renderAll();
   toast(`'${ch.name}'을(를) 지웠어요.`, () => { S = JSON.parse(snap); persist(); renderAll(); });
 });
-$('#addChore').addEventListener('click', () => { S.chores.push({ id: uid(), name: '', min: 10, hidden: false, c: {} }); persist(); renderGrid(); const ins = $$('#grid input[data-f=name]'); ins[ins.length - 1].focus(); });
+$('#addChore').addEventListener('click', () => { S.chores.push({ id: uid(), name: '', min: 10, hidden: false, c: {} }); persist(); renderGrid(); const ins = $$('#grid input[data-f=name]'); ins[ins.length - 1].focus(); MK.play(ins[ins.length - 1].closest('.crow'), 'mk-slide-up'); });
 
 /* ---- 자료 ---- */
-$('#sample').addEventListener('click', () => { const snap = JSON.stringify(S); S = fromSample(); persist(); renderAll(); toast('예시 가족을 불러왔어요(가상 자료).', () => { S = JSON.parse(snap); persist(); renderAll(); }); });
+$('#sample').addEventListener('click', () => { const snap = JSON.stringify(S); S = fromSample(); persist(); renderAll(); MK.stagger($('#grid')); toast('예시 가족을 불러왔어요(가상 자료).', () => { S = JSON.parse(snap); persist(); renderAll(); }); });
 $('#reset').addEventListener('click', () => { const snap = JSON.stringify(S); S = blank(); persist(); renderAll(); toast('빈 근무표로 바꿨어요.', () => { S = JSON.parse(snap); persist(); renderAll(); }); });
 function download(name, text, type) { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500); }
 const today = () => new Date().toISOString().slice(0, 10);
@@ -532,7 +630,7 @@ $('#saveFile').addEventListener('click', () => download(`가사분담_${today()}
 $('#loadFile').addEventListener('click', () => $('#fileIn').click());
 $('#fileIn').addEventListener('change', async (e) => {
   const f = e.target.files[0]; if (!f) return;
-  try { const d = JSON.parse(await f.text()); if (!valid(d)) throw new Error('형식'); S = Object.assign({ moves: [] }, d); persist(); renderAll(); toast('파일을 불러왔어요.'); }
+  try { const d = normalize(JSON.parse(await f.text())); if (!d) throw new Error('형식'); const snap = JSON.stringify(S); S = d; persist(); renderAll(); toast('파일을 불러왔어요.', () => { S = JSON.parse(snap); persist(); renderAll(); }); }
   catch (err) { toast('불러오지 못했어요. 이 앱에서 "파일로 저장"한 .json 파일인지 확인하세요.'); }
   e.target.value = '';
 });
@@ -551,10 +649,10 @@ function renderAnalysis() {
   const R = compute(S.chores); const box = $('#analysis');
   if (!R.total) { box.innerHTML = `<div class="sec empty"><h2>아직 기록이 없어요</h2><p class="lead">근무표에 횟수를 적거나 예시 가족을 불러오면 분석이 나타나요.</p><button class="btn btn--stamp" type="button" data-go="sample">예시 가족 불러오기</button></div>`; return; }
   const me = R.per.find(p => p.m.id === S.me);
-  const choreRows = S.chores.filter(ch => S.members.some(m => ch.c[m.id])).map(ch => {
+  const choreRows = S.chores.filter(ch => S.members.some(m => ch.c[m.id])).map((ch, k) => {
     const t = S.members.reduce((a, m) => a + (ch.c[m.id] || 0), 0);
     const main = S.members.slice().sort((a, b) => (ch.c[b.id] || 0) - (ch.c[a.id] || 0))[0];
-    return `<div class="bar-row"><span class="nm">${esc(ch.name || '(이름 없음)')}${ch.hidden ? ' <span class="tag-hid">숨은 일</span>' : ''}</span>
+    return `<div class="bar-row" style="--i:${k}"><span class="nm">${esc(ch.name || '(이름 없음)')}${ch.hidden ? ' <span class="tag-hid">숨은 일</span>' : ''}</span>
       <div class="bar" role="img" aria-label="${esc(ch.name)} 분담">${S.members.map((m, i) => ch.c[m.id] ? `<i class="${ch.hidden ? 'inv' : ''}" style="width:${ch.c[m.id] / t * 100}%;background-color:${mcolor(i)}"></i>` : '').join('')}</div>
       <span class="who">${esc(main.name)}</span></div>`;
   }).join('');
@@ -575,11 +673,15 @@ function renderAnalysis() {
     <div class="sec"><h2>읽어 보기</h2><ol class="reading">${readings(R).map(r => `<li class="${r.note ? 'note' : ''}">${esc(r.t)}</li>`).join('')}</ol></div>
     <div class="sec chore-bars"><h2>가사별로 누가 하나</h2><p class="lead">막대는 횟수 비율, 오른쪽은 가장 많이 하는 사람입니다.</p><div class="bars">${choreRows}</div></div>
     <div class="sec"><button class="btn" type="button" data-go="sim">바꿔 보기로 가기</button></div>`;
+  // 합계는 올라가며(countUp), 읽어 보기 문장은 차례로, 크게 치우침 경고는 글리치 1회
+  MK.countUp($('#analysis .kpi .v'), R.total, { format: (n) => fmtMin(Math.round(n)) });
+  MK.stagger($('#analysis .reading'));
+  setTimeout(() => MK.play($('#analysis .kpi .v.warn'), 'mk-glitch'), 1000);   // 그래프가 다 자란 뒤
 }
 $('#analysis').addEventListener('click', (e) => { const g = e.target.dataset.go; if (g === 'sample') $('#sample').click(), showTab('analysis'); if (g === 'sim') showTab('sim'); });
 
 /* ---- 3 바꿔 보기 ---- */
-function renderSim() {
+function renderSim(dissolve) {
   const opt = (arr, sel) => arr.map(x => `<option value="${x.id}" ${x.id === sel ? 'selected' : ''}>${esc(x.name || '(이름 없음)')}</option>`).join('');
   const R = compute(S.chores);
   const prevChore = $('#mvChore').value, prevFrom = $('#mvFrom').value, prevTo = $('#mvTo').value;
@@ -590,7 +692,9 @@ function renderSim() {
   $('#moves').innerHTML = S.moves.map((mv, i) => { const ch = S.chores.find(c => c.id === mv.chore); return `<li><span>${esc(ch ? ch.name : '?')} 주 ${mv.n}회: ${esc(nameOf(mv.from))} → <b>${esc(nameOf(mv.to))}</b></span><button class="x" type="button" data-delmv="${i}" aria-label="이 옮기기 취소">×</button></li>`; }).join('') || '<li><span class="muted">아직 옮긴 가사가 없어요.</span></li>';
   const A = compute(applyMoves(S.chores, S.moves));
   const max = Math.max(...R.per.map(p => p.min), ...A.per.map(p => p.min), 1);
-  $('#compare').innerHTML = `<h2>바꾸기 전 → 후</h2>
+  const cur = $('#compare > .mk-dissolve');   // 디졸브 중에 또 바꾸면 '새 장면'을 직전 장면으로 씀
+  const prevHTML = cur ? cur.lastElementChild.innerHTML : $('#compare').innerHTML;
+  const html = `<h2>바꾸기 전 → 후</h2>
     <div class="kpis" style="margin:var(--space-2) 0 var(--space-4)">
       <div class="kpi"><div class="k">가장 많이/적게 (전)</div><div class="v num">${ratioText(R.ratio)}</div></div>
       <div class="kpi"><div class="k">가장 많이/적게 (후)</div><div class="v num ${A.ratio === Infinity || A.ratio > CONFIG.rules.skewRatio ? 'warn' : ''}">${ratioText(A.ratio)}</div></div>
@@ -602,7 +706,18 @@ function renderSim() {
       <span class="delta num ${d > 0 ? 'up' : ''}">${Math.round(a.pct)}% (${d > 0 ? '+' : ''}${d})</span></div>`; }).join('')}</div>
     <div class="key"><span><i style="background:var(--color-muted);opacity:.45"></i>전</span><span><i class="vis"></i>후</span></div>
     <div class="row" style="margin-top:var(--space-4)"><button class="btn" type="button" id="toPromise">이대로 약속서 만들기</button></div>`;
+  clearTimeout(renderSim.t);
+  if (dissolve && prevHTML && !MK.reduced()) {
+    // 옮기기 전 장면과 후 장면을 겹쳐 두고 서서히 바꿈(디졸브) → 끝나면 후 장면만 남김
+    $('#compare').innerHTML = `<div class="mk-dissolve"><div class="is-on" aria-hidden="true">${prevHTML.replace(' id="toPromise"', '')}</div><div>${html}</div></div>`;
+    const box = $('#compare > .mk-dissolve'); void box.offsetWidth; MK.dissolveTo(box, box.lastElementChild);
+    renderSim.t = setTimeout(() => { $('#compare').innerHTML = html; $('#toPromise').onclick = () => showTab('promise'); }, 560);
+  } else $('#compare').innerHTML = html;
   $('#toPromise').onclick = () => showTab('promise');
+  // 바꿔 보기로 '비교적 고르게'(기준값 이하)가 된 순간에만 파티클 한 번
+  const even = A.ratio && A.ratio !== Infinity && A.ratio <= CONFIG.rules.evenRatio;
+  if (dissolve && even && !celebrated && !(R.ratio && R.ratio <= CONFIG.rules.evenRatio)) { celebrated = true; setTimeout(() => MK.burstAt($('#compare .kpis')), 400); }
+  if (!even) celebrated = false;
 }
 function updateMvHint() {
   const ch = S.chores.find(c => c.id === $('#mvChore').value); const from = $('#mvFrom').value;
@@ -613,13 +728,14 @@ function updateMvHint() {
 ['#mvChore', '#mvFrom'].forEach(s => $(s).addEventListener('change', updateMvHint));
 $('#mvAdd').addEventListener('click', () => {
   const chore = $('#mvChore').value, from = $('#mvFrom').value, to = $('#mvTo').value, n = clampN($('#mvN').value, CONFIG.maxCount);
-  if (!chore) { toast('먼저 근무표에 가사를 적어 주세요.'); return; }
-  if (from === to) { toast('원래 하던 사람과 맡을 사람이 같아요.'); return; }
+  if (!chore) { toast('먼저 근무표에 가사를 적어 주세요.'); MK.play($('#mvChore'), 'mk-wiggle'); return; }
+  if (from === to) { toast('원래 하던 사람과 맡을 사람이 같아요.'); MK.play($('#mvTo'), 'mk-wiggle'); return; }
   const have = applyMoves(S.chores, S.moves).find(c => c.id === chore).c[from] || 0;
-  if (!n || n > have) { toast(`${nameOf(from)}의 해당 가사는 주 ${have}회라서 ${have}회까지만 옮길 수 있어요.`); return; }
-  S.moves.push({ chore, from, to, n }); persist(); renderSim();
+  if (!n || n > have) { toast(`${nameOf(from)}의 해당 가사는 주 ${have}회라서 ${have}회까지만 옮길 수 있어요.`); MK.play($('#mvN'), 'mk-wiggle'); return; }
+  S.moves.push({ chore, from, to, n }); persist(); renderSim(true);
+  MK.play($('#moves li:last-child'), 'mk-slide-left');   // 옮긴 내용이 목록에 들어옴
 });
-$('#moves').addEventListener('click', (e) => { const i = e.target.dataset.delmv; if (i == null) return; S.moves.splice(+i, 1); persist(); renderSim(); });
+$('#moves').addEventListener('click', (e) => { const i = e.target.dataset.delmv; if (i == null) return; S.moves.splice(+i, 1); persist(); renderSim(true); });
 
 /* ---- 4 약속서 ---- */
 function renderPromise() {
@@ -643,6 +759,8 @@ function showTab(name) {
   $$('.tab').forEach(t => { const on = t.id === 't-' + name; t.setAttribute('aria-selected', on); t.tabIndex = on ? 0 : -1; });
   $$('.panel').forEach(p => p.classList.toggle('hidden', p.id !== 'p-' + name));
   if (name === 'analysis') renderAnalysis(); if (name === 'sim') renderSim(); if (name === 'promise') renderPromise();
+  // 탭 전환: 분석은 그래프가 각자 자라므로 제외, 약속서는 종이가 놓이듯 스케일 인, 나머지는 슬라이드 인
+  if (name === 'promise') MK.play($('#promise'), 'mk-scale-in'); else if (name !== 'analysis') MK.play($('#p-' + name), 'mk-slide-up');
 }
 $$('.tab').forEach(t => t.addEventListener('click', () => showTab(t.id.slice(2))));
 $('.tabs [role=tablist]').addEventListener('keydown', (e) => {

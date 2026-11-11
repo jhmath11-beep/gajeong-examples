@@ -21,7 +21,7 @@ const MAX_NUMBER = 40;               // 번호(선택) 최댓값. 번호를 적�
 const QUESTIONS = [
   { id: 'breakfast', type: 'single', title: '일주일에 아침밥을 며칠 먹나요?',
     options: ['매일', '5~6일', '3~4일', '1~2일', '거의 안 먹음'] },
-  { id: 'skipReason', type: 'multi', max: 2, title: '아침을 거른다면 가장 큰 이유는? (2개까지)',
+  { id: 'skipReason', type: 'multi', max: 2, title: '아침을 거른다면 그 이유는? (2개까지)',
     options: ['시간이 없어서', '입맛이 없어서', '살을 빼려고', '차려진 음식이 없어서', '습관이 돼서', '거르지 않음'] },
   { id: 'snackFreq', type: 'single', title: '하루에 간식을 몇 번 먹나요?',
     options: ['안 먹음', '1번', '2번', '3번 이상'] },
@@ -86,7 +86,9 @@ function submitResponse(resp) {
       const a = v.answers[q.id];
       return Array.isArray(a) ? a.join(', ') : a;
     }));
-    sheet.getRange(sheet.getLastRow() + 1, 1, 1, row.length).setValues([row]);
+    const at = sheet.getLastRow() + 1;
+    sheet.getRange(at, 2, 1, row.length - 1).setNumberFormat('@');   // 반·번호·답을 글자 그대로(시트가 '3-4' 같은 답을 날짜로 바꾸지 않게)
+    sheet.getRange(at, 1, 1, row.length).setValues([row]);
     return { ok: true, replaced: replaced, savedAt: now.toISOString() };
   });
 }
@@ -134,7 +136,7 @@ function validateResponse_(resp) {
       answers[q.id] = a;
     } else if (q.type === 'multi') {
       if (!Array.isArray(a) || a.length === 0) fail_(label + '에서 1개 이상 골라 주세요.');
-      if (a.length > (q.max || q.options.length)) fail_(label + '은 ' + q.max + '개까지 고를 수 있어요.');
+      if (a.length > (q.max || q.options.length)) fail_(label + '은 ' + (q.max || q.options.length) + '개까지 고를 수 있어요.');
       a.forEach(function (x) { if (q.options.indexOf(x) < 0) fail_(label + '에 없는 선택지예요.'); });
       if (new Set(a).size !== a.length) fail_(label + '에 같은 선택지가 두 번 들어갔어요.');
       answers[q.id] = q.options.filter(function (o) { return a.indexOf(o) >= 0; });   // 선택지 순서대로 정리
@@ -152,8 +154,11 @@ function validateResponse_(resp) {
 function getSheet_(name, headers) {
   const ss = SpreadsheetApp.getActive();
   let sheet = ss.getSheetByName(name);
-  if (!sheet) {
-    sheet = ss.insertSheet(name);
+  const isNew = !sheet;
+  if (isNew) sheet = ss.insertSheet(name);
+  // 문항이 많아 기본 열 수(26)를 넘으면 열을 늘림
+  if (sheet.getMaxColumns() < headers.length) sheet.insertColumnsAfter(sheet.getMaxColumns(), headers.length - sheet.getMaxColumns());
+  if (isNew) {
     sheet.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold');
     sheet.setFrozenRows(1);
   }

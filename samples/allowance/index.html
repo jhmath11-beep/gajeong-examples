@@ -285,7 +285,36 @@ footer { color: var(--color-muted); font-size: var(--fs-xs); padding: var(--sp-4
   .ps .avoid { break-inside: avoid; }
   .ps .small { font-size: 8.5pt; color: var(--color-muted); }
 }
+/* ── 모션 (motion-effects kit에서 필요한 것만) ── */
+:root { --mk-accent: var(--color-ink); --mk-ease-out: cubic-bezier(.22,1,.36,1); --mk-ease-in-out: cubic-bezier(.65,0,.35,1); --mk-base: 280ms; --mk-slow: 520ms; --mk-stagger: 45ms; }
+@keyframes mk-fade-in { from { opacity: 0 } to { opacity: 1 } }
+@keyframes mk-slide-up { from { opacity: 0; transform: translateY(14px) } to { opacity: 1; transform: none } }
+@keyframes mk-wipe-in { from { clip-path: inset(0 100% 0 0) } to { clip-path: inset(0 0 0 0) } }
+@keyframes mk-squash { 0% { transform: none } 30% { transform: scale(1.12,.86) } 55% { transform: scale(.94,1.08) } 75% { transform: scale(1.03,.98) } 100% { transform: none } }
+@keyframes mk-wiggle { 0%,100% { transform: translateX(0) } 20% { transform: translateX(-6px) } 40% { transform: translateX(5px) } 60% { transform: translateX(-3px) } 80% { transform: translateX(2px) } }
+@keyframes mk-glitch { 0%,100% { transform: none; text-shadow: none } 20% { transform: translate(-2px,1px); text-shadow: 2px 0 rgba(255,0,60,.6),-2px 0 rgba(0,200,255,.6) } 40% { transform: translate(2px,-1px) } 60% { transform: translate(-1px,0); text-shadow: -2px 0 rgba(255,0,60,.6),2px 0 rgba(0,200,255,.6) } 80% { transform: translate(1px,1px) } }
+@keyframes mk-ripple { to { transform: scale(1); opacity: 0 } }
+.mk-fade-in { animation: mk-fade-in var(--mk-base) var(--mk-ease-out) both; }
+.mk-slide-up { animation: mk-slide-up var(--mk-base) var(--mk-ease-out) both; }
+.mk-squash { animation: mk-squash 520ms var(--mk-ease-out); transform-origin: 50% 100%; }
+.mk-wiggle { animation: mk-wiggle 380ms var(--mk-ease-out); }
+.mk-glitch { animation: mk-glitch 360ms steps(2,end) 1; }
+.mk-stagger > * { animation: mk-slide-up var(--mk-base) var(--mk-ease-out) both; animation-delay: calc(var(--i,0) * var(--mk-stagger)); }
+.btn { position: relative; overflow: hidden; isolation: isolate; }
+.mk-ripple { position: absolute; border-radius: 50%; pointer-events: none; background: currentColor; opacity: .18; transform: scale(0); animation: mk-ripple 520ms var(--mk-ease-out) forwards; z-index: -1; }
+/* 분석 그래프가 자라나기: 도넛 → 필요/욕구 → 주별 막대 → 예산 막대 순서 */
+@keyframes mk-donut { from { opacity: 0; transform: rotate(-90deg) scale(.6) } to { opacity: 1; transform: none } }
+@keyframes mk-grow-y { from { transform: scaleY(0) } to { transform: none } }
+#donutArea .donut { animation: mk-donut var(--mk-slow) var(--mk-ease-out) both; }
+#nwArea .stack { animation: mk-wipe-in var(--mk-slow) var(--mk-ease-in-out) .15s both; }
+.bars .bar { transform-origin: 50% 100%; animation: mk-grow-y var(--mk-slow) var(--mk-ease-out) both; animation-delay: calc(var(--i,0) * 70ms + .3s); }
+.meter div { animation: mk-wipe-in var(--mk-slow) var(--mk-ease-in-out) .45s both; }
+/* 진단서: 와이프로 열리고 → 유형 이름 스크램블 → 판정 도장 쾅(스케일+스쿼시) */
+@keyframes mk-stamp { 0% { opacity: 0; scale: 2.2 } 45% { opacity: 1; scale: 1.1 .86 } 70% { scale: .95 1.05 } 100% { opacity: 1; scale: 1 } }
+.dx-hero { animation: mk-wipe-in var(--mk-slow) var(--mk-ease-in-out) both; }
+.dx-hero .seal { animation: mk-stamp 520ms var(--mk-ease-out) 1.1s both; }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+@media print { * { animation: none !important; transition: none !important; } }
 </style>
 </head>
 <body>
@@ -507,7 +536,7 @@ const TYPES = {
 const KEY = 'allowance-book-v1';
 let store = { entries: [], budget: { total: CONFIG.defaultBudget, cats: {} } };
 function load() {
-  try { const raw = localStorage.getItem(KEY); if (raw) { const d = JSON.parse(raw); if (Array.isArray(d.entries)) store.entries = d.entries; if (d.budget) store.budget = Object.assign(store.budget, d.budget); } }
+  try { const raw = localStorage.getItem(KEY); if (raw) { const d = JSON.parse(raw); if (Array.isArray(d.entries)) store.entries = d.entries.filter(e => e && /^\d{4}-\d{2}-\d{2}$/.test(e.date) && e.amount > 0); if (d.budget) store.budget = Object.assign(store.budget, d.budget); } }
   catch (e) { toast('저장된 기록을 읽지 못했어요. 새로 시작합니다.'); }
 }
 function save() {
@@ -527,6 +556,55 @@ const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 
 const daysIn = (ym) => { const [y, m] = ym.split('-').map(Number); return new Date(y, m, 0).getDate(); };
 let toastTimer;
 function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2400); }
+
+/* ===== 모션 도우미 (motion-effects kit에서 필요한 것만) — 동작 줄이기 설정이면 바로 끝 상태 ===== */
+const MK = (() => {
+  const reduced = () => window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function play(el, cls) {
+    if (!el || reduced()) return;
+    el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls);
+    const done = e => { if (e.target !== el) return; el.classList.remove(cls); el.removeEventListener('animationend', done); };
+    el.addEventListener('animationend', done);   // 안쪽 그래프의 애니메이션 끝 신호는 무시
+  }
+  // 순차 등장 — 끝나면 클래스를 떼서 다음 렌더 때 다시 움직이지 않게
+  function stagger(parent, { max = 20 } = {}) {
+    if (!parent || reduced()) return;
+    const kids = [...parent.children]; kids.forEach((c, i) => c.style.setProperty('--i', Math.min(i, max)));
+    parent.classList.remove('mk-stagger'); void parent.offsetWidth; parent.classList.add('mk-stagger');
+    setTimeout(() => parent.classList.remove('mk-stagger'), Math.min(kids.length, max) * 45 + 400);
+  }
+  function scramble(el, text, { duration = 700, pool = '가나다라마바사아자차카타파하' } = {}) {
+    return new Promise(res => {
+      if (!el) return res();
+      if (reduced()) { el.textContent = text; return res(); }
+      const chars = [...text], start = performance.now(), P = [...pool];
+      (function frame(now) {
+        const p = Math.min(1, (now - start) / duration), fixed = Math.floor(p * chars.length);
+        el.textContent = chars.map((c, i) => i < fixed || c === ' ' ? c : P[(Math.random() * P.length) | 0]).join('');
+        p < 1 ? requestAnimationFrame(frame) : (el.textContent = text, res());
+      })(start);
+    });
+  }
+  function ripple(root = document, selector = '.btn') {
+    root.addEventListener('pointerdown', e => {
+      const host = e.target.closest(selector); if (!host || reduced()) return;
+      const r = host.getBoundingClientRect(), d = Math.max(r.width, r.height) * 2;
+      const s = document.createElement('span'); s.className = 'mk-ripple';
+      Object.assign(s.style, { width: d + 'px', height: d + 'px', left: (e.clientX - r.left - d / 2) + 'px', top: (e.clientY - r.top - d / 2) + 'px' });
+      host.appendChild(s); s.addEventListener('animationend', () => s.remove(), { once: true });
+    });
+  }
+  function countUp(el, to, { duration = 700, format = n => Math.round(n).toLocaleString() } = {}) {
+    if (!el) return;
+    const from = parseFloat(el.dataset.mkVal || 0) || 0; el.dataset.mkVal = to;
+    const tok = el._mk = {};   // 새로 부르면 이전 숫자 올리기는 멈춤
+    if (reduced() || from === to) { el.textContent = format(to); return; }
+    const start = performance.now(), ease = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    (function f(now) { if (el._mk !== tok) return; const p = Math.min(1, (now - start) / duration); el.textContent = format(from + (to - from) * ease(p)); if (p < 1) requestAnimationFrame(f); })(start);
+  }
+  return { reduced, play, stagger, scramble, ripple, countUp };
+})();
+MK.ripple();
 
 const ui = { month: todayStr().slice(0, 7), tab: 'record', editId: null };
 
@@ -571,10 +649,11 @@ function diagnose(r) {
 /* ===== 렌더: 요약 ===== */
 function renderSummary() {
   const r = calc(monthEntries());
-  $('#sIn').textContent = won(r.inc);
-  $('#sOut').textContent = won(r.spend);
-  $('#sSave').textContent = won(r.save);
-  $('#sBal').textContent = won(r.bal);
+  // 합계 숫자는 올라가며 바뀜(countUp)
+  MK.countUp($('#sIn'), r.inc, { format: won });
+  MK.countUp($('#sOut'), r.spend, { format: won });
+  MK.countUp($('#sSave'), r.save, { format: won });
+  MK.countUp($('#sBal'), r.bal, { format: won });
   $('#sBal').classList.toggle('neg', r.bal < 0);
   $('#sInSub').textContent = `${monthEntries().filter(e => e.type === 'in').length}건`;
   $('#sOutSub').textContent = `${r.outN}건 · 욕구 ${pct(r.spend ? r.want / r.spend : 0)}`;
@@ -586,6 +665,10 @@ function renderSummary() {
   if (b > 0 && r.spend > b) top.innerHTML = `<div class="alert alert--over">이번 달 예산 ${won(b)}을 ${won(r.spend - b)} 넘었어요!</div>`;
   else if (b > 0 && r.spend >= b * 0.8) top.innerHTML = `<div class="alert alert--warn">예산의 ${pct(r.spend / b)}를 썼어요. 남은 예산 ${won(b - r.spend)}</div>`;
   else top.innerHTML = '';
+  // 예산을 막 넘은 순간에만 경고 글리치 1회
+  const over = b > 0 && r.spend > b;
+  if (over && !ui.wasOver) MK.play(top.firstElementChild, 'mk-glitch');
+  ui.wasOver = over;
 }
 
 /* ===== 렌더: 목록 ===== */
@@ -597,7 +680,7 @@ function renderList() {
   const ul = $('#list');
   if (!list.length) {
     const none = monthEntries().length === 0;
-    ul.innerHTML = `<li class="empty"><strong>${none ? '이 달에는 아직 기록이 없어요' : '조건에 맞는 기록이 없어요'}</strong>${none ? '왼쪽(휴대폰은 위쪽) 칸에 첫 기록을 넣어 보세요.<br>연수·시연이라면 샘플 데이터를 넣어 볼 수 있어요.<br><button class="btn btn--ghost" type="button" data-act="sample">샘플 데이터 넣기</button>' : '위의 거르기를 [전체]로 바꿔 보세요.'}</li>`;
+    ul.innerHTML = `<li class="empty"><strong>${none ? '이 달에는 아직 기록이 없어요' : '조건에 맞는 기록이 없어요'}</strong>${none ? '왼쪽(휴대폰은 위쪽) 칸에 첫 기록을 넣어 보세요.<br>먼저 둘러보려면 샘플 데이터를 넣어 볼 수 있어요.<br><button class="btn btn--ghost" type="button" data-act="sample">샘플 데이터 넣기</button>' : '위의 거르기를 [전체]로 바꿔 보세요.'}</li>`;
     return;
   }
   const W = ['일', '월', '화', '수', '목', '금', '토'];
@@ -661,12 +744,14 @@ function renderAnalysis() {
   }
   // 주별
   const dim = daysIn(ui.month);
-  const max = Math.max(...r.weeks, 1);
-  const maxIdx = r.weeks.indexOf(Math.max(...r.weeks));
+  const weeks = r.weeks.slice(0, Math.ceil(dim / 7));   // 2월(28일)은 4주까지만
+  const max = Math.max(...weeks, 1);
+  const maxIdx = weeks.indexOf(Math.max(...weeks));
+  const cols = `grid-template-columns:repeat(${weeks.length},minmax(0,1fr))`;
   $('#weekNote').textContent = '1주 = 1~7일';
-  $('#weekArea').innerHTML = !r.spend ? emptyMsg : `<div class="bars" role="img" aria-label="주별 지출 막대 그래프">${r.weeks.map((w, i) => `<div class="bar ${i === maxIdx && w > 0 ? 'max' : ''}" style="height:${(w / max * 85).toFixed(1)}%"><span>${w ? (w / 1000).toFixed(w % 1000 ? 1 : 0) + '천' : '0'}</span></div>`).join('')}</div>
-    <div class="bar-labels">${r.weeks.map((w, i) => { const s = i * 7 + 1, e = Math.min(dim, s + 6); return `<div><b>${i + 1}주</b>${s}~${i === 4 ? dim : e}일</div>`; }).join('')}</div>
-    <p class="hint" style="margin-top:var(--sp-4)">가장 많이 쓴 주는 <b>${maxIdx + 1}주</b>(${won(r.weeks[maxIdx])})예요. 그 주에 무슨 일이 있었나요?</p>`;
+  $('#weekArea').innerHTML = !r.spend ? emptyMsg : `<div class="bars" style="${cols}" role="img" aria-label="주별 지출 막대 그래프">${weeks.map((w, i) => `<div class="bar ${i === maxIdx && w > 0 ? 'max' : ''}" style="height:${(w / max * 85).toFixed(1)}%;--i:${i}"><span>${w ? (w / 1000).toFixed(w % 1000 ? 1 : 0) + '천' : '0'}</span></div>`).join('')}</div>
+    <div class="bar-labels" style="${cols}">${weeks.map((w, i) => { const s = i * 7 + 1, e = Math.min(dim, s + 6); return `<div><b>${i + 1}주</b>${s}~${i === 4 ? dim : e}일</div>`; }).join('')}</div>
+    <p class="hint" style="margin-top:var(--sp-4)">가장 많이 쓴 주는 <b>${maxIdx + 1}주</b>(${won(weeks[maxIdx])})예요. 그 주에 무슨 일이 있었나요?</p>`;
   // 예산
   const b = store.budget;
   let html = '';
@@ -723,6 +808,8 @@ function renderDx() {
         <div style="margin-top:var(--sp-4)"><button class="btn btn--block" type="button" data-act="print">활동지 인쇄</button></div>
       </div>
     </div>`;
+  // 진단 결과 공개: 진단서가 와이프로 열리는 동안 유형 이름이 뒤섞였다 제자리로(스크램블) → 도장은 CSS로 1.1초 뒤
+  MK.scramble($('#dxArea .dx-hero h2'), t.name, { duration: 900 });
 }
 
 /* ===== 인쇄 활동지 ===== */
@@ -742,7 +829,7 @@ function buildPrint() {
     <h2>2. 어디에 썼을까?</h2>
     <div class="two avoid">${r.spend ? donutSVG(r, 150) : '<p>지출 기록 없음</p>'}
       <div><table><tr><th>항목</th><th>금액</th><th>비율</th></tr>${cats.map(c => `<tr><td><span style="color:${c.color}">■</span> ${c.name}</td><td class="r">${won(r.byCat[c.id])}</td><td class="r">${pct(r.byCat[c.id] / r.spend)}</td></tr>`).join('')}</table>
-      <p>필요 ${pct(r.spend ? r.need / r.spend : 0)} · 욕구 ${pct(d.wantR)} · 충동 ${r.impN}번(${won(r.imp)})<br>주별: ${r.weeks.map((w, i) => `${i + 1}주 ${won(w)}`).join(' / ')}</p></div></div>
+      <p>필요 ${pct(r.spend ? r.need / r.spend : 0)} · 욕구 ${pct(d.wantR)} · 충동 ${r.impN}번(${won(r.imp)})<br>주별: ${r.weeks.slice(0, Math.ceil(daysIn(ui.month) / 7)).map((w, i) => `${i + 1}주 ${won(w)}`).join(' / ')}</p></div></div>
     <h2>3. 나의 소비 성향</h2>
     <div class="dxbox avoid"><b>${t.name}</b> — ${t.line}<br><span class="small">판단 근거: ${d.checks.map(c => `${c.label} ${c.value}${c.hit ? '(해당)' : ''}`).join(', ')}</span><br>개선 팁: ${t.tips[0]}</div>
     <h2>4. 돌아보기</h2>
@@ -809,9 +896,9 @@ $('#form').addEventListener('submit', (ev) => {
   ev.preventDefault();
   const date = $('#fDate').value, amount = Number($('#fAmount').value);
   document.querySelectorAll('.invalid').forEach(x => x.classList.remove('invalid'));
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) { $('#fDate').classList.add('invalid'); $('#formErr').textContent = '날짜를 골라 주세요.'; return; }
-  if (!amount || amount <= 0 || !Number.isFinite(amount)) { $('#fAmount').classList.add('invalid'); $('#formErr').textContent = '금액을 1원 이상 숫자로 넣어 주세요.'; $('#fAmount').focus(); return; }
-  if (amount > 10000000) { $('#fAmount').classList.add('invalid'); $('#formErr').textContent = '금액이 너무 커요. 숫자를 다시 확인해 주세요.'; return; }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) { $('#fDate').classList.add('invalid'); $('#formErr').textContent = '날짜를 골라 주세요.'; MK.play($('#fDate'), 'mk-wiggle'); return; }
+  if (!amount || amount <= 0 || !Number.isFinite(amount)) { $('#fAmount').classList.add('invalid'); $('#formErr').textContent = '금액을 1원 이상 숫자로 넣어 주세요.'; $('#fAmount').focus(); MK.play($('#fAmount'), 'mk-wiggle'); return; }
+  if (amount > 10000000) { $('#fAmount').classList.add('invalid'); $('#formErr').textContent = '금액이 너무 커요. 숫자를 다시 확인해 주세요.'; MK.play($('#fAmount'), 'mk-wiggle'); return; }
   const type = curType(), cat = $('#fCat').value;
   const isOutSpend = type === 'out' && cat !== 'save';
   const rec = {
@@ -829,6 +916,8 @@ $('#form').addEventListener('submit', (ev) => {
   resetForm();
   document.getElementById(keepType === 'in' ? 't-in' : 't-out').checked = true; fillCats(); $('#fDate').value = keepDate;
   renderAll();
+  // 방금 저장한 줄이 장부에 쓱 올라옴
+  const added = document.querySelector(`#list [data-id="${rec.id}"]`); if (added) MK.play(added.closest('.row'), 'mk-slide-up');
 });
 $('#cancelEdit').addEventListener('click', resetForm);
 document.querySelectorAll('input[name=type]').forEach(r => r.addEventListener('change', () => fillCats()));
@@ -860,6 +949,7 @@ function setTab(t) {
   document.querySelectorAll('.tab').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === t)));
   document.querySelectorAll('.panel').forEach(p => p.classList.toggle('hidden', p.id !== 'tab-' + t));
   renderAll();
+  MK.play($('#tab-' + t), 'mk-fade-in');   // 탭 전환: 페이드 인(그래프는 각자 자라남)
 }
 document.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => setTab(b.dataset.tab)));
 function shiftMonth(n) { const [y, m] = ui.month.split('-').map(Number); const d = new Date(y, m - 1 + n, 1); ui.month = `${d.getFullYear()}-${pad(d.getMonth() + 1)}`; $('#month').value = ui.month; if (!ui.editId) $('#fDate').value = defaultDate(); renderAll(); }
@@ -878,6 +968,7 @@ $('#budgetForm').addEventListener('submit', (e) => {
   store.budget.total = v($('#bTotal').value);
   CONFIG.outCats.forEach(c => { store.budget.cats[c.id] = v(document.getElementById('b-' + c.id).value); });
   save(); renderAll(); toast('예산을 저장했어요.');
+  MK.play(e.submitter || $('#budgetForm [type=submit]'), 'mk-squash');   // 저장 성공
 });
 
 /* ===== 샘플 데이터 ===== */
@@ -905,11 +996,12 @@ function addSample() {
   const now = Date.now();
   S.forEach((s, i) => store.entries.push({ id: uid(), created: now + i, date: `${ym}-${pad(Math.min(dim, s[0]))}`, type: s[1], cat: s[2], amount: s[3], need: s[4], pay: s[5], impulse: !!s[6], memo: s[7] }));
   save(); renderAll(); toast(`${Number(ym.slice(5))}월 샘플 데이터 ${S.length}건을 넣었어요.`);
+  if (ui.tab === 'record') MK.stagger($('#list'));   // 장부 줄이 차례로 채워짐
 }
 
 /* ===== CSV ===== */
 const NEED_TXT = { need: '필요', want: '욕구' };
-function csvCell(v) { const s = String(v ?? ''); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }
+function csvCell(v) { let s = String(v ?? ''); if (/^[=+\-@]/.test(s)) s = "'" + s; /* 엑셀 수식 실행 방지 */ return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }
 $('#btnExport').addEventListener('click', () => {
   if (!store.entries.length) return toast('내보낼 기록이 없어요.');
   const head = ['날짜', '구분', '항목', '금액', '필요·욕구', '결제수단', '충동', '메모'];
@@ -948,7 +1040,7 @@ $('#fileImport').addEventListener('change', async (ev) => {
     const amount = Math.round(Number(String(amt).replace(/[^\d.]/g, '')));
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !type || !cat || !(amount > 0)) { bad++; return; }
     const spend = type === 'out' && cat !== 'save';
-    add.push({ id: uid(), created: Date.now() + i, date, type, cat, amount, need: spend ? (need === '욕구' ? 'want' : 'need') : '', pay: type === 'out' ? (payTo(pay || '') || 'cash') : '', impulse: spend && /^(o|y|예|1|true)$/i.test(imp || ''), memo: (memo || '').slice(0, 30) });
+    add.push({ id: uid(), created: Date.now() + i, date, type, cat, amount, need: spend ? (need === '욕구' ? 'want' : 'need') : '', pay: type === 'out' ? (payTo(pay || '') || 'cash') : '', impulse: spend && /^(o|y|예|1|true)$/i.test(imp || ''), memo: (memo || '').replace(/^'(?=[=+\-@])/, '').slice(0, 30) });
   });
   if (!add.length) return toast(`불러올 수 있는 줄이 없어요. 형식을 확인해 주세요. (건너뜀 ${bad}줄)`);
   if (!confirm(`${add.length}건을 기존 기록에 더할까요?${bad ? ` (형식이 맞지 않는 ${bad}줄은 건너뜀)` : ''}`)) return;

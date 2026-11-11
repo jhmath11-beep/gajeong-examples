@@ -258,7 +258,34 @@ dialog[open] { animation: rise 260ms var(--ease-out); }
   .mine { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); align-items: start; }
 }
 @media (min-width: 90rem) { .board { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+/* ── 모션 (motion-effects kit에서 필요한 것만) ── */
+:root { --mk-accent: var(--color-stamp); --mk-ease-out: cubic-bezier(.22,1,.36,1); --mk-ease-in-out: cubic-bezier(.65,0,.35,1); --mk-base: 280ms; --mk-slow: 520ms; --mk-stagger: 45ms; }
+@keyframes mk-slide-up { from { opacity: 0; transform: translateY(14px) } to { opacity: 1; transform: none } }
+@keyframes mk-wipe-in { from { clip-path: inset(0 100% 0 0) } to { clip-path: inset(0 0 0 0) } }
+@keyframes mk-squash { 0% { transform: none } 30% { transform: scale(1.12,.86) } 55% { transform: scale(.94,1.08) } 75% { transform: scale(1.03,.98) } 100% { transform: none } }
+@keyframes mk-wiggle { 0%,100% { transform: translateX(0) } 20% { transform: translateX(-6px) } 40% { transform: translateX(5px) } 60% { transform: translateX(-3px) } 80% { transform: translateX(2px) } }
+@keyframes mk-ripple { to { transform: scale(1); opacity: 0 } }
+@keyframes mk-wave { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-5px) } }
+@keyframes mk-particle { to { transform: translate(var(--dx),var(--dy)) rotate(var(--rot)); opacity: 0 } }
+.mk-slide-up { animation: mk-slide-up var(--mk-base) var(--mk-ease-out) both; }
+.mk-squash { display: inline-block; animation: mk-squash 520ms var(--mk-ease-out); transform-origin: 50% 100%; }
+.mk-wiggle { animation: mk-wiggle 380ms var(--mk-ease-out); }
+.mk-stagger > * { animation: mk-slide-up var(--mk-base) var(--mk-ease-out) both; animation-delay: calc(var(--i,0) * var(--mk-stagger)); }
+.btn, .cat { position: relative; overflow: hidden; isolation: isolate; }
+.mk-ripple { position: absolute; border-radius: 50%; pointer-events: none; background: currentColor; opacity: .18; transform: scale(0); animation: mk-ripple 520ms var(--mk-ease-out) forwards; z-index: -1; }
+.mk-wave { display: inline-flex; gap: 4px; margin-left: 2px; }
+.mk-wave > i { width: 5px; height: 5px; border-radius: 50%; background: currentColor; animation: mk-wave 900ms var(--mk-ease-in-out) infinite; animation-delay: calc(var(--i,0) * 90ms); }
+.mk-particle { position: fixed; width: 7px; height: 7px; border-radius: 2px; pointer-events: none; z-index: 9999; background: var(--mk-accent); animation: mk-particle 800ms var(--mk-ease-out) forwards; }
+/* 전단지는 이미 살짝 기울어져(transform) 있어서 translate·scale 속성만 움직임 — 기울기를 지우지 않게 */
+@keyframes mk-rise-t { from { opacity: 0; translate: 0 14px } to { opacity: 1; translate: none } }
+@keyframes mk-bounce-t { 0%,100% { translate: 0 0 } 35% { translate: 0 -14px } 55% { translate: 0 0 } 70% { translate: 0 -5px } 85% { translate: 0 0 } }
+@keyframes mk-stamp { 0% { opacity: 0; scale: 2.2 } 45% { opacity: 1; scale: 1.12 .84 } 70% { scale: .95 1.05 } 100% { opacity: 1; scale: 1 } }
+.board.mk-stagger > * { animation-name: mk-rise-t; }
+.board .flyer.fresh { animation: mk-bounce-t 700ms var(--mk-ease-out) .25s; }
+.stamp.is-new { animation: mk-stamp 560ms var(--mk-ease-out) .2s both; }
+#catTable .bar i { animation: mk-wipe-in var(--mk-slow) var(--mk-ease-in-out) both; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+@media print { * { animation: none !important; transition: none !important; } }
 </style>
 </head>
 <body>
@@ -499,7 +526,7 @@ const DEMO = {
     if (p.accept !== true) { q.status = '거절'; this.save(db); return { ok: true, status: '거절' }; }
     if (t.done || t.hidden) throw new Error('이 물건은 이미 교환됐거나 숨겨졌어요.');
     const o = q.offer ? db.items.find(i => i.id === q.offer) : null;
-    if (q.offer && (!o || o.done || o.hidden)) throw new Error('상대가 내놓은 물건이 이미 다른 친구와 교환됐어요. 이 신청은 거절해 주세요.');
+    if (q.offer && (!o || o.done || o.hidden)) throw new Error('상대가 내놓은 물건이 이미 교환됐거나 게시판에서 내려갔어요. 이 신청은 거절해 주세요.');
     const now = new Date().toISOString();
     [t, o].forEach(i => { if (i) { i.done = true; i.doneAt = now; } });
     const closed = new Set([t.id, o && o.id].filter(Boolean));
@@ -594,12 +621,62 @@ function toast(msg, isErr) {
   const t = $('#toast'); t.textContent = msg; t.className = 'show' + (isErr ? ' err' : '');
   clearTimeout(toastTimer); toastTimer = setTimeout(() => t.className = '', isErr ? 4500 : 3000);
 }
+/* ---- 모션 도우미 (motion-effects kit에서 필요한 것만) — 동작 줄이기 설정이면 바로 끝 상태 ---- */
+const MK = (() => {
+  const reduced = () => window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function play(el, cls) {
+    if (!el || reduced()) return;
+    el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls);
+    const done = e => { if (e.target !== el) return; el.classList.remove(cls); el.removeEventListener('animationend', done); };
+    el.addEventListener('animationend', done);
+  }
+  // 순차 등장 — 끝나면 클래스를 떼서 검색·필터 때 다시 움직이지 않게
+  function stagger(parent, { max = 20 } = {}) {
+    if (!parent || reduced()) return;
+    const kids = [...parent.children]; kids.forEach((c, i) => c.style.setProperty('--i', Math.min(i, max)));
+    parent.classList.remove('mk-stagger'); void parent.offsetWidth; parent.classList.add('mk-stagger');
+    clearTimeout(parent._mkT); parent._mkT = setTimeout(() => parent.classList.remove('mk-stagger'), Math.min(kids.length, max) * 45 + 400);
+  }
+  function ripple(root = document, selector = '.btn, .cat') {
+    root.addEventListener('pointerdown', e => {
+      const host = e.target.closest(selector); if (!host || host.disabled || reduced()) return;
+      const r = host.getBoundingClientRect(), d = Math.max(r.width, r.height) * 2;
+      const s = document.createElement('span'); s.className = 'mk-ripple';
+      Object.assign(s.style, { width: d + 'px', height: d + 'px', left: (e.clientX - r.left - d / 2) + 'px', top: (e.clientY - r.top - d / 2) + 'px' });
+      host.appendChild(s); s.addEventListener('animationend', () => s.remove(), { once: true });
+    });
+  }
+  // 파티클: 교환 성사 '순간'에 한 번만
+  function burstAt(el, { count = 18 } = {}) {
+    if (!el || reduced()) return;
+    const r = el.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2;
+    for (let i = 0; i < count; i++) {
+      const p = document.createElement('i'); p.className = 'mk-particle';
+      const a = (Math.PI * 2 * i) / count + Math.random() * .4, dist = 50 + Math.random() * 60;
+      p.style.left = x + 'px'; p.style.top = y + 'px';
+      p.style.setProperty('--dx', Math.cos(a) * dist + 'px'); p.style.setProperty('--dy', Math.sin(a) * dist + 'px'); p.style.setProperty('--rot', (Math.random() * 360) + 'deg');
+      document.body.appendChild(p); p.addEventListener('animationend', () => p.remove(), { once: true });
+    }
+  }
+  function countUp(el, to, { from = 0, duration = 700 } = {}) {
+    if (!el) return;
+    if (reduced() || from === to) { el.textContent = to; return; }
+    const start = performance.now(), ease = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    (function f(now) { if (!el.isConnected) return; const p = Math.min(1, (now - start) / duration); el.textContent = Math.round(from + (to - from) * ease(p)); if (p < 1) requestAnimationFrame(f); })(start);
+  }
+  return { reduced, play, stagger, ripple, burstAt, countUp };
+})();
+MK.ripple();
+
 async function busy(btn, label, fn) {
-  const old = btn.textContent; btn.disabled = true; btn.textContent = label;
-  try { return await fn(); } catch (e) { toast(e.message || '잠시 뒤 다시 시도해 주세요.', true); } finally { btn.disabled = false; btn.textContent = old; }
+  // 기다리는 동안 버튼 글자 옆에 웨이브 점 3개
+  const keepRipple = () => btn.querySelectorAll('.mk-ripple');   // 글자를 바꿔도 퍼지던 리플은 남김
+  const old = btn.textContent.trim(); btn.disabled = true;
+  let rip = [...keepRipple()]; btn.innerHTML = esc(label) + '<span class="mk-wave" aria-hidden="true"><i style="--i:0"></i><i style="--i:1"></i><i style="--i:2"></i></span>'; rip.forEach(r => btn.appendChild(r));
+  try { return await fn(); } catch (e) { toast(e.message || '잠시 뒤 다시 시도해 주세요.', true); MK.play(btn, 'mk-wiggle'); } finally { btn.disabled = false; rip = [...keepRipple()]; btn.textContent = old; rip.forEach(r => btn.appendChild(r)); }
 }
 function downloadCsv(filename, rows) {
-  const csv = '﻿' + rows.map(r => r.map(v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"').join(',')).join('\r\n');
+  const csv = '﻿' + rows.map(r => r.map(v => '"' + String(v == null ? '' : v).replace(/^[=+\-@]/, "'$&").replace(/"/g, '""') + '"').join(',')).join('\r\n');
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
   a.download = filename; document.body.appendChild(a); a.click(); a.remove();
@@ -607,7 +684,9 @@ function downloadCsv(filename, rows) {
 function showTab(t) {
   document.querySelectorAll('.tab').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === t));
   ['board', 'post', 'mine', 'teacher'].forEach(x => $('#tab-' + x).hidden = x !== t);
-  if (t === 'mine' && ME && $('#mineBox').hidden) openMine();
+  if (t !== 'board') MK.play($('#tab-' + t), 'mk-slide-up');   // 탭 전환(게시판은 전단지가 차례로 붙음)
+  else { MK.stagger($('#board')); NEW_DONE.clear(); }   // 안 보일 때 끝난 거래의 도장(is-new)은 지금 보이면서 찍힘
+  if (t === 'mine' && ME && $('#mineBox').hidden) openMine().catch(e => toast(e.message, true));
 }
 document.querySelectorAll('.tab').forEach(btn => btn.addEventListener('click', () => showTab(btn.dataset.tab)));
 document.addEventListener('input', e => { const c = e.target.id && $(`.counter[data-for="${e.target.id}"]`); if (c) c.textContent = `${e.target.value.length}/${e.target.maxLength}`; });
@@ -642,12 +721,14 @@ document.addEventListener('click', e => { if (e.target.dataset.unset) forget(); 
 
 /* ======================= 게시판 ======================= */
 let ITEMS = [], REUSED = 0, FRESH = '';
+let NEW_DONE = new Set(), boardLoaded = false, reusedShown = 0;   // 모션용: 방금 교환이 끝난 물건, 화면에 보인 재사용 수
 const view = { cat: '전체', q: '', showDone: true };
 const condOf = name => (CONFIG.conditions.find(c => c.name === name) || { desc: '' }).desc;
 function hl(text) {
-  const s = esc(text); if (!view.q) return s;
-  const q = esc(view.q).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  return s.replace(new RegExp(q, 'gi'), m => `<mark>${m}</mark>`);
+  if (!view.q) return esc(text);
+  // 원문에서 찾은 뒤 조각마다 이스케이프(검색어가 &amp; 같은 엔터티 안을 건드리지 않게)
+  const re = new RegExp('(' + view.q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+  return String(text == null ? '' : text).split(re).map((p, k) => k % 2 ? `<mark>${esc(p)}</mark>` : esc(p)).join('');
 }
 function flyerHTML(it, preview) {
   return `<article class="flyer${it.done ? ' done' : ''}${preview ? ' flyer--preview' : ''}${it.id === FRESH ? ' fresh' : ''}" data-id="${esc(it.id)}">
@@ -658,7 +739,7 @@ function flyerHTML(it, preview) {
       ${it.story ? `<p class="flyer__story">${hl(it.story)}</p>` : ''}
       <dl class="flyer__want"><dt>바꾸고 싶은 것</dt><dd>${it.want ? hl(it.want) : '<span class="free">그냥 나눔</span>'}</dd></dl>
     </div>
-    ${it.done ? `<p class="stamp" aria-label="교환 완료">교환 완료<small>${md(it.doneAt)}</small></p>` : ''}
+    ${it.done ? `<p class="stamp${NEW_DONE.has(it.id) ? ' is-new' : ''}" aria-label="교환 완료">교환 완료<small>${md(it.doneAt)}</small></p>` : ''}
     <footer class="flyer__tabs">
       ${it.done ? '<span class="req">새 주인을 찾았어요</span>'
         : `<span class="req num">${it.requests ? `신청 <b>${it.requests}</b>명 기다리는 중` : '아직 신청 없음'}</span>
@@ -668,7 +749,13 @@ function flyerHTML(it, preview) {
 }
 async function loadBoard() {
   const res = await api('listItems');
+  // 지난번엔 '교환 가능'이었는데 이번에 '완료'가 된 물건 → 도장이 쾅 찍히게
+  const wasOpen = new Set(ITEMS.filter(i => !i.done).map(i => i.id));
+  if (boardLoaded) res.items.forEach(i => { if (i.done && wasOpen.has(i.id)) NEW_DONE.add(i.id); });
+  boardLoaded = true;
+  const fresh = FRESH;
   ITEMS = res.items; REUSED = res.reused; renderBoard();
+  if (!fresh) MK.stagger($('#board'));   // 전단지가 차례로 붙음(새로 붙인 게 있으면 그 전단지만 통통)
 }
 function renderBoard() {
   const counts = {}; ITEMS.forEach(i => counts[i.cat] = (counts[i.cat] || 0) + 1);
@@ -683,10 +770,12 @@ function renderBoard() {
     : `<div class="empty">${ITEMS.length ? '조건에 맞는 물건이 없어요. 분류나 찾기를 바꿔 보세요.' : '아직 붙은 물건이 없어요. ‘올리기’에서 첫 물건을 붙여 보세요.'}
        ${!ITEMS.length && !IS_GAS ? '<br><button class="btn btn--line btn--sm" id="emptyFill">샘플 넣기</button>' : ''}</div>`;
   $('#reuseLine').hidden = !REUSED;
-  $('#reuseLine').innerHTML = `버려질 뻔한 물건 <b class="num">${REUSED}</b>개가 다시 쓰여요`;
+  $('#reuseLine').innerHTML = `버려질 뻔한 물건 <b class="num">${reusedShown}</b>개가 다시 쓰여요`;
+  MK.countUp($('#reuseLine b'), REUSED, { from: reusedShown }); reusedShown = REUSED;   // 재사용 수가 올라감
+  if (!$('#tab-board').hidden) NEW_DONE.clear();   // 보이는 채로 그렸으면 도장은 이번 한 번만
   if (FRESH) { const f = $(`.flyer[data-id="${FRESH}"]`); if (f) f.scrollIntoView({ block: 'center' }); FRESH = ''; }
 }
-$('#cats').addEventListener('click', e => { const b = e.target.closest('.cat'); if (b) { view.cat = b.dataset.cat; renderBoard(); } });
+$('#cats').addEventListener('click', e => { const b = e.target.closest('.cat'); if (b) { view.cat = b.dataset.cat; renderBoard(); MK.stagger($('#board')); } });
 let qTimer; $('#q').addEventListener('input', e => { clearTimeout(qTimer); qTimer = setTimeout(() => { view.q = e.target.value.trim(); renderBoard(); }, 200); });
 $('#showDone').addEventListener('change', e => { view.showDone = e.target.checked; renderBoard(); });
 $('#reload').addEventListener('click', e => busy(e.currentTarget, '불러오는 중…', loadBoard));
@@ -742,6 +831,7 @@ async function loadMyOpen() {
       `<label><input type="radio" name="offer" value="${esc(i.id)}" ${k === 0 ? 'checked' : ''}><span><b>${esc(i.name)}</b> <span class="hint">상태 ${esc(i.cond)}</span></span></label>`).join('') +
       (TARGET.want ? '' : `<label><input type="radio" name="offer" value="" ${MY_OPEN.length ? '' : 'checked'}><span>내 물건 없이 받기 <span class="hint">그냥 나눔이라 가능</span></span></label>`);
     $('#reqPick').hidden = false; $('#reqMsgWrap').hidden = false; $('#reqSend').hidden = false; $('#reqLoad').hidden = true;
+    MK.stagger($('#reqPick'));   // 내놓을 물건 보기가 차례로
     $('#reqMsg').focus();
   });
 }
@@ -759,7 +849,7 @@ $('#reqForm').addEventListener('submit', e => {
 
 /* ======================= 내 장터 ======================= */
 const ST_LABEL = { '대기': '답 기다리는 중', '수락': '교환 성사', '거절': '거절됨', '종료': '다른 교환으로 끝남' };
-$('#mineForm').addEventListener('submit', e => { e.preventDefault(); busy($('#mineBtn'), '여는 중…', () => openMine(getWho('m'))); });
+$('#mineForm').addEventListener('submit', e => { e.preventDefault(); busy($('#mineBtn'), '여는 중…', async () => { await openMine(getWho('m')); MK.play($('#mineBox'), 'mk-slide-up'); }); });
 async function openMine(who) {
   who = who || ME;
   const res = await api('getMine', who);
@@ -787,20 +877,27 @@ async function openMine(who) {
 }
 $('#myItems').addEventListener('click', e => {
   const b = e.target.closest('[data-ans]'); if (!b) return;
-  busy(b, '처리 중…', async () => { await api('respondRequest', { ...ME, reqId: b.dataset.ans, accept: b.dataset.ok === '1' }); await openMine(); await loadBoard(); });
+  const k = [...$('#myItems').children].indexOf(b.closest('.entry')), ok = b.dataset.ok === '1';
+  busy(b, '처리 중…', async () => {
+    await api('respondRequest', { ...ME, reqId: b.dataset.ans, accept: ok }); await openMine();
+    // 수락 = 교환 성사: '교환 완료' 글씨가 도장처럼 눌렸다 펴지고(스쿼시), 축하 파티클 한 번
+    const st = ok && $('#myItems').children[k] && $('#myItems').children[k].querySelector('.state--done');
+    if (st) { MK.play(st, 'mk-squash'); MK.burstAt(st); }
+    await loadBoard();
+  });
 });
 $('#mineReload').addEventListener('click', e => busy(e.currentTarget, '불러오는 중…', () => openMine()));
 $('#mineLock').addEventListener('click', forget);
 
 /* ======================= 교사 화면 ======================= */
-let PIN = '', DATA = null;
+let PIN = '', DATA = null, tReuseShown = 0;
 const tview = { f: 'all', q: '' };
 $('#pinForm').addEventListener('submit', e => {
   e.preventDefault();
   busy($('#pinBtn'), '확인 중…', async () => {
     DATA = await api('getTeacherData', $('#pin').value);
     PIN = $('#pin').value; $('#pin').value = '';
-    $('#pinForm').hidden = true; $('#dash').hidden = false; renderDash();
+    $('#pinForm').hidden = true; $('#dash').hidden = false; renderDash(); MK.play($('#dash'), 'mk-slide-up');
   });
 });
 const reloadT = async () => { DATA = await api('getTeacherData', PIN); renderDash(); };
@@ -812,7 +909,8 @@ function renderDash() {
   const C = DATA.config, items = DATA.items, shown = items.filter(i => !i.hidden);
   const done = items.filter(i => i.done).length;
   const deals = DATA.reqs.filter(q => q.status === '수락').length, wait = DATA.reqs.filter(q => q.status === '대기').length;
-  $('#tReuse').innerHTML = `버려질 뻔한 물건 <b class="num">${done}</b>개 재사용`;
+  $('#tReuse').innerHTML = `버려질 뻔한 물건 <b class="num">${tReuseShown}</b>개 재사용`;
+  MK.countUp($('#tReuse b'), done, { from: tReuseShown }); tReuseShown = done;
   $('#tSummary').textContent = `게시물 ${items.length}개(숨김 ${items.length - shown.length}) · 성사된 교환 ${deals}건 · 답을 기다리는 신청 ${wait}건 · 참여 별칭 ${new Set(items.map(i => i.cls + i.alias)).size}명`;
   const rows = C.categories.map(c => { const a = items.filter(i => i.cat === c); return [c, a.length, a.filter(i => i.done).length]; });
   const pct = (d, n) => n ? Math.round(d / n * 100) : 0;
@@ -859,7 +957,7 @@ async function init() {
   renderPreview();
   try { await loadBoard(); } catch (e) { toast(e.message, true); }
 }
-$('#demoFill').addEventListener('click', async () => { demoFill(); toast('샘플 20건을 붙였어요. 비밀번호는 모두 1111이에요.'); await loadBoard(); if (DATA) reloadT(); });
+$('#demoFill').addEventListener('click', async () => { if (DEMO.load().items.length && !confirm('지금 체험 데이터를 지우고 샘플 20건으로 바꿀까요?')) return; demoFill(); toast('샘플 20건을 붙였어요. 비밀번호는 모두 1111이에요.'); await loadBoard(); if (DATA) reloadT(); });
 $('#demoClear').addEventListener('click', async () => { if (!confirm('체험 데이터를 모두 지울까요?')) return; localStorage.removeItem(DEMO_KEY); forget(); await loadBoard(); if (DATA) reloadT(); });
 init();
 </script>

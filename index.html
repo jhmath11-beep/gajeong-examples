@@ -3,7 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>가정과 실습 예제집</title>
+<title>가정과 수업 웹앱 예제집</title>
+<meta name="description" content="가정과 수업에 바로 쓰는 웹앱 샘플 20종과, AI로 내 버전을 만드는 단계별 프롬프트·도전과제 모음">
+<meta property="og:title" content="가정과 수업 웹앱 예제집 — 바로 쓰는 샘플 20종">
+<meta property="og:description" content="식생활·의생활·주생활·가족·관계·소비 단원 수업용 웹앱. 그대로 쓰거나, 프롬프트를 복사해 AI로 내 버전을 만드세요.">
+<meta property="og:image" content="https://jhmath11-beep.github.io/gajeong-examples/shots/shot_gallery.png">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏠</text></svg>">
 <!-- 바이브코딩 2차(실습·배포) 별책. 내용 원본: _설계서.md §7. 샘플은 samples\ 폴더, 캡처는 ppt\shot_*.png -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap">
 <style>
@@ -34,9 +40,10 @@ code{font-family:Consolas,"D2Coding",monospace;background:var(--amber-soft);colo
 .split{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));margin:28px 0 12px}
 .split>div{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);padding:18px 22px;box-shadow:var(--shadow)}
 .split .k{font-weight:900}
-.split .html{border-top:6px solid var(--violet)} .split .html .k{color:var(--violet)}
-.split .gas{border-top:6px solid var(--teal)} .split .gas .k{color:var(--teal)}
-.ask{background:var(--surface);border-left:6px solid var(--or);border-radius:var(--r-sm);padding:14px 20px;margin:0 0 8px}
+.split .html{background:var(--violet-soft);border-color:transparent} .split .html .k{color:var(--violet)}
+.split .gas{background:var(--teal-soft);border-color:transparent} .split .gas .k{color:#0F6358}
+.split .fb{background:var(--or-soft);border-color:transparent} .split .fb .k{color:#A33A12}
+.ask{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);padding:14px 20px;margin:0 0 8px}
 
 .how{margin:28px 0;background:var(--navy);color:#DCE3F2;border-radius:var(--r-lg);padding:24px 26px}
 .how h2{color:#fff;font-size:1.25rem;margin-bottom:12px}
@@ -88,9 +95,9 @@ details.more[open]>summary::after{content:"접기 ▴"}
 @media(min-width:760px){.ch{grid-template-columns:repeat(3,1fr)}}
 .lv{border-radius:var(--r-md);padding:14px 16px;border:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column;gap:8px}
 .lv h5{margin:0;font-size:.95rem}
-.lv.e{border-top:5px solid #1F9E8F} .lv.e h5{color:var(--teal)}
-.lv.m{border-top:5px solid var(--or)} .lv.m h5{color:var(--or-strong)}
-.lv.h{border-top:5px solid var(--violet)} .lv.h h5{color:var(--violet)}
+.lv.e{background:var(--teal-soft);border-color:transparent} .lv.e h5{color:#0F6358}
+.lv.m{background:var(--or-soft);border-color:transparent} .lv.m h5{color:#A33A12}
+.lv.h{background:var(--violet-soft);border-color:transparent} .lv.h h5{color:var(--violet)}
 .lv ul{margin:0;padding:0;list-style:none;display:grid;gap:8px}
 .lv li{font-size:.92rem;display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
 .lv li .copy{min-height:30px;padding:0 10px;font-size:.78rem;background:var(--bg);border:1px solid var(--border)}
@@ -98,30 +105,48 @@ details.more[open]>summary::after{content:"접기 ▴"}
 .note{font-size:.88rem;background:var(--amber-soft);border-radius:var(--r-sm);padding:10px 14px}
 .foot{margin-top:40px;font-size:.85rem;color:#4A5160}
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--navy);color:#fff;padding:12px 22px;border-radius:var(--r-full);font-weight:700;opacity:0;transition:opacity .2s;pointer-events:none;z-index:50}
-.toast.on{opacity:1}
-@media print{.filters,.btns,.copy,.toast{display:none!important}details.more>.body{display:grid}.ex{break-inside:avoid;box-shadow:none}}
+.toast.on{opacity:1;animation:mk-toast var(--mk-base) var(--mk-ease-out)}
+
+/* motion-effects 스킬 — 이 페이지에 쓰는 것만 */
+:root{--mk-accent:var(--or-strong);--mk-ease-out:cubic-bezier(.22,1,.36,1);--mk-ease-in-out:cubic-bezier(.65,0,.35,1);--mk-base:280ms;--mk-slow:560ms}
+@keyframes mk-slide-up{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes mk-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+@keyframes mk-toast{from{opacity:0;transform:translateX(-50%) translateY(10px) scale(.96)}to{opacity:1;transform:translateX(-50%)}}
+@keyframes mk-ripple{to{transform:scale(1);opacity:0}}
+.mk-slide-up{animation:mk-slide-up var(--mk-base) var(--mk-ease-out) both}
+.mk-pulse{animation:mk-pulse 420ms var(--mk-ease-in-out)}
+.mk-stagger>*{animation:mk-slide-up var(--mk-slow) var(--mk-ease-out) both;animation-delay:calc(var(--i,0) * 70ms)}
+.mk-reveal{opacity:0;transform:translateY(18px);transition:opacity var(--mk-slow) var(--mk-ease-out),transform var(--mk-slow) var(--mk-ease-out)}
+.mk-reveal.is-in{opacity:1;transform:none}
+.copy,.chip,.btn{position:relative;overflow:hidden;isolation:isolate}
+.mk-ripple{position:absolute;border-radius:50%;pointer-events:none;background:currentColor;opacity:.2;transform:scale(0);animation:mk-ripple 520ms var(--mk-ease-out) forwards;z-index:-1}
+.shot img{transition:transform .6s var(--mk-ease-out)}
+.ex:hover .shot img{transform:scale(1.03)}
+details.more[open]>.body{animation:mk-slide-up var(--mk-base) var(--mk-ease-out)}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}.mk-reveal{opacity:1;transform:none}html{scroll-behavior:auto}}
+@media print{.filters,.btns,.copy,.toast{display:none!important}details.more>.body{display:grid}.ex{break-inside:avoid;box-shadow:none}.mk-reveal{opacity:1!important;transform:none!important}*{animation:none!important;transition:none!important}}
 </style>
 </head>
 <body>
 <div class="wrap">
 
 <header class="hero">
-  <span class="eyebrow">수원가정교육연구회 · 바이브코딩 2차 · 별책</span>
-  <h1>가정과 실습 예제집 — <b>바로 수업에 쓰는 샘플 <span id="cnt">15</span>종</b></h1>
+  <span class="eyebrow">가정과 선생님을 위한 수업용 웹앱 모음</span>
+  <h1>가정과 수업 웹앱 예제집 — <b>바로 쓰는 샘플 <span id="cnt">20</span>종</b></h1>
   <p>모두 실제로 동작하는 완성 샘플입니다. <b>그대로 수업에 쓰셔도 되고</b>, 아래 프롬프트로 <b>내 버전을 처음부터 만들어 보거나</b>, <b>도전과제</b>로 하나씩 바꿔 보세요.</p>
-  <p>연수에서 만든 샘플을 그대로 수업에 써 보신 선생님들의 만족도가 높았습니다. 오늘도 같은 방식입니다.</p>
+  <p>코딩을 몰라도 됩니다. 프롬프트를 복사해 ChatGPT·Claude·Gemini 같은 AI 대화창에 붙여넣기만 하면 됩니다.</p>
 </header>
 
 <section aria-labelledby="h-split">
-  <h2 id="h-split" style="font-size:1.4rem;margin-top:28px">먼저 가르기 — HTML 하나로? Apps Script로?</h2>
+  <h2 id="h-split" style="font-size:1.4rem;margin-top:28px">먼저 고르기 — HTML 하나로? 구글 시트로?</h2>
   <div class="split">
-    <div class="html"><div class="k">📄 HTML 하나로 · 경로 B (GitHub Pages)</div>
+    <div class="html"><div class="k">📄 HTML 하나로 · GitHub Pages(무료)</div>
       <div><b>데이터가 그 기기 안에서 끝난다.</b><br>계산 · 연습 · 타이머 · 인쇄 · 내 기록 저장(브라우저에). 서버·로그인 없음. 파일 1개.</div></div>
-    <div class="gas"><div class="k">📊 Apps Script로 · 경로 E (구글 시트)</div>
+    <div class="gas"><div class="k">📊 Apps Script로 · 구글 시트에 모으기</div>
       <div><b>여러 사람의 입력을 한 곳에 모은다.</b><br>제출 · 집계 · 교사 대시보드. 파일 2개(<code>Code.gs</code> + <code>index.html</code>). 개인 gmail 권장.</div></div>
+    <div class="fb"><div class="k">🔥 Firebase로 · 고급</div>
+      <div><b>실시간으로 쌓이고, 사진을 받고, 전시회처럼 보여 준다.</b><br>제출 즉시 TV에 반영 · 작품 사진 · 교사 승인 후 공개. Apps Script로 충분하면 그쪽이 더 쉽습니다.</div></div>
   </div>
-  <div class="split" style="margin-top:0"><div style="border-top:6px solid var(--or)"><div class="k" style="color:var(--or-strong)">🔥 Firebase로 · 고급 (내 Firebase 프로젝트)</div>
-      <div><b>실시간으로 쌓이고, 사진을 받고, 전시회처럼 보여 준다.</b><br>제출 즉시 TV에 반영 · 작품 사진 제출 · 교사 승인 후 공개. Google 로그인으로 교사 화면 잠금. Apps Script로 충분하면 Apps Script가 더 쉽습니다.</div></div></div>
   <p class="ask">❓ 헷갈리면 이 질문 하나: <b>“학생 30명이 낸 걸 내가 한 화면에서 봐야 하나?”</b> → <b>예 = Apps Script</b>, 아니오 = HTML.<br>
   <span style="font-size:.92rem">HTML로 시작해도 됩니다. 화면을 HTML로 먼저 완성·배포한 뒤, 필요할 때 “구글 시트에 모으기”만 Apps Script로 옮기는 게 가장 안전한 순서입니다.</span></p>
 </section>
@@ -129,8 +154,8 @@ details.more[open]>summary::after{content:"접기 ▴"}
 <section class="how">
   <h2>샘플을 쓰는 세 가지 방법</h2>
   <ol>
-    <li><b>그대로 쓰기</b> — [샘플 열기]로 확인 → 마음에 들면 HTML 샘플은 <code>index.html</code>을 내 GitHub 저장소에 올려 내 주소로(경로 B). Apps Script 샘플은 <code>설치방법</code>을 따라 내 구글 시트에(경로 E).</li>
-    <li><b>내 버전 만들기</b> — 각 샘플의 <b>P0 → 키우기 단계</b> 프롬프트를 순서대로 AI에 보내면 비슷한 앱이 처음부터 만들어집니다. 연수 실습용.</li>
+    <li><b>그대로 쓰기</b> — [샘플 열기]로 확인 → 마음에 들면 HTML 샘플은 <code>index.html</code>을 내 GitHub 저장소에 올려 내 주소로. Apps Script·Firebase 샘플은 <code>설치방법</code>을 따라 내 계정에.</li>
+    <li><b>내 버전 만들기</b> — 각 샘플의 <b>첫 화면 → 키우기 단계</b> 프롬프트를 순서대로 AI에 보내면 비슷한 앱이 처음부터 만들어집니다.</li>
     <li><b>바꿔 쓰기(도전과제)</b> — 샘플 파일 전체를 AI에 붙여넣고 <b>“샘플 이어 고치기”</b> 프롬프트 + 도전과제 하나. 쉬움 → 보통 → 어려움 순으로.</li>
   </ol>
 </section>
@@ -156,7 +181,7 @@ details.more[open]>summary::after{content:"접기 ▴"}
 
 <p class="foot">수업용 예시값 주의: 식단 분석기의 1회 분량 에너지·권장 섭취 횟수·음식별 회분량은 <b>수업용 예시값</b>입니다. 교과서와 「한국인 영양소 섭취기준」 표로 확인한 뒤 ⚙ 설정에서 고쳐 쓰세요.<br>
 Apps Script 샘플은 체험 모드(이 브라우저에만 저장)로 검증했습니다. 실제 시트 배포 후 처음 한 번은 직접 제출·교사 화면을 확인하세요. 공식 안내: <a href="https://developers.google.com/apps-script/guides/web" target="_blank" rel="noopener">Apps Script 웹 앱</a><br>
-교사를 위한 바이브코딩 실습 연수 · 가정과 · 김준홍 jbot.kr</p>
+만든 이 · 김준홍 (<a href="https://jbot.kr" target="_blank" rel="noopener">jbot.kr</a>)</p>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
@@ -176,10 +201,10 @@ const EX = [
       m:["타이머가 1분 남았을 때 미리 알림(짧은 소리 + 노란 띠)을 추가해줘.","각 모둠이 [실습 완료]를 누른 시각을 모아 완료 순서표로 보여 주는 화면을 추가해줘."],
       h:["재료 단가를 입력하면 모둠 인원 기준 1인당 재료비와 총액을 계산하고, 예산을 넘으면 경고해줘.","완성된 기록지(모둠·레시피·체크 결과·소감)를 구글 시트로 제출하게 Apps Script(Code.gs + index.html)로 바꿔줘. 교사는 PIN으로 모둠별 제출 현황을 봐."]}},
 { id:"meal", type:"html", area:"식생활", unit:"식생활 · 영양", dir:"samples/meal-balance/", shot:"shots/shot_meal.png",
-  name:"청소년 한 끼 식단 균형 분석기",
+  name:"청소년 하루 식단 균형 분석기",
   scene:"‘균형 잡힌 식사’ 차시에 학생이 어제 먹은 식단이나 급식 메뉴를 담아 식품구성자전거 6군의 부족/과다를 확인하고, 고친 식단을 활동지에 씁니다.",
   feat:["음식 57개(급식·분식·간식) → 아침·점심·저녁·간식 칸에 담기 · 검색·식품군 필터","식품군별 권장선 대비 부족/적정/과다 막대 · 하루 에너지 합계","식품구성자전거 그림이 채워지고 부족 식품군을 채울 음식 추천","⚙ 설정에서 기준값·음식 표 편집(수업용 예시값) · 식단 저장 · A4 활동지 인쇄"],
-  p0:"청소년 한 끼 식단 균형 분석기",
+  p0:"청소년 하루 식단 균형 분석기",
   steps:["음식 버튼 20개를 만들고, 누르면 6개 식품군(곡류 / 고기·생선·달걀·콩류 / 채소류 / 과일류 / 우유·유제품류 / 유지·당류)의 회분량 합계가 늘어나는 표를 추가해줘.",
          "권장 섭취 횟수 대비 부족(80% 미만)/적정/과다(120% 초과)를 색과 글자로 보여 주는 막대 그래프와 에너지 합계를 추가해줘.",
          "아침·점심·저녁·간식 칸을 나누고, 음식 이름 검색과 식품군 필터를 추가해줘.",
@@ -360,7 +385,77 @@ const EX = [
   ch:{e:["쪽지 분류 이름을 ‘찬성·반대·질문’으로 바꿔줘.","쪽지 글자 수 제한을 50자로 줄이고 남은 글자 수를 보여 줘."],
       m:["벽 아래에 묶음별 쪽지 수 막대그래프와 인쇄용 요약 한 장을 추가해줘.","쪽지에 교사가 별표를 달면 TV에서 크게 보이게 해줘."],
       h:["쪽지마다 학생 투표(1인 1표)를 넣고, 중복 투표를 규칙에서 막아줘(작품 전시회의 마음에 들어요 방식 참고).","수업이 끝나면 묶음별로 정리된 결과를 구글 시트로 내보내는 버튼을 추가해줘."]},
-  note:"Firebase는 내 새 프로젝트에 연결합니다. firestore.rules는 새 프로젝트에만 붙여 넣으세요. 방 코드를 아는 사람은 쪽지를 붙일 수 있으니 수업이 끝나면 ‘쪽지 받기 멈춤’을 누르세요."}
+  note:"Firebase는 내 새 프로젝트에 연결합니다. firestore.rules는 새 프로젝트에만 붙여 넣으세요. 방 코드를 아는 사람은 쪽지를 붙일 수 있으니 수업이 끝나면 ‘쪽지 받기 멈춤’을 누르세요."},
+{ id:"consumer", type:"html", area:"소비·자원관리", unit:"소비생활 · 소비자 권리와 책임", dir:"samples/consumer-help/", shot:"shots/shot_consumer.png",
+  name:"소비자 피해 해결 길잡이",
+  scene:"‘소비자 권리와 책임’ 차시에 반품 거절·게임 결제·중고거래 사기 같은 청소년 소비자 문제 사례를 TV로 함께 읽고, 학생이 문제·근거·권리·해결 순서를 판단한 뒤 판매자에게 보낼 요청문을 써서 활동지로 마무리합니다.",
+  feat:["사례 6개(교사 추가·편집) → 문제 판단 + 근거(둘 다 맞아야 1점) · 관련 권리 · 해결 순서 맞추기","빈칸만 채우면 완성되는 정중한 요청문 · 복사 · 이름 칸 없음, 전화번호 등 개인정보 입력 경고","소비자 8대 권리·책임 표 · 판매자 → 1372 → 한국소비자원 피해구제 순서도 · 법률 상담이 아닌 학습용 안내","내 판단 기록 저장(접수 대장) · TV 크게 보기(토의 질문만, 정답 숨김) · A4 사례 분석 + 요청문 활동지"],
+  p0:"소비자 피해 해결 길잡이",
+  steps:["청소년 소비자 피해 사례 하나(온라인에서 산 티셔츠 반품 거절)를 보여 주고, ‘무엇이 문제인가’ 보기 4개와 ‘그렇게 본 근거’ 보기 4개를 고르게 해줘. 둘 다 맞아야 1점.",
+         "소비자의 8대 권리 중 이 사례와 관련된 권리를 고르는 칸과, 판매자 요청 → 1372 소비자상담센터 → 한국소비자원 피해구제 순서를 보기 카드를 눌러 차례대로 맞추는 칸을 추가해줘. 하면 안 되는 행동 카드도 섞어 줘.",
+         "사례를 6개로 늘리고(불량 보조배터리, 보호자 몰래 한 게임 결제, 과장 광고, 중고거래 사기, 주문과 다른 상품) 코드 맨 위 CONFIG에 모아 줘. 판단 기록은 localStorage에 저장.",
+         "구매일·상품·문제 상황·원하는 해결을 채우면 판매자에게 보낼 정중한 요청문이 완성되고 복사되는 화면을 추가해줘. 이름 칸은 만들지 말고, 전화번호를 쓰면 경고해줘.",
+         "사례를 TV에 크게 띄우는 토의 화면(정답은 숨김)과, 사례 분석표와 요청문이 들어간 A4 활동지 인쇄 기능을 추가해줘(@media print). 하단에 ‘법률 상담이 아닌 학습용’ 안내도."],
+  ch:{e:["우리 반 학생들이 실제로 겪은 일(예: 무료 체험 후 자동 결제)을 사례로 하나 더 넣어줘.","8대 권리 표의 설명을 우리 교과서 문장으로 바꾸고, 권리마다 어울리는 예시를 한 줄씩 더해줘."],
+      m:["모둠 토의용으로 사례마다 모둠 의견을 한 줄씩 적어 두는 칸과, 판단 결과를 모둠별로 비교하는 표를 추가해줘.","요청문에 말투 선택(정중하게 / 단호하게)을 넣고, 같은 내용을 두 말투로 나란히 보여 줘."],
+      h:["학생들이 판단 결과를 구글 시트로 제출하게 Apps Script(Code.gs + index.html)로 바꾸고, 교사는 PIN으로 사례별 정답률을 봐.","교사가 화면에서 사례를 추가·수정하는 편집 폼(보기·정답·순서 입력)을 만들고, JSON 파일로 다른 교실과 주고받게 해줘."]},
+  note:"법·제도 내용(청약철회 7일, 미성년자 계약 취소, 1372 등)은 원칙만 담은 학습용입니다. 수업 전 교과서와 한국소비자원 공식 안내로 확인하고, 사례별 ‘관련 권리’ 정답은 ⚙ 설정에서 고칠 수 있습니다." },
+{ id:"label", type:"html", area:"식생활", unit:"식생활 · 식품 선택과 안전", dir:"samples/food-label/", shot:"shots/shot_label.png",
+  name:"식품 표시 읽기 & 현명한 선택",
+  scene:"‘식품 선택과 안전’ 차시에 학생이 편의점·마트 가공식품 포장(또는 사진)의 영양정보를 옮겨 적고, 기준 단위 함정·나트륨·당류·알레르기·소비기한을 읽은 뒤 두 제품 중 고를 제품과 근거를 활동지에 씁니다.",
+  feat:["영양정보 입력 → 실제 포장 서식 그대로 표 그리기 · 1일 기준치 대비 % 자동 계산","‘다 먹으면?’ 환산(1봉지당·100g당 → 총 내용량) · 기준치 절반 이상 형광펜 · 입력 숫자 이상 경고","내 알레르기 경고 · 소비기한/유통기한 개념과 남은 날 계산","두 제품을 같은 양/다 먹으면 기준으로 비교 → 판단+근거 확인 영수증 · 내 제품 저장 · A4 비교 활동지"],
+  p0:"식품 표시 읽기 & 현명한 선택",
+  steps:["총 내용량과 열량·나트륨·탄수화물·당류·지방·트랜스지방·포화지방·콜레스테롤·단백질을 입력하면 실제 식품 포장의 ‘영양정보’ 표 모양(검은 머리띠, 굵은 선)으로 그려 주는 화면을 만들어줘.",
+         "표의 기준을 ‘총 내용량당 / 100g당 / 1봉지(30g)당’ 중에서 고르게 하고, 1일 영양성분 기준치 대비 %와 ‘다 먹으면 몇 배인지’ 환산 표를 추가해줘. 기준치 값은 코드 맨 위 CONFIG에 모아줘.",
+         "알레르기 유발 물질 체크와 ‘내 알레르기’ 설정을 추가해서 겹치면 빨간 경고를 보여 주고, 소비기한 날짜를 넣으면 남은 날을 알려 줘.",
+         "제품 두 개를 나란히 놓고 ‘같은 양(100g)’ 또는 ‘다 먹으면’ 기준으로 다시 계산한 비교표를 영수증 모양으로 보여 주고, 학생이 고른 제품·근거·이유를 쓰면 근거가 숫자와 맞는지 확인해줘.",
+         "내 제품 저장·불러오기와 ⚙ 설정(기준치·알레르기 목록 편집), 두 표와 문항이 들어간 A4 비교 활동지 인쇄를 추가해줘."],
+  ch:{e:["예시 제품에 우리 학교 매점에서 파는 간식 2가지를 추가해줘(가상 이름으로).","‘다 먹으면?’ 표에서 나트륨 줄만 굵게 강조해줘."],
+      m:["비교 근거에 ‘식이섬유가 더 많다’를 추가하고 입력 칸과 판정도 함께 만들어줘.","포장 사진을 올리면 옮겨 적는 칸 옆에 사진을 크게 띄워 보면서 입력할 수 있게 해줘."],
+      h:["반 학생들이 고른 제품과 근거 정답률을 구글 시트에 모아 교사 화면에서 ‘가장 많이 틀린 근거’를 보게 Apps Script로 바꿔줘.","‘함정 찾기’ 모드: 기준 단위가 다른 두 제품을 무작위로 보여 주고 다 먹었을 때 나트륨이 더 많은 쪽을 고르게 해서 점수를 저장해줘."]},
+  note:"1일 영양성분 기준치와 알레르기 유발 물질 표시 대상은 수업 전 식약처 「식품등의 표시기준」 최신 고시와 대조한 뒤 ⚙ 설정에서 고쳐 쓰세요. 예시 제품의 숫자·가격은 가상의 값입니다." },
+{ id:"homecheck", type:"html", area:"주생활", unit:"주생활 · 안전하고 쾌적한 주거", dir:"samples/home-check/", shot:"shots/shot_homecheck.png",
+  name:"우리 집 안전·에너지 점검표",
+  scene:"과제로 집을 공간별로 돌며 화재·전기·가스·미끄럼·환기·에너지 항목을 점검하고, 수업에서 취약 분야를 확인해 고칠 일 순서와 담당을 가족과 약속한 뒤 1~2주 후 다시 점검해 비교합니다.",
+  feat:["현관·거실·주방·욕실·내 방·베란다 36항목 · ○예/×아니오/／해당 없음 + 메모 · 항목마다 ‘왜?’ 한 줄 근거","공간별·분야별 결과 막대 · 우리 집 취약 분야 TOP 3","고칠 일을 위험도×고치기 쉬움 매트릭스로 정렬 · 담당(부르는 말)·기한·약속 · 가족 확인 도장","1차/2차 재점검 비교(나아짐·아직·새로 생김) · 항목 설정 · 파일 저장/불러오기 · 결과지·가족 약속서·빈 점검표 A4 인쇄"],
+  p0:"우리 집 안전·에너지 점검표",
+  steps:["현관·거실·주방·욕실 공간별로 집 안전 점검 항목 5개씩을 보여 주고, 항목마다 예/아니오/해당 없음 버튼과 메모 칸, ‘왜 위험한지’ 한 줄 설명을 붙여줘. 항목 문장은 ‘그렇다’면 안전한 쪽으로 써줘.",
+         "항목마다 화재·전기·가스·미끄럼·환기·에너지 분야를 정하고, 결과 요약 화면에 공간별·분야별 막대와 ‘아니오’가 많은 취약 분야 TOP 3을 보여줘.",
+         "‘아니오’ 항목을 고칠 일 목록으로 모으고, 위험도(높음/보통/낮음)와 고치기 쉬움(쉬움/보통/어려움) 3×3 표에 배치해 위험한데 쉬운 것부터 순서를 매겨줘. 담당(가족을 부르는 말)과 기한도 정하게 해줘.",
+         "1차/2차 점검을 바꿔 기록할 수 있게 하고, 두 번 점검한 결과를 비교해 나아진 항목·아직 그대로인 항목·새로 생긴 문제를 묶어 보여줘. 기록은 localStorage에 저장.",
+         "점검 결과지·가족 약속서(서명란)·빈 점검표를 A4로 인쇄하는 기능과, 기록을 JSON 파일로 저장·불러오는 기능을 추가해줘(@media print)."],
+  ch:{e:["‘다용도실’ 공간을 따로 나누고 세탁기·건조기 관련 점검 항목 3개를 추가해줘.","점검표 머리의 확인 도장 글자를 ‘약속’ 대신 우리 반 이름으로 바꿔줘."],
+      m:["고칠 일의 기한이 지났는데 ‘고쳤어요’가 체크되지 않았으면 빨간 글씨로 ‘기한 지남’을 표시해줘.","생활화학(세제 섞어 쓰지 않기·보관) 분야를 새로 만들고 항목과 근거를 추가해줘."],
+      h:["학생들의 분야별 ‘아니오’ 개수만(이름·주소 없이) 구글 시트로 모아 반 전체 취약 분야 순위 그래프를 보는 Apps Script 버전을 만들어줘.","QR 코드를 읽으면 그 공간의 점검 항목으로 바로 가게 공간별 주소(#entry 등)와 QR 인쇄 카드를 추가해줘."]},
+  note:"항목 근거는 상식 수준으로만 썼습니다. 가스 누출 대처, 베란다 대피 공간, 보일러 배기통 항목은 교과서와 소방청·한국가스안전공사 안내로 한 번 더 확인하고 쓰세요." },
+{ id:"imsg", type:"html", area:"가족·발달", unit:"청소년기 발달 · 관계와 의사소통", dir:"samples/i-message/", shot:"shots/shot_imsg.png",
+  name:"나-전달법 대화 연습장",
+  scene:"‘관계와 의사소통’ 차시에 가족·친구 갈등 상황 카드를 골라 비난하는 너-전달법 말을 상황·감정·영향·바람 네 칸으로 바꿔 쓰고, 짝과 크게 띄워 역할극을 한 뒤 활동지로 정리합니다.",
+  feat:["갈등 상황 카드 8장(가족·형제자매·친구·학교·온라인) + 직접 쓰기 · 카드마다 쓰던 내용 따로 저장","네 칸 → 원고지 미리보기 · 비난·일반화·판단형 감정 낱말에 빨간 교정 표시(낱말 규칙, AI 아님)","감정 낱말 도우미 · 전후 비교 기록 · TV 크게 보기 역할극(역할 바꾸기)","판단 + 이유 퀴즈(찍기 방지) · A4 활동지(빈칸판 포함) · 카드 추가·기록 파일"],
+  p0:"나-전달법 대화 연습장",
+  steps:["갈등 상황 카드 목록을 만들고, 카드를 누르면 장면 설명과 고쳐야 할 너-전달법 말이 크게 나오게 해줘.",
+         "상황·감정·영향(이유)·바람(부탁) 네 칸에 나눠 쓰면 이어 붙인 문장이 원고지 칸에 한 글자씩 실시간으로 보이게 해줘.",
+         "‘너는, 맨날, 항상, 왜 그래, 무시당한’ 같은 낱말 목록으로 비난·일반화·판단형 감정을 찾아 빨간 동그라미와 고칠 점 메모를 붙이고, 빈 칸은 안내해줘.",
+         "감정 낱말 고르기 도우미, 기록 저장(고치기 전/후 비교), TV용 크게 보기 역할극 화면을 추가해줘.",
+         "판단과 이유를 둘 다 맞혀야 1점인 퀴즈와, 네 칸·완성 문장·짝 점검표가 들어간 A4 활동지 인쇄를 넣어줘."],
+  ch:{e:["우리 반에서 자주 생기는 갈등 상황 카드 2장을 설정에 추가해줘.","감정 낱말 도우미에 ‘기쁘고 고마울 때’ 묶음을 넣어줘."],
+      m:["역할극 화면에 60초 타이머와 ‘듣는 사람이 느낀 감정’ 고르기 버튼을 추가해줘.","교정 표시가 사라질 때까지 고친 횟수를 세어 ‘몇 번 만에 고쳤는지’ 기록에 남겨줘."],
+      h:["학생이 완성한 나-전달법을 별칭만 붙여 구글 시트로 제출하고, 교사 화면에서 익명 갤러리로 띄우는 Apps Script 버전을 만들어줘.","같은 상황을 짝과 서로 바꿔 받아 상대 문장에 교정 메모를 남기는 ‘짝 교정’ 모드를 만들어줘."]},
+  note:"교정 표시는 낱말 규칙으로 찾은 참고용입니다. 네 요소 구성은 교과서마다 다를 수 있으니(3요소 등) 설정에서 맞춰 쓰세요." },
+{ id:"tpo", type:"html", area:"의생활", unit:"의생활 · 옷차림과 자기표현", dir:"samples/tpo-closet/", shot:"shots/shot_tpo.png",
+  name:"TPO 옷차림 코디 보드",
+  scene:"‘옷차림과 자기표현’ 차시에 때·장소·상황 카드를 뽑고, 3D 모델에게 옷을 입혀 본 뒤 그렇게 고른 이유를 TPO 기준으로 써서 모둠별로 발표합니다.",
+  feat:["3D 모델 8명 + 나이대·체형·피부색·머리 모양 고르기 · 끌어서 360° 돌리기·확대","옷 35가지(상의·하의·원피스·겉옷·신발·소품) · 색 20가지+직접 고르기 · 줄무늬·체크·도트·데님","상황 카드 9장 + 모둠 카드 · 이유 세 칸(T·P·O)을 써야 점검 · ‘피할 것/근거 필요/챙길 것’ 피드백","먼셀 10색상환 색 조화 도우미 · A/B 저장 비교 · TV 크게 보기 · 이미지 저장 · A4 코디 활동지"],
+  p0:"TPO 옷차림 코디 보드",
+  steps:["three.js로 화면 가운데에 스튜디오 조명과 바닥 그림자가 있는 3D 사람 모델을 코드로 만들고, 끌어서 돌리고 휠로 확대할 수 있게 해줘.",
+         "몸 치수에 맞춰 입혀지는 3D 옷(티셔츠·셔츠·바지·치마·재킷·운동화·구두)을 만들고, 오른쪽 옷장 그리드에서 누르면 입고 다시 누르면 벗게 해줘.",
+         "고른 옷의 색을 팔레트에서 바꾸고 민무늬·줄무늬·체크·도트 무늬를 캔버스 텍스처로 입혀줘. 면·니트·가죽은 재질감이 다르게 보이게 해줘.",
+         "때·장소·상황 카드(결혼식·조문·등산·면접 등)와 카드별 ‘피할 것/권장’ 규칙을 CONFIG에 두고, 이유 세 칸을 써야 판단 결과와 이유를 보여줘.",
+         "색상환으로 유사색·보색·무채색 조합을 알려 주는 도우미, 코디 A/B 저장 비교, TV 크게 보기, 3D 캡처가 들어간 A4 활동지 인쇄를 추가해줘."],
+  ch:{e:["우리 학교 행사(예: 졸업식 하객)를 상황 카드로 추가하고 피할 것·권장 규칙을 2개씩 넣어줘.","색 팔레트에 우리 반 색 2가지를 추가해줘."],
+      m:["모델이 천천히 걷거나 손을 흔드는 짧은 동작을 넣고, 동작 줄이기 설정이면 멈추게 해줘.","저장한 코디 A·B를 나란히 세워 한 화면에서 360° 함께 돌려 보는 비교 무대를 만들어줘."],
+      h:["CC0 라이선스 3D 캐릭터(GLB)를 불러와 지금 옷들이 그 몸에 맞게 입혀지도록 바꿔줘. 출처·라이선스를 화면에 표시해줘.","모둠별 코디 이미지와 TPO 이유를 구글 시트로 제출하고, 교사가 반 전체 코디를 갤러리로 넘겨 보는 Apps Script 버전을 만들어줘."]},
+  note:"3D 화면은 three.js를 인터넷에서 불러옵니다(학교망에서 막히면 2D 화면으로 바뀌고 수업 기능은 그대로 됩니다). 상황별 예절 규칙은 일반적인 관례이니 ⚙ 설정에서 학교 사정에 맞게 고치고, 색상환은 교과서와 대조하세요." }
 ];
 
 const P0 = n => `[${n}]이라는 웹앱을 만들 거야. 지금은 첫 화면만 만들어줘.
@@ -377,10 +472,10 @@ const reg = t => { const id = "t" + (k++); TXT[id] = t; return id; };
 function card(x){
   const isG = x.type === "gas", isF = x.type === "fb";
   const route = isG
-    ? `<b>📊 Apps Script · 경로 E</b> — 파일 2개(<code>Code.gs</code> + <code>index.html</code>). 키우기 1·2단계는 HTML로 화면을 먼저 만들어 경로 B로 배포해 두고, 3단계에서 Apps Script로 옮깁니다. 배포: 시트 → 확장 프로그램 → Apps Script → 배포 → 새 배포 → 웹 앱 · 실행: 나 · 액세스: <b>모든 사용자</b>. 개인 gmail 권장.`
+    ? `<b>📊 Apps Script · 구글 시트</b> — 파일 2개(<code>Code.gs</code> + <code>index.html</code>). 키우기 1·2단계는 HTML로 화면을 먼저 만들어 GitHub Pages에 올려 두고, 3단계에서 Apps Script로 옮깁니다. 배포: 시트 → 확장 프로그램 → Apps Script → 배포 → 새 배포 → 웹 앱 · 실행: 나 · 액세스: <b>모든 사용자</b>. 개인 gmail 권장.`
     : isF
-    ? `<b>🔥 Firebase · 고급</b> — <code>index.html</code>은 경로 B(GitHub Pages)로 배포하고, 데이터는 <b>내가 새로 만든 Firebase 프로젝트</b>에 모읍니다. <code>firestore.rules</code>는 <b>새 프로젝트에만</b> 붙여넣기 — 이미 쓰는 프로젝트에 붙이면 기존 규칙이 통째로 덮어써져 다른 사이트가 망가집니다. 설정이 비어 있으면 체험 모드로 동작.`
-    : `<b>📄 HTML 하나 · 경로 B</b> — <code>index.html</code> 하나를 GitHub 저장소에 올리면 끝. 기록은 그 기기 브라우저에 저장되고 서버로 가지 않습니다.`;
+    ? `<b>🔥 Firebase · 고급</b> — <code>index.html</code>은 GitHub Pages에 올리고, 데이터는 <b>내가 새로 만든 Firebase 프로젝트</b>에 모읍니다. <code>firestore.rules</code>는 <b>새 프로젝트에만</b> 붙여넣기 — 이미 쓰는 프로젝트에 붙이면 기존 규칙이 통째로 덮어써져 다른 사이트가 망가집니다. 설정이 비어 있으면 체험 모드로 동작.`
+    : `<b>📄 HTML 하나 · GitHub Pages</b> — <code>index.html</code> 하나를 GitHub 저장소에 올리면 끝. 기록은 그 기기 브라우저에 저장되고 서버로 가지 않습니다.`;
   const tagCls = isG ? "t-gas" : isF ? "t-fb" : "t-html", tagTxt = isG ? "📊 Apps Script" : isF ? "🔥 Firebase · 고급" : "📄 HTML 하나";
   const lv = (cls, name, arr) => `<div class="lv ${cls}"><h5>${name}</h5><ul>${arr.map(c => `<li><span>${esc(c)}</span><button class="copy" data-t="${reg(c)}" aria-label="도전과제 복사">복사</button></li>`).join("")}</ul></div>`;
   return `<article class="ex" data-type="${x.type}" id="ex-${x.id}">
@@ -405,11 +500,11 @@ function card(x){
     <summary>만드는 프롬프트 · 도전과제 6개</summary>
     <div class="body">
       <div class="route">${route}</div>
-      <div><h4>① 첫 화면 (P0) — 배포 먼저</h4>
-        <div class="pb"><div class="ph"><div class="pt">P0 · 앱 이름이 채워져 있어요</div><button class="copy" data-t="${reg(P0(x.p0))}">복사</button></div><pre>${esc(P0(x.p0))}</pre></div></div>
+      <div><h4>① 첫 화면 — 먼저 만들어 올려 두기</h4>
+        <div class="pb"><div class="ph"><div class="pt">첫 화면 프롬프트 · 앱 이름이 채워져 있어요</div><button class="copy" data-t="${reg(P0(x.p0))}">복사</button></div><pre>${esc(P0(x.p0))}</pre></div></div>
       <div><h4>② 키우기 — 하나 보내고, 확인하고, 재배포</h4>
-        <ol class="steps">${x.steps.map(s => `<li><span>${esc(s)}</span><button class="copy" data-t="${reg(P1(s))}" aria-label="P1 프롬프트 복사">복사</button></li>`).join("")}</ol>
-        <p class="note" style="margin-top:8px">복사 버튼은 P1 문장(“지금 파일은 그대로 두고…”)까지 붙여 줍니다. 한 번에 하나씩.</p></div>
+        <ol class="steps">${x.steps.map(s => `<li><span>${esc(s)}</span><button class="copy" data-t="${reg(P1(s))}" aria-label="단계 프롬프트 복사">복사</button></li>`).join("")}</ol>
+        <p class="note" style="margin-top:8px">복사 버튼은 “지금 파일은 그대로 두고…” 안내 문장까지 함께 복사합니다. 한 번에 하나씩 보내고, 확인한 뒤 다음 단계로.</p></div>
       <div><h4>③ 도전과제 — 샘플을 붙여넣고 ‘샘플 이어 고치기’ + 하나</h4>
         <div class="ch">${lv("e", "쉬움 · 글·값 바꾸기", x.ch.e)}${lv("m", "보통 · 기능 하나 더", x.ch.m)}${lv("h", "어려움 · 형식·구조 바꾸기", x.ch.h)}</div></div>
     </div>
@@ -429,6 +524,7 @@ document.addEventListener("click", async e => {
   try { await navigator.clipboard.writeText(t); }
   catch { const a = document.createElement("textarea"); a.value = t; document.body.appendChild(a); a.select(); document.execCommand("copy"); a.remove(); }
   say("복사했어요 — AI 대화창에 붙여넣기");
+  MK.play(b, "mk-pulse");
 });
 // 거르기: 형식(HTML/Apps Script) × 영역 — 둘 다 맞는 카드만
 const AREAS = [...new Set(EX.map(x => x.area))];
@@ -446,8 +542,41 @@ document.querySelector(".filters").addEventListener("click", e => {
   const c = e.target.closest(".chip"); if (!c) return;
   F[c.dataset.k] = c.dataset.v;
   document.querySelectorAll(`.chip[data-k="${c.dataset.k}"]`).forEach(x => x.classList.toggle("on", x === c));
-  EX.forEach(x => document.getElementById("ex-" + x.id).hidden =
-    !((F.type === "all" || x.type === F.type) && (F.area === "all" || x.area === F.area)));
+  let i = 0;
+  EX.forEach(x => {
+    const el = document.getElementById("ex-" + x.id);
+    el.hidden = !((F.type === "all" || x.type === F.type) && (F.area === "all" || x.area === F.area));
+    if (!el.hidden && i < 6) { el.classList.add("is-in"); el.style.animationDelay = (i++ * 60) + "ms"; MK.play(el, "mk-slide-up"); }
+  });
+});
+
+// 모션: 첫 화면 순차 등장 · 숫자 올라가기 · 카드 스크롤 등장 · 누른 자리 파문 · 펼칠 때 슬라이드
+const MK = (() => {
+  const reduced = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const play = (el, cls) => { if (!el || reduced()) return; el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); el.addEventListener("animationend", () => el.classList.remove(cls), { once: true }); };
+  const stagger = p => { [...p.children].forEach((c, i) => c.style.setProperty("--i", i)); p.classList.add("mk-stagger"); };
+  return { reduced, play, stagger };
+})();
+MK.stagger(document.querySelector(".hero"));
+MK.stagger(document.querySelector(".split"));
+(() => { // 20종 숫자
+  const el = document.getElementById("cnt"), to = EX.length;
+  if (MK.reduced()) return;
+  const t0 = performance.now(), d = 900, ease = t => 1 - Math.pow(1 - t, 3);
+  (function f(now){ const p = Math.min(1, (now - t0) / d); el.textContent = Math.round(to * ease(p)); if (p < 1) requestAnimationFrame(f); })(t0);
+})();
+(() => { // 카드·안내 블록 스크롤 등장
+  const els = document.querySelectorAll(".ex, .how, .pb");
+  els.forEach(e => e.classList.add("mk-reveal"));
+  if (MK.reduced() || !("IntersectionObserver" in window)) { els.forEach(e => e.classList.add("is-in")); return; }
+  const io = new IntersectionObserver(es => es.forEach(en => { if (en.isIntersecting) { en.target.classList.add("is-in"); io.unobserve(en.target); } }), { threshold: .08 });
+  els.forEach(e => io.observe(e));
+})();
+document.addEventListener("pointerdown", e => { // 버튼 리플
+  const h = e.target.closest(".copy, .chip, .btn"); if (!h || MK.reduced()) return;
+  const r = h.getBoundingClientRect(), d = Math.max(r.width, r.height) * 2.2, s = document.createElement("span");
+  s.className = "mk-ripple"; Object.assign(s.style, { width: d + "px", height: d + "px", left: (e.clientX - r.left - d / 2) + "px", top: (e.clientY - r.top - d / 2) + "px" });
+  h.appendChild(s); s.addEventListener("animationend", () => s.remove(), { once: true });
 });
 </script>
 </body>
